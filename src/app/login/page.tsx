@@ -1,17 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, Loader2, Sparkles, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
-import { supabase } from "@/utils/supabase";
+import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    document.title = "Sign In | Saarthi - WhatsApp AI Agent";
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +43,9 @@ export default function LoginPage() {
       }
 
       setSuccessMsg("Welcome back! Signing you in...");
-      // Simulated redirect delay for smooth user experience
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1500);
+      // Force the server to pick up the new auth cookie, then navigate
+      router.refresh();
+      router.push("/dashboard");
     } catch (err: any) {
       console.error("[Login Error]:", err.message || err);
       setErrorMsg(err.message || "Failed to sign in. Please check your credentials.");
@@ -50,9 +56,6 @@ export default function LoginPage() {
 
   return (
     <>
-      <title>Sign In | Saarthi - WhatsApp AI Agent</title>
-      <meta name="description" content="Sign in to Saarthi to manage your WhatsApp AI sales agent, view extracted leads, and configure prompt instructions." />
-      
       <div className="relative min-h-screen w-full flex items-center justify-center bg-background px-4 overflow-hidden selection:bg-accent/20 selection:text-accent">
         {/* Ambient background grid pattern (light theme radial dots) */}
         <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />

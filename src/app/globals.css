@@ -3,24 +3,76 @@
 @config "../../tailwind.config.ts";
 
 @theme {
-  --color-background: #FAFAFA;
-  --color-foreground: #0F172A;
-  --color-accent: #0052FF;
-  --color-accent-secondary: #4D7CFF;
-  --color-whatsapp: #25D366;
-  --color-muted: #F1F5F9;
-  --color-border: #E2E8F0;
+  --color-background: #09090B;
+  --color-foreground: #F4F4F5;
+  --color-accent: #6366F1;
+  --color-accent-secondary: #4F46E5;
+  --color-whatsapp: #10B981;
+  --color-muted: #71717A;
+  --color-border: #27272A;
+  
+  --color-surface-mid: #121214;
+  --color-surface-float: #1C1C1F;
+  --color-precision: #27272A;
+  --color-text-primary: #F4F4F5;
+  --color-text-muted: #71717A;
 
   --font-calistoga: var(--font-calistoga), serif;
   --font-sans: var(--font-inter), sans-serif;
+  --font-mono: var(--font-mono), monospace;
 }
 
 :root {
-  --background: #FAFAFA;
-  --foreground: #0F172A;
+  --background: #09090B;
+  --foreground: #F4F4F5;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+}
+
+/* Custom dark lattice background utility */
+.lattice-bg {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(39, 39, 42, 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(39, 39, 42, 0.2) 1px, transparent 1px);
+}
+
+/* Custom 60fps shimmer animation for obsidian loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #121214 25%,
+    #1C1C1F 50%,
+    #121214 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite ease-in-out;
+}
+
+/* Scrollbar customization for elite dark look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #09090B;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272A;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6366F1;
 }

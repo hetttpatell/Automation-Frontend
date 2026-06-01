@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, 
@@ -169,12 +170,12 @@ export default function Home() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <a href="/login" className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2">
+          <Link href="/login" className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2">
             Sign In
-          </a>
-          <a href="/login" className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm">
+          </Link>
+          <Link href="/login" className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm">
             Get Started
-          </a>
+          </Link>
         </div>
       </header>
 
@@ -204,10 +205,10 @@ export default function Home() {
 
             {/* CTA Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-              <a href="/login" className="group cursor-pointer inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-accent to-accent-secondary text-white font-semibold font-sans shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
+              <Link href="/login" className="group cursor-pointer inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-accent to-accent-secondary text-white font-semibold font-sans shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
-              </a>
+              </Link>
               
               <button 
                 onClick={handleManualReplay}

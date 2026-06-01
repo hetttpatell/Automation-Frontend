@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Calistoga } from "next/font/google";
+import { Inter, Calistoga, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -11,6 +11,11 @@ const calistoga = Calistoga({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-calistoga",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body
-        className={`${inter.variable} ${calistoga.variable} font-sans min-h-full flex flex-col bg-background text-foreground`}
+        className={`${inter.variable} ${calistoga.variable} ${jetbrainsMono.variable} font-sans min-h-full flex flex-col bg-background text-foreground`}
       >
         {children}
       </body>
