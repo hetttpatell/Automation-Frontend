@@ -153,12 +153,10 @@ export default function Home() {
 
       {/* Global Header */}
       <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent to-accent-secondary flex items-center justify-center text-white shadow-md shadow-accent/20">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-          </div>
-          <span className="font-calistoga text-2xl tracking-tight text-slate-900 select-none">
-            Saarthi
+        <div className="flex items-center gap-2.5 select-none cursor-pointer">
+          <img src="/Logo.png" alt="LeadFlow" className="h-8 w-8 object-contain" />
+          <span className="font-sans text-2xl font-extrabold tracking-tight select-none">
+            <span className="text-slate-900">Lead</span><span className="text-[#6366F1]">Flow</span>
           </span>
         </div>
 
@@ -289,7 +287,7 @@ export default function Home() {
                     
                     <div className="flex flex-col ml-0.5">
                       <div className="flex items-center gap-1">
-                        <span className="text-[12px] font-bold text-white tracking-wide">Saarthi Business</span>
+                        <span className="text-[12px] font-bold text-white tracking-wide">LeadFlow Business</span>
                         <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-white/20 flex items-center justify-center text-white scale-80 shrink-0">
                           <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
                         </div>
@@ -536,7 +534,7 @@ export default function Home() {
             Everything you need to automate your inbound pipeline.
           </h2>
           <p className="text-lg text-slate-600 font-sans leading-relaxed">
-            Stop letting hot leads turn cold. Saarthi works 24/7 to nurture, qualify, and convert every incoming WhatsApp conversation automatically.
+            Stop letting hot leads turn cold. LeadFlow works 24/7 to nurture, qualify, and convert every incoming WhatsApp conversation automatically.
           </p>
         </div>
 
@@ -718,7 +716,7 @@ export default function Home() {
                     <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent mb-1 animate-pulse">
                       <Shield className="w-4 h-4" />
                     </div>
-                    <span className="font-bold text-white text-[10px]">Saarthi Guard</span>
+                    <span className="font-bold text-white text-[10px]">LeadFlow Guard</span>
                     <div className="text-[9px] text-emerald-400 font-extrabold uppercase bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-900/40">
                       200 OK CACHED
                     </div>
@@ -739,7 +737,7 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section id="solutions" className="relative bg-foreground py-32 overflow-hidden w-full">
+      <section id="solutions" className="relative bg-[#0b0f19] py-32 overflow-hidden w-full">
         <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px] opacity-30 pointer-events-none" />
         
         <div className="absolute -top-40 -left-40 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
@@ -752,7 +750,7 @@ export default function Home() {
               IMPLEMENTATION ROADMAP
             </div>
             <h2 className="font-calistoga text-4xl md:text-5xl text-white tracking-tight leading-tight mb-4">
-              Deploying Saarthi in three simple steps.
+              Deploying LeadFlow in three simple steps.
             </h2>
             <p className="text-lg text-slate-400 font-sans leading-relaxed">
               No complex development cycles. Integrate your custom WhatsApp flows with your CRM instantly.
@@ -988,7 +986,7 @@ export default function Home() {
 
       {/* Global Footer */}
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/50 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 mt-auto">
-        <span>&copy; {new Date().getFullYear()} Saarthi. All rights reserved.</span>
+        <span>&copy; {new Date().getFullYear()} LeadFlow. All rights reserved.</span>
         <div className="flex items-center gap-6">
           <a href="#terms" className="hover:text-slate-600 transition-colors">Terms of Service</a>
           <a href="#privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</a>

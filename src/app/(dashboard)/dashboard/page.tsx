@@ -117,7 +117,7 @@ export default function LeadsDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    document.title = "Leads Dashboard | Saarthi";
+    document.title = "Leads Dashboard | LeadFlow";
 
     async function fetchLeads() {
       setIsLoading(true);

@@ -76,11 +76,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         
         {/* Sidebar Header */}
         <div className="h-16 flex items-center px-6 border-b border-[#27272A] select-none gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center">
-            <span className="text-[#6366F1] font-calistoga font-bold text-lg">S</span>
-          </div>
-          <span className="font-calistoga text-2xl text-[#F4F4F5] tracking-tight">
-            Saarthi
+          <img src="/Logo.png" alt="LeadFlow Logo" className="h-8 w-8 object-contain" />
+          <span className="font-sans text-2xl font-extrabold tracking-tight select-none">
+            <span className="text-[#F4F4F5]">Lead</span><span className="text-[#6366F1]">Flow</span>
           </span>
         </div>
 

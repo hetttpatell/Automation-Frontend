@@ -193,7 +193,7 @@ export default function KnowledgeBasePage() {
   }>({ show: false, message: "", variant: "success" });
 
   useEffect(() => {
-    document.title = "Knowledge Base | Saarthi";
+    document.title = "Knowledge Base | LeadFlow";
   }, []);
 
   // Fetch FAQs
@@ -544,7 +544,7 @@ export default function KnowledgeBasePage() {
                     No active parameters found
                   </h3>
                   <p className="text-[#71717A] text-[11px] mt-1 max-w-[320px] leading-relaxed mx-auto">
-                    Submit your first trigger-response pair on the left to teach Saarthi how to navigate customer inquiries.
+                    Submit your first trigger-response pair on the left to teach LeadFlow how to navigate customer inquiries.
                   </p>
                 </motion.div>
               ) : (

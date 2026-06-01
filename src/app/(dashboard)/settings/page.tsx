@@ -254,7 +254,7 @@ export default function SettingsPage() {
   const t = TRANSLATIONS[formLanguage];
 
   useEffect(() => {
-    document.title = "Settings | Saarthi";
+    document.title = "Settings | LeadFlow";
   }, []);
 
   // Fetch tenant config on mount
@@ -285,7 +285,7 @@ export default function SettingsPage() {
 
       if (error && error.code === "PGRST116") {
         // Auto-create tenant config if not found
-        const initialPrompt = `You are the AI assistant for ${defaultBusinessName}. 
+        const initialPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${defaultBusinessName}. 
 You must communicate primarily in English.
 Our services are: General support. 
 Our hours are: Monday to Friday: 9:00 AM - 6:00 PM. 
@@ -414,7 +414,7 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
     }
 
     // Client-side Prompt Compiler Logic
-    const compiledInstruction = `You are the AI assistant for ${businessName}. 
+    const compiledInstruction = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${businessName}. 
 You must communicate primarily in ${botLanguage}.
 Our services are: ${servicesText}. 
 Our hours are: ${hoursText}. 

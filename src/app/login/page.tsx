@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   React.useEffect(() => {
-    document.title = "Sign In | Saarthi - WhatsApp AI Agent";
+    document.title = "Sign In | LeadFlow - WhatsApp AI Agent";
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -56,9 +56,9 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="relative min-h-screen w-full flex items-center justify-center bg-background px-4 overflow-hidden selection:bg-accent/20 selection:text-accent">
-        {/* Ambient background grid pattern (light theme radial dots) */}
-        <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+      <div className="relative min-h-screen w-full flex items-center justify-center bg-[#0b0f19] px-4 overflow-hidden selection:bg-accent/20 selection:text-accent">
+        {/* Ambient background grid pattern (dark theme radial dots) */}
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
         
         {/* Soft atmospheric gradient glowing blobs in corners for high contrast */}
         <div className="absolute top-1/4 left-1/4 w-[350px] h-[350px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
@@ -79,13 +79,12 @@ export default function LoginPage() {
             {/* Header Content */}
             <div className="flex flex-col items-center text-center">
               {/* Branded Logo Mark */}
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-accent to-accent-secondary flex items-center justify-center text-white shadow-md shadow-accent/20 mb-4 select-none">
-                <Sparkles className="w-6 h-6 animate-pulse" />
+              <div className="flex flex-col items-center select-none mb-4">
+                <img src="/Logo.png" alt="LeadFlow Logo" className="h-12 w-12 object-contain mb-2.5" />
+                <span className="font-sans text-3xl font-extrabold tracking-tight select-none">
+                  <span className="text-slate-900">Lead</span><span className="text-[#6366F1]">Flow</span>
+                </span>
               </div>
-              
-              <span className="font-calistoga text-3xl tracking-tight text-accent select-none mb-4">
-                Saarthi
-              </span>
 
               <h1 className="font-sans text-2xl font-semibold tracking-tight text-slate-900 mb-1.5">
                 Welcome back
@@ -214,7 +213,7 @@ export default function LoginPage() {
 
             {/* Bottom branding footer */}
             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 select-none">
-              <span>Saarthi Cloud v1.0</span>
+              <span>LeadFlow Cloud v1.0</span>
               <a href="/privacy" className="hover:text-slate-600 transition-colors cursor-pointer">Privacy & Terms</a>
             </div>
           </div>

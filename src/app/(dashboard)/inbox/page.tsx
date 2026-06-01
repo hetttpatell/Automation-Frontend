@@ -84,7 +84,7 @@ export default function InboxPage() {
 
   // ─── Fetch Conversations on Mount & Setup Realtime ────────
   useEffect(() => {
-    document.title = "Conversations | Saarthi";
+    document.title = "Conversations | LeadFlow";
 
     async function fetchConversations() {
       setIsLoading(true);
@@ -148,11 +148,13 @@ export default function InboxPage() {
       return;
     }
 
+    const conversationId = selectedConversation.id;
+
     async function fetchMessages() {
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .eq("conversation_id", selectedConversation.id)
+        .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -172,7 +174,7 @@ export default function InboxPage() {
         (payload) => {
           const newMessage = payload.new as Message;
           // If the incoming message belongs to the currently active conversation thread, append it smoothly to the local messages array state
-          if (newMessage.conversation_id === selectedConversation.id) {
+          if (newMessage.conversation_id === conversationId) {
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMessage.id)) return prev;
               return [...prev, newMessage];
@@ -218,18 +220,19 @@ export default function InboxPage() {
     if (!selectedConversation || isToggling) return;
     setIsToggling(true);
     
+    const conversationId = selectedConversation.id;
     const currentStatus = selectedConversation.is_ai_active;
     const targetStatus = !currentStatus;
 
     // Fast local state update
     setSelectedConversation(prev => prev ? { ...prev, is_ai_active: targetStatus } : null);
-    setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, is_ai_active: targetStatus } : c));
+    setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, is_ai_active: targetStatus } : c));
 
     try {
       const { error } = await supabase
         .from("conversations")
         .update({ is_ai_active: targetStatus })
-        .eq("id", selectedConversation.id);
+        .eq("id", conversationId);
 
       if (error) {
         throw error;
@@ -238,7 +241,7 @@ export default function InboxPage() {
       console.error("[Human Override Toggle Error]:", err.message);
       // Rollback
       setSelectedConversation(prev => prev ? { ...prev, is_ai_active: currentStatus } : null);
-      setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, is_ai_active: currentStatus } : c));
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, is_ai_active: currentStatus } : c));
     } finally {
       setIsToggling(false);
     }
@@ -249,6 +252,7 @@ export default function InboxPage() {
     if (!selectedConversation || !inputMessage.trim() || isSending) return;
     setIsSending(true);
 
+    const { id: conversationId, customer_phone: customerPhone, tenant_id: tenantId } = selectedConversation;
     const tempText = inputMessage;
     setInputMessage("");
 
@@ -259,10 +263,10 @@ export default function InboxPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          conversationId: selectedConversation.id,
-          customerPhone: selectedConversation.customer_phone,
+          conversationId,
+          customerPhone,
           messageText: tempText,
-          tenantId: selectedConversation.tenant_id,
+          tenantId,
         }),
       });
 
