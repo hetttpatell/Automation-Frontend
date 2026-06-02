@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Inter, Calistoga, JetBrains_Mono } from "next/font/google";
+import { Inter, Calistoga, JetBrains_Mono, DM_Sans } from "next/font/google";
+import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,14 +15,19 @@ const calistoga = Calistoga({
   variable: "--font-calistoga",
 });
 
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "WhatsApp AI Sales Agent | Auto-Extract Leads",
-  description: "Turn WhatsApp into your best salesperson. Instantly converse with prospects, answer inquiries, and extract structured leads in real time.",
+  title: "LeadFlow | WhatsApp AI Automation Dashboard",
+  description: "Automate WhatsApp conversations with AI. Manage leads, train your AI brain, and handle customer inquiries — all from one dashboard.",
 };
 
 export default function RootLayout({
@@ -29,11 +36,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${calistoga.variable} ${jetbrainsMono.variable} font-sans min-h-full flex flex-col bg-background text-foreground`}
+        className={`${inter.variable} ${calistoga.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans min-h-full flex flex-col`}
       >
-        {children}
+        <ThemeProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,11 +1,24 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Search, MessageSquare, Bot, User, Phone, Circle, Loader2, Cpu, ShieldAlert } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  Search,
+  MessageSquare,
+  Bot,
+  User,
+  Phone,
+  Loader2,
+  AlertTriangle,
+  Send,
+  SlidersHorizontal
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import { useToast } from "@/components/ui/Toast";
+import Avatar from "@/components/ui/Avatar";
 
-// ─── Database Interfaces ───────────────────────────────────────────
+// ─── Interfaces ───────────────────────────────────────────────────
 interface Conversation {
   id: string;
   tenant_id: string;
@@ -27,7 +40,7 @@ interface Message {
   created_at: string;
 }
 
-// ─── Helper Functions ──────────────────────────────────────────────
+// ─── Formatting Helpers ──────────────────────────────────────────
 function formatMessageTime(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleTimeString("en-US", {
@@ -40,7 +53,7 @@ function formatMessageTime(isoString: string): string {
 function formatConversationTime(isoString: string): string {
   const date = new Date(isoString);
   const now = new Date();
-  
+
   if (date.toDateString() === now.toDateString()) {
     return date.toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -48,21 +61,21 @@ function formatConversationTime(isoString: string): string {
       hour12: true,
     });
   }
-  
+
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
 }
 
-// ─── Skeleton Loader for Conversation List ───────────────────────────
-function ConversationSkeleton() {
+// ─── Loading Skeletons ─────────────────────────────────────────────
+function ThreadSkeleton() {
   return (
-    <div className="p-4 border-b border-[#27272A] bg-[#121214] flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full shrink-0 animate-shimmer" />
-      <div className="flex-1 space-y-2">
-        <div className="h-3.5 rounded-md w-2/3 animate-shimmer" />
-        <div className="h-2.5 rounded-md w-1/2 animate-shimmer" />
+    <div className="h-[72px] p-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center gap-3">
+      <div className="w-9 h-9 rounded-full bg-[var(--bg-muted)] animate-pulse shrink-0" />
+      <div className="flex-1 space-y-2 min-w-0">
+        <div className="h-3 rounded bg-[var(--bg-muted)] w-1/3 animate-pulse" />
+        <div className="h-2.5 rounded bg-[var(--bg-muted)] w-2/3 animate-pulse" />
       </div>
     </div>
   );
@@ -71,20 +84,31 @@ function ConversationSkeleton() {
 // ─── Main Component ───────────────────────────────────────────────
 export default function InboxPage() {
   const supabase = createClient();
+  const { success, warning, info, error: toastError } = useToast();
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterMode, setFilterMode] = useState<"all" | "ai" | "human">("all");
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+
   const [isToggling, setIsToggling] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // ─── Fetch Conversations on Mount & Setup Realtime ────────
   useEffect(() => {
-    document.title = "Conversations | LeadFlow";
+    setMounted(true);
+  }, []);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch threads on mount & setup realtime subscription
+  useEffect(() => {
+    document.title = "Inbox | LeadFlow";
 
     async function fetchConversations() {
       setIsLoading(true);
@@ -95,8 +119,17 @@ export default function InboxPage() {
 
       if (error) {
         console.error("[Fetch Conversations Error]:", error.message);
+        toastError("Failed to fetch conversations");
       } else {
-        setConversations((data as Conversation[]) || []);
+        const sortedConvos = ((data as Conversation[]) || []).map(convo => ({
+          ...convo,
+          messages: convo.messages
+            ? [...convo.messages].sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              )
+            : []
+        }));
+        setConversations(sortedConvos);
       }
       setIsLoading(false);
     }
@@ -104,7 +137,7 @@ export default function InboxPage() {
     fetchConversations();
 
     const channel = supabase
-      .channel("inbox-conversations")
+      .channel("inbox-conversations-channel")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "conversations" },
@@ -141,7 +174,7 @@ export default function InboxPage() {
     };
   }, []);
 
-  // ─── Fetch Messages when selectedConversation changes ─────
+  // Fetch messages for selected conversation
   useEffect(() => {
     if (!selectedConversation) {
       setMessages([]);
@@ -167,20 +200,19 @@ export default function InboxPage() {
     fetchMessages();
 
     const channel = supabase
-      .channel("realtime-messages")
+      .channel(`realtime-messages-${conversationId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const newMessage = payload.new as Message;
-          // If the incoming message belongs to the currently active conversation thread, append it smoothly to the local messages array state
           if (newMessage.conversation_id === conversationId) {
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMessage.id)) return prev;
               return [...prev, newMessage];
             });
           }
-          // Also append new incoming message to this conversation's messages list inside the conversations state
+
           setConversations((prevConvos) => {
             const updated = prevConvos.map((c) => {
               if (c.id === newMessage.conversation_id) {
@@ -207,53 +239,62 @@ export default function InboxPage() {
     };
   }, [selectedConversation?.id]);
 
-  // ─── Scroll to Bottom ──────────────────────────────────
+  // Auto-scroll & focus
   useEffect(() => {
     const timer = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
-    return () => clearTimeout(timer);
-  }, [messages]);
 
-  // ─── Human Override Controller ───────────────────────────
+    if (selectedConversation && !selectedConversation.is_ai_active) {
+      textInputRef.current?.focus();
+    }
+
+    return () => clearTimeout(timer);
+  }, [messages, selectedConversation?.is_ai_active]);
+
+  // AI Toggle
   const handleToggleAI = async () => {
     if (!selectedConversation || isToggling) return;
     setIsToggling(true);
-    
-    const conversationId = selectedConversation.id;
+
+    const convoId = selectedConversation.id;
     const currentStatus = selectedConversation.is_ai_active;
     const targetStatus = !currentStatus;
 
-    // Fast local state update
+    if (targetStatus) {
+      success("AI Autopilot activated");
+    } else {
+      warning("Human Takeover active");
+    }
+
     setSelectedConversation(prev => prev ? { ...prev, is_ai_active: targetStatus } : null);
-    setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, is_ai_active: targetStatus } : c));
+    setConversations(prev => prev.map(c => c.id === convoId ? { ...c, is_ai_active: targetStatus } : c));
 
     try {
       const { error } = await supabase
         .from("conversations")
         .update({ is_ai_active: targetStatus })
-        .eq("id", conversationId);
+        .eq("id", convoId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
     } catch (err: any) {
-      console.error("[Human Override Toggle Error]:", err.message);
-      // Rollback
+      console.error("[Override Toggle Error]:", err.message);
+      toastError("Failed to toggle AI state");
       setSelectedConversation(prev => prev ? { ...prev, is_ai_active: currentStatus } : null);
-      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, is_ai_active: currentStatus } : c));
+      setConversations(prev => prev.map(c => c.id === convoId ? { ...c, is_ai_active: currentStatus } : c));
     } finally {
       setIsToggling(false);
     }
   };
 
+  // Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedConversation || !inputMessage.trim() || isSending) return;
     setIsSending(true);
 
     const { id: conversationId, customer_phone: customerPhone, tenant_id: tenantId } = selectedConversation;
-    const tempText = inputMessage;
+    const textToSend = inputMessage;
     setInputMessage("");
 
     try {
@@ -265,306 +306,368 @@ export default function InboxPage() {
         body: JSON.stringify({
           conversationId,
           customerPhone,
-          messageText: tempText,
+          messageText: textToSend,
           tenantId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send manual message");
+        throw new Error("Failed to post message");
       }
+      info("Message sent successfully");
     } catch (err: any) {
       console.error("[Send Message Error]:", err.message);
-      setInputMessage(tempText);
+      toastError("Failed to deliver message");
+      setInputMessage(textToSend);
     } finally {
       setIsSending(false);
+      setTimeout(() => textInputRef.current?.focus(), 50);
     }
   };
 
+  // Filter & search
   const filteredConversations = conversations.filter((c) => {
     const name = (c.customer_name || "").toLowerCase();
     const phone = (c.customer_phone || "").toLowerCase();
     const query = searchQuery.toLowerCase();
-    return name.includes(query) || phone.includes(query);
+    const matchesSearch = name.includes(query) || phone.includes(query);
+
+    if (!matchesSearch) return false;
+    if (filterMode === "ai") return c.is_ai_active;
+    if (filterMode === "human") return !c.is_ai_active;
+    return true;
   });
 
   return (
-    <div className={`h-[calc(100vh-8rem)] bg-[#121214] rounded-2xl border flex overflow-hidden shadow-2xl select-none transition-all duration-300 ${
-      selectedConversation && !selectedConversation.is_ai_active 
-        ? "border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.05)]" 
-        : "border-[#27272A]"
-    }`}>
-      
-      {/* ─── LEFT PANE: Thread Feed List ────────────────────────── */}
-      <aside className="w-80 border-r border-[#27272A] flex flex-col h-full bg-[#121214] shrink-0">
-        
-        {/* Left Pane Header */}
-        <div className="p-4 border-b border-[#27272A] space-y-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <h1 className="font-calistoga text-lg text-[#F4F4F5]">
-              Live Threads
+    <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden bg-[var(--bg-canvas)]">
+
+      {/* ─── LEFT PANEL: Thread List (320px) ─────────────────────── */}
+      <aside className="w-80 border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none">
+
+        {/* Header (52px) */}
+        <div className="h-[52px] px-4 flex items-center justify-between border-b border-[var(--border-subtle)] relative shrink-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-[16px] font-semibold text-[var(--text-primary)] font-display">
+              Inbox
             </h1>
-            {conversations.length > 0 && (
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#1C1C1F] text-[#71717A] border border-[#27272A] tabular-nums">
-                {conversations.length}
+            {filteredConversations.length > 0 && (
+              <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] tabular-nums">
+                {filteredConversations.length}
               </span>
             )}
           </div>
 
-          {/* Search Box */}
           <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center text-[#71717A]">
-              <Search className="w-3.5 h-3.5" />
+            <button
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none"
+              aria-label="Filter threads"
+            >
+              <SlidersHorizontal className="w-[18px] h-[18px]" />
+            </button>
+
+            {isFilterDropdownOpen && (
+              <div className="absolute right-0 mt-1.5 w-44 bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-1 z-50">
+                {(["all", "ai", "human"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      setFilterMode(mode);
+                      setIsFilterDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-sans cursor-pointer ${
+                      filterMode === mode
+                        ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)] font-medium"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {mode === "all" ? "All Threads" : mode === "ai" ? "AI Active" : "Human Takeover"}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="p-3 border-b border-[var(--border-subtle)] shrink-0">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-3 flex items-center text-[var(--text-tertiary)] pointer-events-none">
+              <Search className="w-4 h-4" />
             </span>
             <input
               type="text"
-              placeholder="Search prospects..."
+              placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-[#09090B] border border-[#27272A] rounded-xl text-xs text-[#F4F4F5] placeholder-[#71717A] focus:outline-none focus:border-[#6366F1]/50 hover:bg-[#09090B]/80 transition-all duration-200 font-sans"
+              className="w-full h-10 pl-9 pr-3 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)]"
             />
           </div>
         </div>
 
         {/* Thread Cards */}
-        <div className="flex-1 overflow-y-auto divide-y divide-[#27272A]/40 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-subtle)]">
           {isLoading ? (
-            [...Array(4)].map((_, i) => <ConversationSkeleton key={i} />)
+            [...Array(5)].map((_, i) => <ThreadSkeleton key={i} />)
           ) : filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-center h-48 select-none">
-              <MessageSquare className="w-8 h-8 text-[#71717A] mb-2" />
-              <p className="text-[#F4F4F5] text-xs font-semibold">
+              <MessageSquare className="w-8 h-8 text-[var(--text-tertiary)] mb-2" />
+              <p className="text-[var(--text-primary)] text-xs font-semibold">
                 {searchQuery ? "No matching conversations" : "No active threads"}
               </p>
-              <p className="text-[#71717A] text-[10px] mt-1 max-w-[200px] leading-relaxed mx-auto">
-                {searchQuery ? "Try searching for a different number or name." : "Once customers text your WhatsApp line, threads appear here."}
+              <p className="text-[var(--text-secondary)] text-[10px] mt-1 max-w-[180px] leading-relaxed mx-auto">
+                {searchQuery ? "Adjust your keywords or filter." : "New WhatsApp messages will appear here."}
               </p>
             </div>
           ) : (
-            <AnimatePresence initial={false}>
-              {filteredConversations.map((convo) => {
-                const isSelected = selectedConversation?.id === convo.id;
-                return (
-                  <motion.div
-                    key={convo.id}
-                    onClick={() => setSelectedConversation(convo)}
-                    whileTap={{ scale: 0.99 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 35 }}
-                    className={`p-4 flex items-center gap-3 transition-all duration-200 cursor-pointer border-l-2 outline-none relative hover:bg-white/[0.01] ${
-                      isSelected
-                        ? "bg-[#6366F1]/5 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.06)]"
-                        : "border-transparent bg-transparent"
-                    }`}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        setSelectedConversation(convo);
-                      }
-                    }}
-                  >
-                    {/* Glow active effect wrapper */}
-                    {isSelected && convo.is_ai_active && (
-                      <div className="absolute inset-0 border border-[#6366F1]/10 rounded-r-lg pointer-events-none shadow-[0_0_12px_rgba(99,102,241,0.08)]" />
-                    )}
+            filteredConversations.map((convo) => {
+              const isSelected = selectedConversation?.id === convo.id;
 
-                    {/* Avatar Indicator */}
-                    <div className="w-10 h-10 rounded-lg bg-[#1C1C1F] border border-[#27272A] flex items-center justify-center text-[#71717A] shrink-0 shadow-inner relative">
-                      {convo.is_ai_active ? (
-                        <Bot className={`w-5 h-5 ${isSelected ? "text-[#6366F1]" : "text-[#71717A]"}`} />
-                      ) : (
-                        <User className="w-5 h-5 text-[#71717A]" />
-                      )}
-                      {/* Active Status Live Dot */}
-                      <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
-                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${convo.is_ai_active ? "bg-[#6366F1]" : "bg-[#10B981]"}`} />
-                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${convo.is_ai_active ? "bg-[#6366F1]" : "bg-[#10B981]"}`} />
+              let lastMessage = "";
+              let isLastMessageFromAI = false;
+              if (convo.messages && convo.messages.length > 0) {
+                const lastMsgObj = convo.messages[convo.messages.length - 1];
+                lastMessage = lastMsgObj.message_text;
+                isLastMessageFromAI = lastMsgObj.sender === "ai";
+              } else if (convo.chat_summary) {
+                lastMessage = convo.chat_summary;
+              }
+
+              return (
+                <div
+                  key={convo.id}
+                  onClick={() => setSelectedConversation(convo)}
+                  className={`h-[72px] px-4 py-3 flex items-center gap-3 cursor-pointer border-b border-[var(--border-subtle)] relative hover:bg-[var(--bg-subtle)] ${
+                    isSelected
+                      ? "bg-[var(--color-info-bg)]"
+                      : "bg-transparent"
+                  }`}
+                  style={{
+                    borderLeft: isSelected ? "3px solid var(--brand-primary)" : "3px solid transparent",
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setSelectedConversation(convo);
+                    }
+                  }}
+                >
+                  <div className="shrink-0">
+                    <Avatar
+                      name={convo.customer_name || convo.customer_phone}
+                      size="md"
+                      status={convo.is_ai_active ? "ai" : "human"}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <h3 className={`text-[14px] font-medium truncate font-sans ${
+                        isSelected ? "text-[var(--brand-primary)] font-semibold" : "text-[var(--text-primary)]"
+                      }`}>
+                        {convo.customer_name || "Customer"}
+                      </h3>
+                      <span className="text-[var(--text-tertiary)] text-[11px] font-mono shrink-0 ml-1">
+                        {formatConversationTime(convo.updated_at)}
                       </span>
                     </div>
-
-                    {/* Thread Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <h3 className={`text-xs font-semibold truncate ${isSelected ? "text-[#6366F1]" : "text-[#F4F4F5]"}`}>
-                          {convo.customer_name || "Prospect Thread"}
-                        </h3>
-                        <span className="text-[#71717A] text-[9px] font-mono tabular-nums shrink-0">
-                          {formatConversationTime(convo.updated_at)}
-                        </span>
+                    {lastMessage && (
+                      <div className="flex items-center gap-1 text-[12px] text-[var(--text-secondary)] truncate">
+                        {isLastMessageFromAI && (
+                          <span className="inline-flex items-center bg-[var(--color-ai-bg)] text-[var(--color-ai)] text-[9px] font-semibold px-1 rounded-sm shrink-0">
+                            AI
+                          </span>
+                        )}
+                        <span className="truncate flex-1">{lastMessage}</span>
                       </div>
-                      <p className="text-[10px] text-[#71717A] font-mono truncate tracking-tight">
-                        {convo.customer_phone}
-                      </p>
-                      {convo.messages && convo.messages.length > 0 ? (
-                        <p className="text-[10px] text-[#71717A] font-sans truncate mt-1">
-                          {convo.messages[convo.messages.length - 1].message_text}
-                        </p>
-                      ) : convo.chat_summary ? (
-                        <p className="text-[10px] text-[#71717A] font-sans truncate mt-1">
-                          {convo.chat_summary}
-                        </p>
-                      ) : null}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                    )}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </aside>
 
-      {/* ─── RIGHT PANE: Chat Canvas ─────────────────────────────── */}
-      <section className={`flex-1 flex flex-col h-full bg-[#09090B] transition-colors duration-300 relative select-text border-l border-[#27272A] ${
-        selectedConversation && !selectedConversation.is_ai_active ? "border-l-amber-500/20" : ""
-      }`}>
-        
-        {/* Warn wrapper state if human takeover */}
-        {selectedConversation && !selectedConversation.is_ai_active && (
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 z-50 pointer-events-none" />
-        )}
+      {/* ─── RIGHT PANEL: Chat Canvas ─────────────────────────── */}
+      <section className="flex-1 flex flex-col h-full bg-[var(--bg-canvas)] relative select-text">
 
         <AnimatePresence mode="wait">
           {!selectedConversation ? (
-            <motion.div
-              key="empty-state"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.25 }}
-              className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full select-none"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-[#121214] border border-[#27272A] flex items-center justify-center text-[#71717A] mb-4 shadow-xl">
-                <MessageSquare className="w-7 h-7" />
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full select-none">
+              <div className="w-14 h-14 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-tertiary)] mb-4 shadow-[var(--shadow-sm)]">
+                <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className="text-[#F4F4F5] font-semibold text-sm font-sans">
-                Select Conversation Thread
+              <h3 className="text-[var(--text-primary)] font-semibold text-sm font-sans">
+                Select a Conversation
               </h3>
-              <p className="text-[#71717A] text-xs mt-1 max-w-[280px] leading-relaxed mx-auto">
-                Inspect active customer dialogue histories, toggle telemetry states, or deploy automated override policies in real-time.
+              <p className="text-[var(--text-secondary)] text-xs mt-1 max-w-[240px] leading-relaxed mx-auto">
+                Choose a thread from the left to view messages, toggle AI autopilot, or send manual replies.
               </p>
-            </motion.div>
+            </div>
           ) : (
             <motion.div
               key={selectedConversation.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
               className="flex-1 flex flex-col h-full overflow-hidden"
             >
-              {/* Chat Canvas Header */}
-              <header className={`h-16 bg-[#121214] border-b border-[#27272A] px-6 flex items-center justify-between shrink-0 select-none shadow-md transition-colors duration-300 ${
-                !selectedConversation.is_ai_active ? "border-b-amber-500/20" : ""
-              }`}>
-                
-                {/* User details */}
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#1C1C1F] border border-[#27272A] flex items-center justify-center shadow-inner">
-                    <User className="w-4 h-4 text-[#71717A]" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xs font-semibold text-[#F4F4F5]">
-                        {selectedConversation.customer_name || "Prospect User"}
-                      </h2>
-                      {selectedConversation.is_ai_active ? (
-                        <span className="flex items-center gap-1 bg-[#6366F1]/10 text-[#6366F1] text-[9px] font-bold px-2 py-0.5 rounded-full border border-[#6366F1]/20 font-mono uppercase">
-                          <Circle className="w-1.5 h-1.5 fill-[#6366F1] stroke-none" />
-                          AI Active
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 bg-amber-500/10 text-amber-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-500/20 font-mono uppercase">
-                          <ShieldAlert className="w-1.5 h-1.5 fill-amber-500 stroke-none" />
-                          Human Taken Over
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-[#71717A] font-mono tracking-tight flex items-center gap-1 mt-0.5">
-                      <Phone className="w-3 h-3 text-[#71717A]" />
+              {/* Canvas Header (64px) */}
+              <header className="h-16 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] px-5 flex items-center justify-between shrink-0 select-none z-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar name={selectedConversation.customer_name || selectedConversation.customer_phone} size="md" />
+                  <div className="min-w-0">
+                    <h2 className="text-[16px] font-semibold text-[var(--text-primary)] truncate font-display">
+                      {selectedConversation.customer_name || "Customer"}
+                    </h2>
+                    <p className="text-[13px] text-[var(--text-secondary)] font-sans flex items-center gap-1 mt-0.5 truncate">
                       {selectedConversation.customer_phone}
                     </p>
                   </div>
                 </div>
 
-                {/* Switch Override Slider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col items-end select-none">
-                    <span className="text-[9px] font-mono font-semibold text-[#71717A] tracking-wider uppercase">
-                      {selectedConversation.is_ai_active ? "AI DRIVER: ACTIVE" : "AI CONTROLLER: STOPPED"}
-                    </span>
-                    <span className="text-[8px] font-sans text-amber-500/80 leading-none">
-                      {!selectedConversation.is_ai_active && "⚠️ Human Controller takeover active"}
-                    </span>
-                  </div>
-
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={handleToggleAI}
-                    disabled={isToggling}
-                    className={`w-12 h-6.5 rounded-full p-0.5 cursor-pointer relative flex items-center transition-colors duration-300 ${
-                      selectedConversation.is_ai_active 
-                        ? "bg-[#6366F1] shadow-[0_0_8px_rgba(99,102,241,0.5)]" 
-                        : "bg-[#27272A]"
-                    }`}
-                  >
-                    <motion.div
-                      layout
-                      transition={{ type: "spring", stiffness: 380, damping: 35 }}
-                      className={`w-5.5 h-5.5 rounded-full shadow-md bg-white ${
-                        selectedConversation.is_ai_active ? "ml-auto" : "mr-auto"
-                      }`}
-                    />
-                  </motion.button>
-                </div>
+                {/* Render Actions in Layout Header Portal */}
+                {mounted && typeof document !== "undefined" && document.getElementById("header-cta-portal") ? (
+                  createPortal(
+                    <div className="flex items-center gap-2 select-none">
+                      <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
+                        AI Autopilot
+                      </span>
+                      <button
+                        onClick={handleToggleAI}
+                        disabled={isToggling}
+                        className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
+                          selectedConversation.is_ai_active
+                            ? "bg-[var(--color-success)]"
+                            : "bg-[var(--bg-muted)]"
+                        }`}
+                        role="switch"
+                        aria-checked={selectedConversation.is_ai_active}
+                        aria-label="AI Autopilot"
+                      >
+                        <motion.div
+                          layout
+                          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                          className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
+                          style={{
+                            marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
+                            marginRight: selectedConversation.is_ai_active ? "0" : "auto"
+                          }}
+                        />
+                      </button>
+                    </div>,
+                    document.getElementById("header-cta-portal")!
+                  )
+                ) : null}
               </header>
 
-              {/* Message Canvas Grid Container */}
-              <div className="flex-1 overflow-y-auto px-8 py-6 lattice-bg space-y-4 relative scrollbar-thin select-text">
-                
+              {/* Human Takeover Banner */}
+              {!selectedConversation.is_ai_active && (
+                <div className="bg-[var(--color-warning-bg)] border-b border-[var(--warning-border)] px-5 py-1.5 flex items-center gap-2 select-none shrink-0 z-10" style={{ animation: "fadeIn 150ms ease" }}>
+                  <AlertTriangle className="w-[14px] h-[14px] text-[var(--warning-icon)] shrink-0" />
+                  <span className="text-[14px] font-medium text-[var(--color-warning-text)]">
+                    Human Takeover Active — AI paused for this thread
+                  </span>
+                </div>
+              )}
+
+              {/* Message Stream */}
+              <div
+                role="log"
+                aria-live="polite"
+                aria-label="Conversation messages"
+                className="flex-1 overflow-y-auto px-4 py-6 bg-[var(--bg-canvas)] space-y-3 select-text"
+              >
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-8 text-center h-48 select-none">
-                    <p className="text-[#71717A] text-xs font-semibold">No messages recorded in this chat</p>
-                    <p className="text-[#71717A] text-[10px] mt-1">Dialogue traces appear here instantly.</p>
+                    <p className="text-[var(--text-secondary)] text-xs font-semibold">No messages in this conversation</p>
+                    <p className="text-[var(--text-tertiary)] text-[10px] mt-1">Messages will appear here as they arrive.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {messages.map((message) => {
                       const isCustomer = message.sender === "customer";
+                      const isAI = message.sender === "ai";
                       const hash = message.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                      const mockMs = 100 + (hash % 200);
-                      const mockTokens = message.tokens_consumed > 0 ? message.tokens_consumed : 10 + (hash % 40);
+                      const mockMs = 120 + (hash % 110);
+                      const mockTokens = message.tokens_consumed > 0 ? message.tokens_consumed : 20 + (hash % 30);
+
                       return (
                         <div
                           key={message.id}
-                          className={`flex w-full ${isCustomer ? "justify-end" : "justify-start"}`}
+                          className={`flex w-full flex-col ${isCustomer ? "items-start" : "items-end"}`}
                         >
-                          <div
-                            className={`max-w-[70%] p-3.5 rounded-2xl text-xs break-words relative flex flex-col gap-1.5 shadow-md ${
-                              isCustomer
-                                ? "bg-[#18181B] text-[#F4F4F5] rounded-tr-none border border-[#27272A]"
-                                : "bg-[#6366F1] text-white rounded-tl-none border border-[#6366F1]/20 shadow-[0_4px_12px_rgba(99,102,241,0.15)]"
-                            }`}
-                          >
-                            <p className="font-sans leading-relaxed whitespace-pre-wrap select-text selection:bg-white/20">
-                              {message.message_text}
-                            </p>
-                            
-                            {/* Metadata telemetry badge */}
-                            <div className="flex items-center justify-between gap-3 mt-1.5 select-none shrink-0 border-t border-white/[0.08] pt-1">
-                              <span className={`text-[8px] font-mono ${
-                                isCustomer ? "text-[#71717A]" : "text-white/60"
-                              }`}>
-                                {formatMessageTime(message.created_at)}
-                              </span>
-                              
-                              {!isCustomer && (
-                                <span className="inline-flex items-center gap-1 font-mono text-[8px] bg-[#09090B]/30 text-white/90 px-1.5 py-0.5 rounded-md border border-white/10 whitespace-nowrap">
-                                  <Cpu className="w-2.5 h-2.5 text-[#10B981]" />
-                                  ⚡ 2.5-Flash | {mockMs}ms | {mockTokens} tk
-                                </span>
-                              )}
+                          {isCustomer ? (
+                            /* Customer Message (Left Side) */
+                            <div className="flex flex-col max-w-[70%] gap-1">
+                              <div
+                                className="px-4 py-3 text-[14px] font-sans leading-[1.55] break-words bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[18px] rounded-tl-[3px] shadow-xs"
+                              >
+                                <p className="whitespace-pre-wrap select-text">
+                                  {message.message_text}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-[6px] px-1 select-none text-[10px] text-[var(--text-tertiary)] mt-1">
+                                <span className="font-sans font-medium">{formatMessageTime(message.created_at)}</span>
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            /* Business Response — Agent or AI (Right Side) */
+                            <div className="flex flex-col max-w-[70%] gap-1 items-end">
+                              <div
+                                className={`px-4 py-3 text-[14px] font-sans leading-[1.55] break-words ${
+                                  isAI
+                                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 dark:from-violet-500 dark:to-purple-700 text-white rounded-[18px] rounded-tr-[3px] shadow-md shadow-purple-500/5"
+                                    : "bg-[var(--brand-primary)] text-white rounded-[18px] rounded-tr-[3px] shadow-sm"
+                                }`}
+                              >
+                                {isAI ? (
+                                  <div className="flex items-center gap-1 mb-1.5 text-[10px] text-purple-200/90 font-semibold uppercase tracking-wider select-none">
+                                    <Bot className="w-3.5 h-3.5 text-purple-200/90" />
+                                    <span>AI Autopilot</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 mb-1.5 text-[10px] text-indigo-100/90 font-semibold uppercase tracking-wider select-none">
+                                    <User className="w-3.5 h-3.5 text-indigo-100/90" />
+                                    <span>Agent</span>
+                                  </div>
+                                )}
+                                <p className="whitespace-pre-wrap select-text">
+                                  {message.message_text}
+                                </p>
+                              </div>
+
+                              {/* Telemetry and Timestamp */}
+                              <div className="flex items-center flex-wrap gap-[6px] px-1 select-none text-[10px] text-[var(--text-tertiary)] mt-1 justify-end">
+                                <span className="font-sans font-medium">{formatMessageTime(message.created_at)}</span>
+                                {isAI && (
+                                  <>
+                                    <span className="text-[var(--text-tertiary)] select-none">·</span>
+                                    <span className="bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide font-sans">
+                                      gemini-2.5-flash
+                                    </span>
+                                    <span className="bg-[var(--bg-subtle)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-medium font-sans">
+                                      {mockMs}ms
+                                    </span>
+                                    <span className="bg-[var(--bg-subtle)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-medium font-sans">
+                                      {mockTokens} tk
+                                    </span>
+                                  </>
+                                )}
+                                {!isAI && (
+                                  <>
+                                    <span className="text-[var(--text-tertiary)] select-none">·</span>
+                                    <span className="bg-[var(--bg-subtle)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-medium font-sans">
+                                      Manual Reply
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -573,43 +676,72 @@ export default function InboxPage() {
                 )}
               </div>
 
-              {/* Message Input Footer for human agent override */}
-              <footer className={`bg-[#121214] p-4 border-t border-[#27272A] flex items-center justify-center shrink-0 shadow-md transition-colors duration-300 ${
-                !selectedConversation.is_ai_active ? "bg-amber-500/[0.02] border-t-amber-500/20" : ""
-              }`}>
-                {selectedConversation.is_ai_active ? (
-                  <div className="flex items-center gap-2 bg-[#09090B] px-5 py-2.5 rounded-xl border border-[#27272A] shadow-inner select-none">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
-                    </span>
-                    <span className="text-[10px] font-mono font-semibold text-[#71717A] tracking-tight uppercase">
-                      🤖 AI controller active. Handshake verified.
-                    </span>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSendMessage} className="flex gap-2 w-full max-w-4xl mx-auto">
-                    <input
-                      type="text"
-                      placeholder="Type a manual response to customer..."
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      disabled={isSending}
-                      className="flex-1 px-4 py-2.5 bg-[#09090B] border border-amber-500/20 hover:border-amber-500/30 focus:border-amber-500/50 rounded-xl text-xs text-[#F4F4F5] placeholder-[#71717A] focus:outline-none transition-all duration-200"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSending || !inputMessage.trim()}
-                      className="cursor-pointer px-5 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 disabled:bg-[#1C1C1F] text-amber-400 disabled:text-[#71717A] border border-amber-500/20 disabled:border-[#27272A] rounded-xl text-xs font-semibold font-sans tracking-wide transition-all duration-200 shrink-0"
+              {/* Footer Action Bar */}
+              <footer className="bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] z-10 shrink-0">
+                <AnimatePresence mode="wait">
+                  {selectedConversation.is_ai_active ? (
+                    /* AI Active — locked footer */
+                    <motion.div
+                      key="autopilot-active"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                      className="h-14 px-5 flex items-center gap-3 bg-[var(--bg-subtle)] select-none w-full"
                     >
-                      {isSending ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        "Send Reply"
-                      )}
-                    </button>
-                  </form>
-                )}
+                      <Bot className="w-[18px] h-[18px] text-[var(--color-ai)] shrink-0" />
+                      <span className="text-[13px] font-sans text-[var(--text-secondary)]">
+                        AI Autopilot is managing this conversation
+                      </span>
+                    </motion.div>
+                  ) : (
+                    /* Human Takeover — text input */
+                    <motion.div
+                      key="human-takeover"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                      className="p-3 w-full"
+                    >
+                      <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-5xl mx-auto">
+                        <div className="flex-1 relative">
+                          <textarea
+                            ref={textInputRef}
+                            placeholder="Type a reply..."
+                            value={inputMessage}
+                            onChange={(e) => setInputMessage(e.target.value)}
+                            disabled={isSending}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                if (inputMessage.trim() && !isSending) {
+                                  handleSendMessage(e);
+                                }
+                              }
+                            }}
+                            rows={1}
+                            className="w-full h-10 px-3 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] resize-none"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isSending || !inputMessage.trim()}
+                          className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-md)] text-[14px] font-sans font-medium flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] outline-none shrink-0"
+                        >
+                          {isSending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4" />
+                              <span>Send Reply</span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </footer>
             </motion.div>
           )}

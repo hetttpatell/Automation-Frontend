@@ -1,20 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
-  BookOpen,
-  Plus,
+  Brain,
+  Upload,
   Trash2,
   Loader2,
   ChevronDown,
+  Clock,
+  Database,
+  Check,
   HelpCircle,
   MessageSquareText,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
+  AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Interfaces ────────────────────────────────────────────────────
 interface FAQ {
@@ -24,66 +27,21 @@ interface FAQ {
   created_at?: string;
 }
 
-// ─── Skeleton Loader ───────────────────────────────────────────────
+// ─── Loading Skeletons ───────────────────────────────────────────────
 function KnowledgeSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 p-4">
       {[...Array(3)].map((_, i) => (
         <div
           key={i}
-          className="bg-[#121214] rounded-xl border border-[#27272A] p-5 h-24 animate-shimmer"
+          className="bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] h-14 animate-shimmer"
         />
       ))}
     </div>
   );
 }
 
-// ─── Toast Notification ────────────────────────────────────────────
-function Toast({
-  show,
-  message,
-  variant = "success",
-  onClose,
-}: {
-  show: boolean;
-  message: string;
-  variant?: "success" | "error";
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (show) {
-      const timer = setTimeout(onClose, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [show, onClose]);
-
-  return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 pl-4 pr-5 py-3.5 rounded-xl shadow-2xl border ${
-            variant === "success"
-              ? "bg-[#1C1C1F] text-[#F4F4F5] border-[#27272A]"
-              : "bg-rose-950 text-rose-200 border-rose-800/30"
-          }`}
-        >
-          {variant === "success" ? (
-            <CheckCircle2 className="w-5 h-5 text-[#10B981] shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-          )}
-          <span className="text-xs font-semibold font-sans">{message}</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─── FAQ Card Component ────────────────────────────────────────────
+// ─── FAQ Accordion Card Component ──────────────────────────
 function FAQCard({
   faq,
   onDelete,
@@ -95,116 +53,123 @@ function FAQCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Format index as two digit (01, 02...)
+  const formattedIndex = String(index + 1).padStart(2, "0");
+
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 16, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: -20, scale: 0.95 }}
-      transition={{
-        duration: 0.35,
-        delay: index * 0.04,
-        ease: [0.16, 1, 0.3, 1],
+    <div
+      className="bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] hover:border-[var(--border-brand)] hover:shadow-[var(--shadow-sm)] overflow-hidden relative group"
+      style={{
+        borderColor: isExpanded ? "var(--border-brand)" : undefined,
+        boxShadow: isExpanded ? "var(--shadow-sm)" : "none",
+        transition: "border-color 150ms ease, box-shadow 150ms ease"
       }}
-      className="group bg-[#121214] rounded-xl border border-[#27272A] shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
     >
-      {/* Question Row — Clickable */}
-      <button
-        type="button"
+      {/* Question Collapsed Header Row (56px tall) */}
+      <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left cursor-pointer select-none focus:outline-none rounded-xl transition-colors duration-200 hover:bg-white/[0.01]"
+        className="w-full h-14 px-4 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-[var(--bg-subtle)]"
+        style={{ transition: "background-color 150ms ease" }}
       >
-        {/* Numbering Badge */}
-        <span className="w-7 h-7 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[10px] font-bold font-mono text-[#6366F1] shrink-0 tabular-nums">
-          {index + 1}
-        </span>
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Index Badge */}
+          <span className="font-mono text-[11px] font-bold text-[var(--brand-primary)] bg-[var(--brand-subtle)] min-w-[26px] h-[22px] flex items-center justify-center rounded-[var(--radius-sm)] select-none">
+            {formattedIndex}
+          </span>
+          {/* Question Title */}
+          <span className="text-[14px] font-sans font-medium text-[var(--text-primary)] truncate pr-4">
+            {faq.question}
+          </span>
+        </div>
 
-        {/* Question Text */}
-        <span className="flex-1 text-xs font-semibold text-[#F4F4F5] font-sans leading-snug">
-          {faq.question}
-        </span>
-
-        {/* Expand Chevron */}
-        <motion.span
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.25 }}
-          className="text-[#71717A] shrink-0"
-        >
-          <ChevronDown className="w-4 h-4" />
-        </motion.span>
-
-        {/* Delete Button */}
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(faq.id);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Trash Action */}
+          <button
+            onClick={(e) => {
               e.stopPropagation();
               onDelete(faq.id);
-            }
-          }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg hover:bg-rose-500/10 cursor-pointer focus:outline-none"
-          aria-label={`Delete FAQ: ${faq.question}`}
-        >
-          <Trash2 className="w-4 h-4 text-[#71717A] hover:text-rose-400 transition-colors duration-200" />
-        </span>
-      </button>
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-[var(--danger-icon)] cursor-pointer"
+            style={{ transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease" }}
+            aria-label="Delete FAQ"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+          
+          <ChevronDown 
+            className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" 
+            style={{
+              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 200ms ease"
+            }}
+          />
+        </div>
+      </div>
 
-      {/* Answer Collapsible Section */}
+      {/* Expanded body (Framer Motion spring transition) */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
-            key="answer"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 220, damping: 28 }}
-            className="overflow-hidden"
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="overflow-hidden border-t border-[var(--border-subtle)]"
           >
-            <div className="px-5 pb-4 pt-0 ml-10 border-t border-[#27272A]/60">
-              <p className="text-xs text-[#71717A] font-sans leading-relaxed mt-3 whitespace-pre-wrap select-text selection:bg-[#6366F1]/20">
-                {faq.answer}
-              </p>
+            <div className="p-3.5 bg-transparent space-y-3 select-text">
+              <div className="space-y-1">
+                <p className="text-[10px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-wider">Trigger Question</p>
+                <div className="bg-[var(--bg-subtle)] px-3 py-2.5 rounded-[var(--radius-sm)]">
+                  <p className="text-[13px] font-sans font-medium text-[var(--text-primary)] leading-relaxed select-text">
+                    {faq.question}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-wider">AI Response Payload</p>
+                <div className="bg-[var(--bg-subtle)] px-3 py-2.5 rounded-[var(--radius-sm)] font-mono text-[13px] leading-[1.6] select-text text-[var(--text-secondary)] whitespace-pre-wrap">
+                  {faq.answer}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
 // ─── Main Page Component ───────────────────────────────────────────
 export default function KnowledgeBasePage() {
   const supabase = createClient();
+  const { success: toastSuccess, error: toastError } = useToast();
+
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    variant: "success" | "error";
-  }>({ show: false, message: "", variant: "success" });
+  
+  // Custom button deploy success state
+  const [deploySuccess, setDeploySuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     document.title = "Knowledge Base | LeadFlow";
   }, []);
 
-  // Fetch FAQs
+  // Fetch FAQ arrays on mount
   useEffect(() => {
     async function fetchFAQs() {
       setIsLoading(true);
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
         console.error("[KB Auth Error]:", authError?.message || "No user found");
@@ -238,7 +203,6 @@ export default function KnowledgeBasePage() {
 
         if (createError) {
           if (createError.code === "23505" || createError.message?.includes("unique constraint")) {
-            // Swallow unique key constraint error and query existing row
             const { data: existingTenant, error: fetchError } = await supabase
               .from("tenants")
               .select("id")
@@ -275,6 +239,7 @@ export default function KnowledgeBasePage() {
 
         if (error) {
           console.error("[KB Fetch Error]:", error.message);
+          toastError("Failed to load knowledge entries");
         } else {
           setFaqs((data as FAQ[]) || []);
         }
@@ -288,68 +253,56 @@ export default function KnowledgeBasePage() {
 
   // Add Q&A Pair
   async function handleAdd() {
-    if (!newQuestion.trim() || !newAnswer.trim() || !tenantId) return;
+    if (!newQuestion.trim() || !newAnswer.trim() || !tenantId || isSubmitting) return;
 
     setIsSubmitting(true);
 
-    const { data, error } = await supabase
-      .from("knowledge_base")
-      .insert({
-        tenant_id: tenantId,
-        question: newQuestion.trim(),
-        answer: newAnswer.trim(),
-      })
-      .select("id, question, answer, created_at")
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("knowledge_base")
+        .insert({
+          tenant_id: tenantId,
+          question: newQuestion.trim(),
+          answer: newAnswer.trim(),
+        })
+        .select("id, question, answer, created_at")
+        .single();
 
-    if (error) {
-      console.error("[KB Insert Error]:", error.message);
-      setToast({
-        show: true,
-        message: "Failed to add entry. Please try again.",
-        variant: "error",
-      });
-    } else if (data) {
-      setFaqs((prev) => [data as FAQ, ...prev]);
-      setNewQuestion("");
-      setNewAnswer("");
-      setToast({
-        show: true,
-        message: "Knowledge entry added successfully",
-        variant: "success",
-      });
+      if (error) throw error;
+
+      if (data) {
+        setFaqs((prev) => [data as FAQ, ...prev]);
+        setNewQuestion("");
+        setNewAnswer("");
+        
+        // Trigger deploy success animation and toast success
+        setDeploySuccess(true);
+        toastSuccess("Knowledge deployed successfully");
+        setTimeout(() => setDeploySuccess(false), 1500);
+      }
+    } catch (err: any) {
+      console.error("[KB Insert Error]:", err.message);
+      toastError("Failed to deploy knowledge entry");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   }
 
   // Delete Q&A Pair
   async function handleDelete(id: string) {
-    const { error } = await supabase
-      .from("knowledge_base")
-      .delete()
-      .eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("knowledge_base")
+        .delete()
+        .eq("id", id);
 
-    if (error) {
-      console.error("[KB Delete Error]:", error.message);
-      setToast({
-        show: true,
-        message: "Failed to delete entry. Please try again.",
-        variant: "error",
-      });
-    } else {
+      if (error) throw error;
+
       setFaqs((prev) => prev.filter((faq) => faq.id !== id));
-      setToast({
-        show: true,
-        message: "Entry removed from knowledge base",
-        variant: "success",
-      });
-    }
-  }
-
-  function handleFormKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      handleAdd();
+      toastSuccess("Knowledge entry removed");
+    } catch (err: any) {
+      console.error("[KB Delete Error]:", err.message);
+      toastError("Failed to delete entry");
     }
   }
 
@@ -357,281 +310,206 @@ export default function KnowledgeBasePage() {
   const canSubmit = newQuestion.trim().length > 0 && newAnswer.trim().length > 0;
 
   return (
-    <>
-      <div className="max-w-7xl mx-auto py-2 flex flex-col gap-8 pb-24 select-none">
+    <div className="h-full flex overflow-hidden bg-[var(--bg-canvas)]">
+      
+      {/* ─── LEFT PANEL: Training Form (420px) ────────────────────────── */}
+      <aside className="w-[420px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none relative">
         
-        {/* Page Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col gap-4"
-        >
-          {/* Section Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 text-[10px] font-mono font-bold tracking-wider text-[#6366F1] uppercase select-none self-start">
-            <BookOpen className="w-3.5 h-3.5" />
-            KNOWLEDGE BASE
-          </div>
-
-          <div className="space-y-1">
-            <h1 className="font-calistoga text-4xl text-[#F4F4F5] leading-tight">
-              Knowledge Repository
-            </h1>
-            <p className="font-sans text-sm text-[#71717A] font-medium max-w-lg">
-              Feed custom trigger-response pairs directly into the AI live brain to automate WhatsApp customer success.
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Two-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          
-          {/* LEFT COLUMN: Add New Knowledge Form */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.5,
-              delay: 0.1,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            className="lg:col-span-2"
-          >
-            <div
-              className="sticky top-24 bg-[#121214] rounded-2xl border border-[#27272A] shadow-xl p-6 transition-all duration-300 hover:shadow-2xl"
-              onKeyDown={handleFormKeyDown}
-            >
-              {/* Form Header */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-[#6366F1]" />
-                </div>
-                <div>
-                  <h2 className="font-calistoga text-lg text-[#F4F4F5]">
-                    Train Engine
-                  </h2>
-                  <p className="text-[10px] text-[#71717A] font-sans mt-0.5">
-                    Define exact contextual Q&A structures
-                  </p>
-                </div>
-              </div>
-
-              {/* Question Input */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="kb-question"
-                    className="flex items-center gap-2 text-[10px] font-mono font-semibold text-[#71717A] uppercase tracking-wider"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 text-[#71717A]" />
-                    Trigger Question
-                  </label>
-                  <input
-                    id="kb-question"
-                    type="text"
-                    value={newQuestion}
-                    onChange={(e) => setNewQuestion(e.target.value)}
-                    placeholder='e.g., "What are your standard opening hours?"'
-                    className="w-full px-4 py-3 bg-[#09090B] border border-[#27272A] rounded-xl text-xs text-[#F4F4F5] placeholder-[#71717A] font-sans transition-all duration-200 focus:outline-none focus:border-[#6366F1] hover:border-[#71717A]/50"
-                  />
-                </div>
-
-                {/* Answer Textarea */}
-                <div className="space-y-2">
-                  <label
-                    htmlFor="kb-answer"
-                    className="flex items-center gap-2 text-[10px] font-mono font-semibold text-[#71717A] uppercase tracking-wider"
-                  >
-                    <MessageSquareText className="w-3.5 h-3.5 text-[#71717A]" />
-                    AI Response Payload
-                  </label>
-                  <div className="relative">
-                    <textarea
-                      id="kb-answer"
-                      value={newAnswer}
-                      onChange={(e) => setNewAnswer(e.target.value)}
-                      placeholder="Input standard company replies, Objections, or pricing targets..."
-                      rows={6}
-                      className="w-full px-4 py-3 bg-[#09090B] border border-[#27272A] rounded-xl text-xs text-[#F4F4F5] placeholder-[#71717A] font-sans leading-relaxed resize-none transition-all duration-200 focus:outline-none focus:border-[#6366F1] hover:border-[#71717A]/50 min-h-[150px]"
-                    />
-                    <span className="absolute bottom-3 right-4 text-[9px] font-mono text-[#71717A] tabular-nums select-none">
-                      {newAnswer.length.toLocaleString()} chars
-                    </span>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <motion.button
-                  whileTap={canSubmit ? { scale: 0.98 } : {}}
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={isSubmitting || !canSubmit}
-                  className={`w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl text-xs font-semibold font-sans transition-all duration-200 cursor-pointer select-none ${
-                    canSubmit && !isSubmitting
-                      ? "bg-[#6366F1] text-white hover:bg-[#4F46E5] hover:shadow-lg"
-                      : "bg-[#1C1C1F] text-[#71717A] cursor-not-allowed border border-[#27272A]"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      SYNCHRONIZING ATOMS…
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      Deploy to Live Brain
-                    </>
-                  )}
-                </motion.button>
-
-                <p className="text-center text-[9px] text-[#71717A] font-mono select-none">
-                  Press ⌘ + Enter to queue parameters
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* RIGHT COLUMN: Active FAQ Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.5,
-              delay: 0.2,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            className="lg:col-span-3 space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <h2 className="font-mono text-[10px] font-semibold text-[#71717A] tracking-wider uppercase">
-                  ACTIVE DEPLOYED KNOWLEDGE
-                </h2>
-                {faqs.length > 0 && (
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#121214] text-[#71717A] border border-[#27272A] tabular-nums">
-                    {faqs.length}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* List View */}
-            <AnimatePresence mode="wait">
-              {isLoading ? (
-                <motion.div
-                  key="skeleton"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <KnowledgeSkeleton />
-                </motion.div>
-              ) : faqs.length === 0 ? (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.35 }}
-                  className="flex flex-col items-center justify-center py-20 px-8 text-center bg-[#121214] rounded-2xl border border-dashed border-[#27272A] select-none"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-[#09090B] border border-[#27272A] flex items-center justify-center text-[#71717A] mb-5 shadow-inner">
-                    <BookOpen className="w-7 h-7" />
-                  </div>
-                  <h3 className="text-[#F4F4F5] font-semibold text-xs font-sans">
-                    No active parameters found
-                  </h3>
-                  <p className="text-[#71717A] text-[11px] mt-1 max-w-[320px] leading-relaxed mx-auto">
-                    Submit your first trigger-response pair on the left to teach LeadFlow how to navigate customer inquiries.
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="list"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-3"
-                >
-                  <AnimatePresence initial={false}>
-                    {faqs.map((faq, idx) => (
-                      <FAQCard
-                        key={faq.id}
-                        faq={faq}
-                        onDelete={handleDelete}
-                        index={idx}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+        {/* Header Form (52px tall) */}
+        <div className="h-[52px] px-5 flex flex-col justify-center border-b border-[var(--border-subtle)] shrink-0">
+          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] font-display">
+            Train the AI Brain
+          </h2>
+          <p className="text-[12px] text-[var(--text-secondary)] font-sans mt-0.5 leading-none">
+            Inject precise Q&A context
+          </p>
         </div>
-      </div>
 
-      {/* Floating Bottom Action Banner */}
-      <AnimatePresence>
-        {isFormDirty && (
-          <motion.div
-            initial={{ opacity: 0, y: 80 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 80 }}
-            transition={{ type: "spring", stiffness: 220, damping: 28 }}
-            className="fixed bottom-6 inset-x-0 md:left-72 md:right-8 z-40 flex items-center justify-center px-4"
-          >
-            <div className="bg-[#1C1C1F] border border-amber-500/20 shadow-2xl rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-3xl w-full">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5 text-amber-500" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-semibold text-[#F4F4F5]">
-                    ⚠️ Unsaved parameter modifications detected
-                  </h3>
-                  <p className="text-[10px] text-[#71717A] font-sans mt-0.5">
-                    You have entered trigger details that are not yet committed to live database vectors.
-                  </p>
-                </div>
+        {/* Form Body Fields (padding 20px, gap 20px) */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          
+          {/* Question Trigger Field */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between select-none">
+              <label
+                htmlFor="kb-question"
+                className="text-[11px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-[0.6px] flex items-center gap-1.5"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                Customer Trigger Question
+              </label>
+              <span 
+                className="text-[11px] font-mono select-none"
+                style={{
+                  color: newQuestion.length > 180 ? "var(--danger-icon)" : "var(--text-tertiary)"
+                }}
+              >
+                {newQuestion.length} / 200
+              </span>
+            </div>
+            <input
+              id="kb-question"
+              type="text"
+              maxLength={200}
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              placeholder='e.g. "Where are you located?"'
+              className="w-full h-10 px-3 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]"
+              style={{ transition: "border-color 150ms ease, box-shadow 150ms ease" }}
+            />
+          </div>
+
+          {/* AI Response Textarea Field */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between select-none">
+              <label
+                htmlFor="kb-answer"
+                className="text-[11px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-[0.6px] flex items-center gap-1.5"
+              >
+                <MessageSquareText className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                AI Response Payload
+              </label>
+              <span className="text-[11px] font-mono text-[var(--text-tertiary)] select-none">
+                {newAnswer.length} chars
+              </span>
+            </div>
+            <textarea
+              id="kb-answer"
+              value={newAnswer}
+              onChange={(e) => setNewAnswer(e.target.value)}
+              placeholder="Write the exact response the AI should give..."
+              rows={6}
+              maxLength={1000}
+              className="w-full px-3 py-[10px] bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[13px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-mono leading-[1.55] resize-none focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]"
+              style={{ height: "130px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
+            />
+          </div>
+
+          {/* Render Actions in Layout Header Portal */}
+          {mounted && typeof document !== "undefined" && document.getElementById("header-cta-portal") ? (
+            createPortal(
+              <button
+                onClick={handleAdd}
+                disabled={isSubmitting || !canSubmit}
+                className={`h-9 px-4 rounded-[var(--radius-md)] text-[13px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
+                  deploySuccess 
+                    ? "bg-[var(--success-icon)] text-white" 
+                    : canSubmit && !isSubmitting
+                      ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] shadow-[var(--shadow-sm)]"
+                      : "bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)]"
+                }`}
+                style={{
+                  pointerEvents: isSubmitting ? "none" : "auto"
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="dual-ring-spinner shrink-0" />
+                    <span>Deploying...</span>
+                  </>
+                ) : deploySuccess ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Deployed!</span>
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-3.5 h-3.5 shrink-0" />
+                    <span>Deploy to Live Brain</span>
+                  </>
+                )}
+              </button>,
+              document.getElementById("header-cta-portal")!
+            )
+          ) : null}
+        </div>
+
+        {/* Sticky Unsaved Changes Banner */}
+        <AnimatePresence>
+          {isFormDirty && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              className="absolute bottom-0 inset-x-0 bg-[var(--warning-bg)] border-t border-[var(--warning-border)] p-4 flex items-center justify-between z-20 shadow-md select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-[var(--warning-icon)] shrink-0" />
+                <span className="text-[13px] font-medium text-[var(--warning-text)]">
+                  Unsaved changes
+                </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
+                <button
                   onClick={() => {
                     setNewQuestion("");
                     setNewAnswer("");
                   }}
-                  className="px-3.5 py-1.5 rounded-xl border border-[#27272A] text-[11px] text-[#71717A] hover:bg-white/[0.02] hover:text-[#F4F4F5] transition-colors duration-150 cursor-pointer"
+                  className="px-3 h-8 rounded-[var(--radius-md)] text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none font-sans"
+                  style={{ transition: "color 150ms ease, background-color 150ms ease" }}
                 >
                   Discard
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
+                </button>
+                <button
                   onClick={handleAdd}
                   disabled={!canSubmit || isSubmitting}
-                  className={`px-3.5 py-1.5 rounded-xl text-[11px] font-semibold transition-colors duration-150 cursor-pointer ${
-                    canSubmit && !isSubmitting
-                      ? "bg-[#6366F1] text-white hover:bg-[#4F46E5]"
-                      : "bg-[#27272A] text-[#71717A] cursor-not-allowed"
-                  }`}
+                  className="px-3 h-8 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer outline-none font-sans bg-[var(--warning-icon)] hover:bg-[var(--warning-text)] text-white disabled:bg-[var(--bg-muted)] disabled:text-[var(--text-tertiary)] disabled:cursor-not-allowed"
+                  style={{ transition: "background-color 150ms ease" }}
                 >
-                  Deploy to Live Agent
-                </motion.button>
+                  Deploy
+                </button>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </aside>
 
-      <Toast
-        show={toast.show}
-        message={toast.message}
-        variant={toast.variant}
-        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-      />
-    </>
+      {/* ─── RIGHT PANEL: Active Catalog List ─────────────────────────── */}
+      <section className="flex-1 flex flex-col h-full bg-[var(--bg-canvas)] select-none">
+        
+        {/* Header Deployed Catalog (52px tall) */}
+        <div className="h-[52px] px-5 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] shrink-0 shadow-sm z-10">
+          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] font-display">
+            Deployed Knowledge
+          </h2>
+          {faqs.length > 0 && (
+            <span className="text-[12px] font-medium px-[10px] py-1.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)]">
+              {faqs.length} entries
+            </span>
+          )}
+        </div>
+
+        {/* Accordions Stack */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 select-none">
+          {isLoading ? (
+            <KnowledgeSkeleton />
+          ) : faqs.length === 0 ? (
+            /* Empty Catalog state */
+            <div className="flex flex-col items-center justify-center py-20 px-8 text-center h-full select-none">
+              <Brain className="w-12 h-12 text-[var(--text-tertiary)] mb-2" />
+              <h3 className="text-[16px] font-semibold text-[var(--text-primary)] font-display">
+                No knowledge deployed yet
+              </h3>
+              <p className="text-[14px] text-[var(--text-secondary)] mt-1 max-w-[280px] leading-relaxed mx-auto">
+                Train the AI brain using the form on the left.
+              </p>
+            </div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {faqs.map((faq, index) => (
+                <FAQCard
+                  key={faq.id}
+                  faq={faq}
+                  onDelete={handleDelete}
+                  index={index}
+                />
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
+      </section>
+
+    </div>
   );
 }
