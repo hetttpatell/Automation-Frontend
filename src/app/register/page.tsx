@@ -4,54 +4,67 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Building2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
   const { success, error: toastError } = useToast();
 
+  const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = "Sign In | LeadFlow - WhatsApp AI Agent";
+    document.title = "Sign Up | LeadFlow - WhatsApp AI Agent";
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!email || !password) {
+    if (!businessName || !email || !password) {
       toastError("Please fill in all fields.");
       setLoading(false);
       return;
     }
 
+    if (password.length < 6) {
+      toastError("Password must be at least 6 characters long.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            business_name: businessName,
+          },
+        },
       });
 
       if (error) {
         throw error;
       }
 
-      success("Welcome back! Signing you in...");
-      router.refresh();
-      router.push("/dashboard");
-    } catch (err: any) {
-      if (err.message === "Email not confirmed") {
-        toastError("Please confirm your email address before signing in. Check your inbox for the verification link.");
+      if (data.session) {
+        success("Account created successfully! Welcome to LeadFlow.");
+        router.refresh();
+        router.push("/dashboard");
       } else {
-        console.error("[Login Error]:", err.message || err);
-        toastError(err.message || "Invalid credentials. Please check your email and password.");
+        success("Registration successful! Please verify your email, then sign in.");
+        router.push("/login");
       }
+    } catch (err: any) {
+      console.error("[Registration Error]:", err.message || err);
+      toastError(err.message || "Failed to register account. Email may already be in use.");
     } finally {
       setLoading(false);
     }
@@ -89,16 +102,41 @@ export default function LoginPage() {
             </div>
 
             <h1 className="font-sans text-2xl font-semibold tracking-tight text-white mb-2">
-              Welcome back
+              Create your account
             </h1>
             
             <p className="font-sans text-sm text-zinc-400 max-w-[300px]">
-              Welcome back to LeadFlow. Log in to manage your automated sales pipeline.
+              Set up your automated sales pipeline and start capturing leads today.
             </p>
           </div>
 
           {/* Form Fields */}
-          <form onSubmit={handleLogin} className="mt-8 space-y-5" noValidate>
+          <form onSubmit={handleRegister} className="mt-8 space-y-5" noValidate>
+            {/* Business Name Field */}
+            <div className="space-y-2">
+              <label 
+                htmlFor="businessName" 
+                className="block text-xs font-semibold text-zinc-400 tracking-wide uppercase select-none"
+              >
+                Business Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <input
+                  id="businessName"
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Acme Corp"
+                  disabled={loading}
+                  className="w-full h-12 pl-10 pr-4 bg-[#09090B] border border-[#27272A] focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/10 rounded-xl text-zinc-100 text-sm font-medium outline-none transition-all duration-200 disabled:opacity-50"
+                  required
+                />
+              </div>
+            </div>
+
             {/* Email Field */}
             <div className="space-y-2">
               <label 
@@ -126,14 +164,12 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label 
-                  htmlFor="password" 
-                  className="block text-xs font-semibold text-zinc-400 tracking-wide uppercase select-none"
-                >
-                  Password
-                </label>
-              </div>
+              <label 
+                htmlFor="password" 
+                className="block text-xs font-semibold text-zinc-400 tracking-wide uppercase select-none"
+              >
+                Password
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
                   <Lock className="w-4 h-4" />
@@ -164,29 +200,29 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              id="login-submit-button"
+              id="register-submit-button"
               disabled={loading}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#818cf8] hover:from-[#5a5cd8] hover:to-[#737ee0] text-white font-semibold text-sm shadow-md shadow-[#6366F1]/10 hover:shadow-lg hover:shadow-[#6366F1]/20 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-98 cursor-pointer flex items-center justify-center gap-2 group disabled:opacity-75 disabled:pointer-events-none disabled:transform-none disabled:shadow-none"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Signing In...</span>
+                  <span>Registering...</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Sign Up</span>
                   <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Toggle register page link */}
+          {/* Toggle login page link */}
           <div className="mt-6 text-center text-sm text-zinc-400">
-            Don't have an account?{" "}
-            <Link href="/register" className="cursor-pointer text-[#6366F1] hover:text-[#818cf8] transition-colors font-semibold">
-              Sign up
+            Already have an account?{" "}
+            <Link href="/login" className="cursor-pointer text-[#6366F1] hover:text-[#818cf8] transition-colors font-semibold">
+              Sign in
             </Link>
           </div>
 

@@ -7,7 +7,6 @@ import {
   Loader2, 
   Sparkles, 
   Check, 
-  Eye, 
   Copy,
   Globe,
   Briefcase,
@@ -18,7 +17,13 @@ import {
   Clock,
   Building2,
   DollarSign,
-  ChevronDown
+  ChevronDown,
+  User,
+  BookOpen,
+  Terminal,
+  CreditCard,
+  ShieldCheck,
+  FileText
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -75,7 +80,13 @@ const TRANSLATIONS = {
     discard: "Discard",
     save: "Save Profile",
     saving: "Deploying...",
-    lastSaved: "Last saved"
+    lastSaved: "Last saved",
+    tabProfile: "General Profile",
+    tabProfileDesc: "Identity, tone & language settings",
+    tabVectors: "Knowledge Vectors",
+    tabVectorsDesc: "Services, hours & billing limits",
+    tabCompiler: "AI Prompt Compiler",
+    tabCompilerDesc: "Live prompt variable compiled preview"
   },
   hi: {
     badge: "एआई बिजनेस प्रोफाइल",
@@ -109,7 +120,7 @@ const TRANSLATIONS = {
     specialRulesHelper: "सख्त नियम जिन्हें एआई एजेंट को लागू करना होगा।",
     aiToneTitle: "एआई संचार टोन प्रीसेट",
     aiToneSubtitle: "सक्रिय बातचीत धागे के लिए कॉन्फ़िगर किए गए व्यक्तित्व",
-    promptPreview: "एआई सिस्टम निर्देश पूर्वावलोकन",
+    promptPreview: "एआई सिस्टम निर्देश निर्देश पूर्वावलोकन",
     promptPreviewSubtitle: "जेमिनी को भेजे गए संकलित निर्देश प्रॉम्प्ट",
     copyBtn: "क्लिपबोर्ड पर कॉपी करें",
     copied: "कॉपी किया गया!",
@@ -118,7 +129,13 @@ const TRANSLATIONS = {
     discard: "रद्द करें",
     save: "प्रोफ़ाइल सहेजें",
     saving: "तैनात किया जा रहा है...",
-    lastSaved: "अंतिम बार सहेजा गया"
+    lastSaved: "अंतिम बार सहेजा गया",
+    tabProfile: "सामान्य प्रोफ़ाइल",
+    tabProfileDesc: "पहचान, टोन और भाषा",
+    tabVectors: "ज्ञान वैक्टर",
+    tabVectorsDesc: "सेवाएं, समय और नीतियां",
+    tabCompiler: "एआई प्रॉम्प्ट कंपाइलर",
+    tabCompilerDesc: "लाइव कंपाइल निर्देश पूर्वावलोकन"
   },
   gu: {
     badge: "એઆઈ બિઝનેસ પ્રોફાઇલ",
@@ -161,13 +178,22 @@ const TRANSLATIONS = {
     discard: "રદ કરો",
     save: "પ્રોફાઇલ સાચવો",
     saving: "તૈનાત થઈ રહ્યું છે...",
-    lastSaved: "છેલ્લે સાચવેલ"
+    lastSaved: "છેલ્લે સાચવેલ",
+    tabProfile: "સામાન્ય પ્રોફાઇલ",
+    tabProfileDesc: "ઓળખ, ટોન અને ભાષા",
+    tabVectors: "જ્ઞાન વેક્ટર્સ",
+    tabVectorsDesc: "સેવાઓ, સમય અને નિયમો",
+    tabCompiler: "એઆઈ પ્રોમ્પ્ટ કમ્પાઈલર",
+    tabCompilerDesc: "લાઇવ કમ્પાઇલ કરેલ પૂર્વાવલોકન"
   }
 };
 
 export default function SettingsPage() {
   const supabase = createClient();
   const { success: toastSuccess, error: toastError } = useToast();
+
+  // Active navigation tab
+  const [activeTab, setActiveTab] = useState<"profile" | "vectors" | "compiler" | "integrations">("profile");
 
   // Form states
   const [businessName, setBusinessName] = useState("");
@@ -179,11 +205,16 @@ export default function SettingsPage() {
   const [botLanguage, setBotLanguage] = useState("English");
   const [aiTone, setAiTone] = useState("Professional");
 
+  // Google Calendar States
+  const [tenantId, setTenantId] = useState("");
+  const [isCalendarConnected, setIsCalendarConnected] = useState(false);
+  const [gcalCalendarId, setGcalCalendarId] = useState("");
+  const [googleReviewLink, setGoogleReviewLink] = useState("");
+
   // Dynamic UI Language
   const [formLanguage, setFormLanguage] = useState<"en" | "hi" | "gu">("en");
 
   // Toggle visual preview
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   // Loading feedback
@@ -202,6 +233,8 @@ export default function SettingsPage() {
     rulesText: "",
     botLanguage: "English",
     aiTone: "Professional",
+    gcalCalendarId: "",
+    googleReviewLink: "",
   });
 
   const [mounted, setMounted] = useState(false);
@@ -209,34 +242,47 @@ export default function SettingsPage() {
     setMounted(true);
   }, []);
 
+  // Listen to search params for Google Calendar connection notifications
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("success") === "true") {
+        toastSuccess("Google Calendar connected successfully!");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (params.get("error") === "oauth_failed") {
+        toastError("Failed to connect Google Calendar. Please try again.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [toastSuccess, toastError]);
+
   const t = TRANSLATIONS[formLanguage];
 
   // Fetch initial configs
-  useEffect(() => {
-    async function fetchConfig() {
-      setIsLoading(true);
+  const fetchConfig = React.useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-      if (authError || !user) {
-        console.error("[Settings Auth Error]:", authError?.message || "No user found");
-        setIsLoading(false);
-        return;
-      }
+    if (authError || !user) {
+      console.error("[Settings Auth Error]:", authError?.message || "No user found");
+      setIsLoading(false);
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
-        .eq("owner_email", user.email)
-        .single();
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
+      .eq("owner_email", user.email)
+      .single();
 
-      let tenantConfig = data;
-      const defaultBusinessName = user.email
-        ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) + "'s Business"
-        : "My Business";
+    let tenantConfig = data;
+    const defaultBusinessName = user.email
+      ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) + "'s Business"
+      : "My Business";
 
-      if (error && error.code === "PGRST116") {
-        const initialPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${defaultBusinessName}. 
+    if (error && error.code === "PGRST116") {
+      const initialPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${defaultBusinessName}. 
 You must communicate primarily in English.
 Our services are: General support. 
 Our hours are: Monday to Friday: 9:00 AM - 6:00 PM. 
@@ -244,90 +290,117 @@ We accept these payments: Cash, UPI, Cards.
 Our target audience is: General segment.
 Follow these rules strictly: Customer satisfaction is paramount.`;
 
-        let { data: newTenant, error: createError } = await supabase
-          .from("tenants")
-          .insert({
-            business_name: defaultBusinessName,
-            owner_email: user.email,
-            ai_system_instruction: initialPrompt,
-            system_prompt: initialPrompt,
-            ai_tone: "Professional",
-            bot_language: "English",
-            services_text: "General services and business support",
-            hours_text: "Monday to Friday: 9:00 AM - 6:00 PM",
-            rules_text: "Customer satisfaction is paramount.",
-            payment_methods_text: "Cash, UPI, Cards",
-            target_audience_text: "General segment",
-          })
-          .select("ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
-          .single();
+      let { data: newTenant, error: createError } = await supabase
+        .from("tenants")
+        .insert({
+          business_name: defaultBusinessName,
+          owner_email: user.email,
+          ai_system_instruction: initialPrompt,
+          system_prompt: initialPrompt,
+          ai_tone: "Professional",
+          bot_language: "English",
+          services_text: "General services and business support",
+          hours_text: "Monday to Friday: 9:00 AM - 6:00 PM",
+          rules_text: "Customer satisfaction is paramount.",
+          payment_methods_text: "Cash, UPI, Cards",
+          target_audience_text: "General segment",
+        })
+        .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
+        .single();
 
-        if (createError) {
-          if (createError.code === "23505" || createError.message?.includes("unique constraint")) {
-            const { data: existingTenant, error: fetchError } = await supabase
-              .from("tenants")
-              .select("ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
-              .eq("owner_email", user.email)
-              .single();
-            if (!fetchError) tenantConfig = existingTenant;
-          }
-        } else {
-          tenantConfig = newTenant;
+      if (createError) {
+        if (createError.code === "23505" || createError.message?.includes("unique constraint")) {
+          const { data: existingTenant, error: fetchError } = await supabase
+            .from("tenants")
+            .select("id, is_calendar_connected, gcal_calendar_id, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
+            .eq("owner_email", user.email)
+            .single();
+          if (!fetchError) tenantConfig = existingTenant;
         }
+      } else {
+        tenantConfig = newTenant;
       }
-
-      if (tenantConfig) {
-        const tone = tenantConfig.ai_tone || "Professional";
-        const name = tenantConfig.business_name || defaultBusinessName;
-        const services = tenantConfig.services_text || "";
-        const hours = tenantConfig.hours_text || "";
-        const payment = tenantConfig.payment_methods_text || "";
-        const audience = tenantConfig.target_audience_text || "";
-        const rules = tenantConfig.rules_text || "";
-        const lang = tenantConfig.bot_language || "English";
-
-        setBusinessName(name);
-        setServicesText(services);
-        setHoursText(hours);
-        setPaymentMethodsText(payment);
-        setTargetAudienceText(audience);
-        setRulesText(rules);
-        setBotLanguage(lang);
-        setAiTone(tone);
-
-        setOriginalData({
-          businessName: name,
-          servicesText: services,
-          hoursText: hours,
-          paymentMethodsText: payment,
-          targetAudienceText: audience,
-          rulesText: rules,
-          botLanguage: lang,
-          aiTone: tone,
-        });
-      }
-
-      setIsLoading(false);
     }
 
-    fetchConfig();
-  }, []);
+    if (tenantConfig) {
+      const tone = tenantConfig.ai_tone || "Professional";
+      const name = tenantConfig.business_name || defaultBusinessName;
+      const services = tenantConfig.services_text || "";
+      const hours = tenantConfig.hours_text || "";
+      const payment = tenantConfig.payment_methods_text || "";
+      const audience = tenantConfig.target_audience_text || "";
+      const rules = tenantConfig.rules_text || "";
+      const lang = tenantConfig.bot_language || "English";
+      const tId = tenantConfig.id || "";
+      const calConnected = tenantConfig.is_calendar_connected || false;
+      const calId = tenantConfig.gcal_calendar_id || "";
+      const googleLink = tenantConfig.google_review_link || "";
 
-  // Track dirty changes
+      setBusinessName(name);
+      setServicesText(services);
+      setHoursText(hours);
+      setPaymentMethodsText(payment);
+      setTargetAudienceText(audience);
+      setRulesText(rules);
+      setBotLanguage(lang);
+      setAiTone(tone);
+      setTenantId(tId);
+      setIsCalendarConnected(calConnected);
+      setGcalCalendarId(calId);
+      setGoogleReviewLink(googleLink);
+
+      setOriginalData({
+        businessName: name,
+        servicesText: services,
+        hoursText: hours,
+        paymentMethodsText: payment,
+        targetAudienceText: audience,
+        rulesText: rules,
+        botLanguage: lang,
+        aiTone: tone,
+        gcalCalendarId: calId,
+        googleReviewLink: googleLink,
+      });
+    }
+
+    setIsLoading(false);
+  }, [supabase]);
+
+  // Initial fetch on mount
   useEffect(() => {
-    setHasChanges(
-      businessName !== originalData.businessName ||
-      servicesText !== originalData.servicesText ||
-      hoursText !== originalData.hoursText ||
-      paymentMethodsText !== originalData.paymentMethodsText ||
-      targetAudienceText !== originalData.targetAudienceText ||
-      rulesText !== originalData.rulesText ||
-      botLanguage !== originalData.botLanguage ||
-      aiTone !== originalData.aiTone
-    );
-  }, [
-    businessName, servicesText, hoursText, paymentMethodsText, targetAudienceText, rulesText, botLanguage, aiTone, originalData
-  ]);
+    fetchConfig();
+  }, [fetchConfig]);
+
+  // Re-fetch config on tab focus (syncs connected state if they completed OAuth in the newly opened tab)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleFocus = () => {
+      // Re-fetch silently without showing full-screen loader to keep it seamless
+      fetchConfig(false);
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [fetchConfig]);
+
+  // Check which tabs have unsaved edits
+  const hasProfileChanges = 
+    businessName !== originalData.businessName ||
+    botLanguage !== originalData.botLanguage ||
+    aiTone !== originalData.aiTone;
+
+  const hasVectorChanges = 
+    servicesText !== originalData.servicesText ||
+    hoursText !== originalData.hoursText ||
+    paymentMethodsText !== originalData.paymentMethodsText ||
+    targetAudienceText !== originalData.targetAudienceText ||
+    rulesText !== originalData.rulesText;
+
+  const hasIntegrationChanges = gcalCalendarId !== originalData.gcalCalendarId || googleReviewLink !== originalData.googleReviewLink;
+
+  // Track global dirty changes
+  useEffect(() => {
+    setHasChanges(hasProfileChanges || hasVectorChanges || hasIntegrationChanges);
+  }, [hasProfileChanges, hasVectorChanges, hasIntegrationChanges]);
 
   // Compile instructions preview
   const compiledPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${businessName || "My Business"}. 
@@ -343,10 +416,10 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
     const variables = [
       { key: businessName || "My Business", label: "businessName", style: "bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: botLanguage, label: "botLanguage", style: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
-      { key: servicesText || "General services and business support", label: "servicesText", style: "bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
+      { key: servicesText || "General services and business support", label: "servicesText", style: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] border border-[var(--info-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: hoursText || "Monday to Friday: 9:00 AM - 6:00 PM", label: "hoursText", style: "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border border-[var(--warning-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
-      { key: paymentMethodsText || "Cash, UPI, Cards", label: "paymentMethods", style: "bg-[var(--color-ai-bg)] text-[var(--color-ai)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
-      { key: targetAudienceText || "General segment", label: "targetAudience", style: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] border border-[var(--info-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
+      { key: paymentMethodsText || "Cash, UPI, Cards", label: "paymentMethods", style: "bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
+      { key: targetAudienceText || "General segment", label: "targetAudience", style: "bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: rulesText || "Customer satisfaction is paramount.", label: "specialRules", style: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] border border-[var(--danger-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
     ];
 
@@ -364,7 +437,7 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
         splitText.forEach((t, index) => {
           if (index > 0) {
             nextParts.push(
-              <span key={`${v.label}-${index}`} className={v.style} title={`Active Vector: ${v.label}`}>
+              <span key={`${v.label}-${index}`} className={v.style} title={`Variable: ${v.label}`}>
                 {v.key}
               </span>
             );
@@ -408,6 +481,8 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
           rules_text: rulesText,
           bot_language: botLanguage,
           ai_tone: aiTone,
+          gcal_calendar_id: gcalCalendarId || null,
+          google_review_link: googleReviewLink || null
         })
         .eq("owner_email", user.email);
 
@@ -422,6 +497,8 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
         rulesText,
         botLanguage,
         aiTone,
+        gcalCalendarId,
+        googleReviewLink,
       });
       setHasChanges(false);
       
@@ -446,6 +523,7 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
     setRulesText(originalData.rulesText);
     setBotLanguage(originalData.botLanguage);
     setAiTone(originalData.aiTone);
+    setGoogleReviewLink(originalData.googleReviewLink);
     toastSuccess("Modifications discarded");
   }
 
@@ -457,33 +535,67 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
     setTimeout(() => setIsCopied(false), 2000);
   }
 
-  const inputBaseClass = "w-full px-3 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]";
+  // Google Calendar Connection Controls
+  function handleConnectCalendar() {
+    if (!tenantId) {
+      toastError("Tenant ID not found. Please reload and try again.");
+      return;
+    }
+    // Open OAuth endpoint in a new tab to bypass iframe sandboxing limits
+    window.open(`http://localhost:3001/api/calendar/auth?tenant_id=${tenantId}`, '_blank');
+  }
+
+  async function handleDisconnectCalendar() {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw new Error("No user found");
+
+      const { error } = await supabase
+        .from("tenants")
+        .update({
+          gcal_access_token: null,
+          gcal_refresh_token: null,
+          is_calendar_connected: false
+        })
+        .eq("owner_email", user.email);
+
+      if (error) throw error;
+
+      setIsCalendarConnected(false);
+      toastSuccess("Google Calendar disconnected successfully!");
+    } catch (err: any) {
+      console.error("[Disconnect Error]:", err.message);
+      toastError("Failed to disconnect calendar");
+    }
+  }
+
+  const inputBaseClass = "w-full px-3.5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)] transition-all duration-150";
 
   return (
-    <div className="h-full overflow-y-auto bg-[var(--bg-canvas)] select-none relative flex flex-col">
+    <div className="h-full overflow-hidden bg-[var(--bg-canvas)] select-none flex flex-col">
       
       {/* ─── Scrollable Body Area ───────────────────────────────────── */}
-      <div className="flex-1 p-6 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24">
         
         {/* Page Header (with language segmented switcher) */}
-        <div className="max-w-[720px] mx-auto flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+        <div className="max-w-[1000px] mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[10px] font-mono font-bold tracking-wider text-[var(--brand-primary)] uppercase select-none self-start">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[10px] font-mono font-bold tracking-wider text-[var(--brand-primary)] uppercase select-none self-start">
               {t.badge}
             </div>
 
-            <div className="space-y-0.5">
-              <h1 className="font-display text-2xl font-bold text-[var(--text-primary)] leading-tight">
+            <div className="space-y-1">
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight leading-tight">
                 {t.title}
               </h1>
-              <p className="font-sans text-xs text-[var(--text-secondary)] font-medium max-w-md">
+              <p className="font-sans text-xs text-[var(--text-secondary)] font-medium max-w-xl">
                 {t.subtitle}
               </p>
             </div>
           </div>
 
           {/* 3-Option segmented language control */}
-          <div className="flex bg-[var(--bg-subtle)] p-[3px] rounded-[var(--radius-md)] border border-[var(--border-subtle)] self-start sm:self-end shadow-[var(--shadow-sm)] gap-[2px] select-none">
+          <div className="flex bg-[var(--bg-surface)] p-[4px] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] self-start md:self-center shadow-[var(--shadow-sm)] gap-[2px] select-none">
             {(["en", "hi", "gu"] as const).map((lang) => {
               const labels = { en: "EN", hi: "हिंदी", gu: "ગુ" };
               return (
@@ -491,12 +603,11 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
                   key={lang}
                   type="button"
                   onClick={() => setFormLanguage(lang)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none ${
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-[var(--radius-md)] cursor-pointer outline-none transition-all duration-150 ${
                     formLanguage === lang
-                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--shadow-xs)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--shadow-sm)]"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
                   }`}
-                  style={{ transition: "background-color 150ms ease, color 150ms ease" }}
                 >
                   {labels[lang]}
                 </button>
@@ -505,294 +616,526 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
           </div>
         </div>
 
-        {/* Form Container Cards */}
-        <div className="max-w-[720px] mx-auto space-y-4 select-none">
-          
+        {/* Main Settings Grid Workspace */}
+        <div className="max-w-[1000px] mx-auto select-none">
           {isLoading ? (
-            <div className="bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-6 h-80 animate-shimmer" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="md:col-span-1 space-y-3">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="h-14 bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] animate-shimmer" />
+                ))}
+              </div>
+              <div className="md:col-span-3 bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-6 h-96 animate-shimmer" />
+            </div>
           ) : (
-            <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
               
-              {/* Section 1: Business Identity */}
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 space-y-4 shadow-[var(--shadow-xs)]">
-                <h2 className="text-[13px] font-semibold font-display text-[var(--text-primary)] uppercase tracking-[0.5px] pl-2.5 border-l-[3px] border-[var(--brand-primary)] mb-4">
-                  {t.identityTitle}
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Business Name */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5" />
-                      {t.businessName}
-                    </label>
-                    <input
-                      type="text"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder={t.businessNamePlaceholder}
-                      className={`${inputBaseClass} h-10`}
-                      style={{ transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">
-                      {t.businessNameHelper}
-                    </p>
-                  </div>
-
-                  {/* Primary Bot Language */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5" />
-                      {t.botLanguage}
-                    </label>
-                    <div className="relative">
-                      <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
-                      <select
-                        value={botLanguage}
-                        onChange={(e) => setBotLanguage(e.target.value)}
-                        className={`${inputBaseClass} h-10 pl-10 pr-10 cursor-pointer appearance-none`}
-                        style={{ transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                      >
-                        <option value="English">English</option>
-                        <option value="Hindi">Hindi (हिंदी)</option>
-                        <option value="Hinglish">Hinglish</option>
-                        <option value="Spanish">Spanish (Español)</option>
-                        <option value="Arabic">Arabic (العربية)</option>
-                        <option value="French">French (Français)</option>
-                        <option value="Portuguese">Portuguese (Português)</option>
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none select-none">
-                        <ChevronDown className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">
-                      {t.botLanguageHelper}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Core Information */}
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 space-y-4 shadow-[var(--shadow-xs)]">
-                <h2 className="text-[13px] font-semibold font-display text-[var(--text-primary)] uppercase tracking-[0.5px] pl-2.5 border-l-[3px] border-[var(--brand-primary)] mb-4">
-                  {t.coreInfoTitle}
-                </h2>
-
-                <div className="space-y-4">
-                  {/* Services & Pricing */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <DollarSign className="w-3.5 h-3.5" />
-                      {t.services}
-                    </label>
-                    <textarea
-                      value={servicesText}
-                      onChange={(e) => setServicesText(e.target.value)}
-                      placeholder={t.servicesPlaceholder}
-                      rows={3}
-                      className={`${inputBaseClass} py-2 leading-relaxed resize-vertical`}
-                      style={{ height: "80px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">{t.servicesHelper}</p>
-                  </div>
-
-                  {/* Working Hours */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      {t.hours}
-                    </label>
-                    <textarea
-                      value={hoursText}
-                      onChange={(e) => setHoursText(e.target.value)}
-                      placeholder={t.hoursPlaceholder}
-                      rows={3}
-                      className={`${inputBaseClass} py-2 leading-relaxed resize-vertical`}
-                      style={{ height: "80px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">{t.hoursHelper}</p>
-                  </div>
-
-                  {/* Payment Methods */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Info className="w-3.5 h-3.5" />
-                      {t.payments}
-                    </label>
-                    <textarea
-                      value={paymentMethodsText}
-                      onChange={(e) => setPaymentMethodsText(e.target.value)}
-                      placeholder={t.paymentsPlaceholder}
-                      rows={2}
-                      className={`${inputBaseClass} py-2 leading-relaxed resize-vertical`}
-                      style={{ height: "60px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">{t.paymentsHelper}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Brand Voice & Rules */}
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 space-y-4 shadow-[var(--shadow-xs)]">
-                <h2 className="text-[13px] font-semibold font-display text-[var(--text-primary)] uppercase tracking-[0.5px] pl-2.5 border-l-[3px] border-[var(--brand-primary)] mb-4">
-                  {t.brandVoiceTitle}
-                </h2>
-
-                <div className="space-y-4">
-                  {/* Target Audience */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {t.targetAudience}
-                    </label>
-                    <textarea
-                      value={targetAudienceText}
-                      onChange={(e) => setTargetAudienceText(e.target.value)}
-                      placeholder={t.targetAudiencePlaceholder}
-                      rows={2}
-                      className={`${inputBaseClass} py-2 leading-relaxed resize-vertical`}
-                      style={{ height: "80px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">{t.targetAudienceHelper}</p>
-                  </div>
-
-                  {/* Special Rules */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                      <Info className="w-3.5 h-3.5" />
-                      {t.specialRules}
-                    </label>
-                    <textarea
-                      value={rulesText}
-                      onChange={(e) => setRulesText(e.target.value)}
-                      placeholder={t.specialRulesPlaceholder}
-                      rows={3}
-                      className={`${inputBaseClass} py-2 leading-relaxed resize-vertical`}
-                      style={{ height: "80px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)] font-sans">{t.specialRulesHelper}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 4: AI Tone Preset Grid */}
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 space-y-4 shadow-[var(--shadow-xs)]">
-                <h2 className="text-[13px] font-semibold font-display text-[var(--text-primary)] uppercase tracking-[0.5px] pl-2.5 border-l-[3px] border-[var(--brand-primary)] mb-4">
-                  {t.aiToneTitle}
-                </h2>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 select-none">
-                  {TONE_OPTIONS.map((opt) => {
-                    const isSelected = aiTone === opt.value;
-                    const Icon = opt.icon;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setAiTone(opt.value)}
-                        className={`h-[105px] p-3 rounded-[var(--radius-lg)] border flex flex-col items-center justify-center text-center cursor-pointer select-none relative active:scale-[0.98] overflow-hidden ${
-                          isSelected 
-                            ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)] shadow-[var(--shadow-sm)]" 
-                            : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)]"
-                        }`}
-                        style={{ transition: "border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease, transform 100ms ease" }}
-                      >
-                        {/* Selected Checkmark Badge top-right */}
-                        {isSelected && (
-                          <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-md">
-                            <Check className="w-2.5 h-2.5 text-white" />
-                          </span>
-                        )}
-                        
-                        <motion.div
-                          animate={{ 
-                            scale: isSelected ? 1.15 : 1,
-                            rotate: isSelected ? [0, 8, -8, 0] : 0
-                          }}
-                          transition={{ 
-                            scale: { type: "spring", stiffness: 350, damping: 20 },
-                            rotate: { duration: 0.4, ease: "easeInOut" }
-                          }}
-                        >
-                          <Icon className={`w-[20px] h-[20px] mb-1.5 ${
-                            isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"
-                          }`} />
-                        </motion.div>
-                        
-                        <span className={`text-[13px] font-display font-bold leading-none ${
-                          isSelected ? "text-[var(--brand-text-strong)]" : "text-[var(--text-primary)]"
-                        }`}>
-                          {opt.label}
-                        </span>
-                        
-                        <span className="text-[10px] text-[var(--text-secondary)] leading-tight mt-1 font-sans px-1 select-none pointer-events-none opacity-85">
-                          {opt.desc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Section 5: Compiled Preview (Collapsible) */}
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-xs)] overflow-hidden select-none">
+              {/* Sidebar Tabs (Vertical on Desktop, Horizontal Pill List on Mobile) */}
+              <nav className="md:col-span-1 flex flex-row md:flex-col overflow-x-auto md:overflow-visible pb-2 md:pb-0 gap-1.5 select-none scrollbar-none border-b md:border-b-0 border-[var(--border-subtle)]">
                 
-                {/* Header click */}
-                <div 
-                  onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
-                  className="w-full px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-[var(--bg-subtle)]"
-                  style={{ transition: "background-color 150ms ease" }}
+                {/* Profile Tab Link */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("profile")}
+                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
+                    activeTab === "profile"
+                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
+                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                  }`}
                 >
-                  <h2 className="text-[13px] font-semibold font-display text-[var(--text-primary)] uppercase tracking-[0.5px] flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-primary)] pulse-dot-ai" />
-                    {t.promptPreview}
-                  </h2>
-                  <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)]" 
-                    style={{
-                      transform: isPreviewExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 200ms ease"
-                    }}
-                  />
-                </div>
-
-                {/* Body drawer: Dynamic interactive terminal prompt compiler */}
-                {isPreviewExpanded && (
-                  <div className="overflow-hidden border-t border-[var(--border-subtle)] bg-[#070A13] p-0 relative select-text flex flex-col">
-                    {/* Terminal Titlebar header */}
-                    <div className="h-9 bg-[#0B0F19]/90 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 select-none shrink-0">
-                      <div className="flex items-center gap-1.5 select-none pointer-events-none">
-                        <span className="w-2 h-2 rounded-full bg-[#EF4444]/60" />
-                        <span className="w-2 h-2 rounded-full bg-[#F59E0B]/60" />
-                        <span className="w-2 h-2 rounded-full bg-[#10B981]/60" />
-                      </div>
-                      <span className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-widest opacity-80 pointer-events-none">
-                        gemini-prompt-compiler.sh (live status: ready)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopyToClipboard}
-                        className="h-6 px-2.5 bg-[#1E293B]/70 hover:bg-[#1E293B] border border-slate-700/50 rounded-[var(--radius-sm)] text-[10px] font-mono font-bold text-[var(--text-secondary)] hover:text-white flex items-center gap-1 cursor-pointer"
-                        style={{ transition: "background-color 150ms ease, color 150ms ease" }}
-                      >
-                        {isCopied ? <Check className="w-3 h-3 text-[var(--success-icon)]" /> : <Copy className="w-3 h-3" />}
-                        <span>{isCopied ? t.copied : t.copyBtn}</span>
-                      </button>
-                    </div>
-
-                    {/* Prompt content with syntax highlighting */}
-                    <div className="p-4 text-xs leading-[1.7] font-mono text-slate-300 overflow-y-auto max-h-[280px] whitespace-pre-wrap select-text">
-                      {renderHighlightedPrompt(compiledPrompt)}
-                    </div>
+                  <div className={`p-1.5 rounded-md ${activeTab === "profile" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
+                    <User className="w-4 h-4 shrink-0" />
                   </div>
-                )}
+                  <div className="hidden md:flex flex-col text-left">
+                    <span className="text-xs font-bold leading-tight">{t.tabProfile}</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">{t.tabProfileDesc}</span>
+                  </div>
+                  <span className="md:hidden text-xs font-bold">{t.tabProfile}</span>
+
+                  {/* Unsaved Changes Indicator Dot */}
+                  {hasProfileChanges && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-sm animate-pulse" />
+                  )}
+                </button>
+
+                {/* Vectors Tab Link */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("vectors")}
+                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
+                    activeTab === "vectors"
+                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
+                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-md ${activeTab === "vectors" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
+                    <BookOpen className="w-4 h-4 shrink-0" />
+                  </div>
+                  <div className="hidden md:flex flex-col text-left">
+                    <span className="text-xs font-bold leading-tight">{t.tabVectors}</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">{t.tabVectorsDesc}</span>
+                  </div>
+                  <span className="md:hidden text-xs font-bold">{t.tabVectors}</span>
+
+                  {/* Unsaved Changes Indicator Dot */}
+                  {hasVectorChanges && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-sm animate-pulse" />
+                  )}
+                </button>
+
+                {/* Compiler Tab Link */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("compiler")}
+                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
+                    activeTab === "compiler"
+                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
+                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-md ${activeTab === "compiler" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
+                    <Terminal className="w-4 h-4 shrink-0" />
+                  </div>
+                  <div className="hidden md:flex flex-col text-left">
+                    <span className="text-xs font-bold leading-tight">{t.tabCompiler}</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">{t.tabCompilerDesc}</span>
+                  </div>
+                  <span className="md:hidden text-xs font-bold">{t.tabCompiler}</span>
+
+                  {/* Compiling live highlight indicator dot */}
+                  <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[var(--color-ai)] pulse-dot-ai" />
+                </button>
+
+                {/* Integrations Tab Link */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("integrations")}
+                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
+                    activeTab === "integrations"
+                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
+                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-md ${activeTab === "integrations" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
+                    <Globe className="w-4 h-4 shrink-0" />
+                  </div>
+                  <div className="hidden md:flex flex-col text-left">
+                    <span className="text-xs font-bold leading-tight">Integrations & Booking</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">Connect Google Calendar</span>
+                  </div>
+                  <span className="md:hidden text-xs font-bold">Integrations</span>
+
+                  {/* Unsaved Changes Indicator Dot */}
+                  {hasIntegrationChanges && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-sm animate-pulse" />
+                  )}
+                </button>
+              </nav>
+
+              {/* Active Tab Panel Content */}
+              <div className="md:col-span-3 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] p-5 sm:p-6 shadow-[var(--shadow-sm)] min-h-[380px] relative overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
+                    className="h-full"
+                  >
+                    {/* ─── TAB: Profile & Identity ──────────────────────────────── */}
+                    {activeTab === "profile" && (
+                      <div className="space-y-6">
+                        <div className="border-b border-[var(--border-subtle)] pb-4">
+                          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-[var(--brand-primary)]" />
+                            {t.identityTitle}
+                          </h2>
+                          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.identitySubtitle}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Business Name Field */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5" />
+                              {t.businessName}
+                            </label>
+                            <input
+                              type="text"
+                              value={businessName}
+                              onChange={(e) => setBusinessName(e.target.value)}
+                              placeholder={t.businessNamePlaceholder}
+                              className={`${inputBaseClass} h-11`}
+                            />
+                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                              {t.businessNameHelper}
+                            </p>
+                          </div>
+
+                          {/* Primary Bot Language Field */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <Globe className="w-3.5 h-3.5" />
+                              {t.botLanguage}
+                            </label>
+                            <div className="relative">
+                              <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
+                              <select
+                                value={botLanguage}
+                                onChange={(e) => setBotLanguage(e.target.value)}
+                                className={`${inputBaseClass} h-11 pl-10 pr-10 cursor-pointer appearance-none`}
+                              >
+                                <option value="English">English</option>
+                                <option value="Hindi">Hindi (हिंदी)</option>
+                                <option value="Hinglish">Hinglish</option>
+                                <option value="Spanish">Spanish (Español)</option>
+                                <option value="Arabic">Arabic (العربية)</option>
+                                <option value="French">French (Français)</option>
+                                <option value="Portuguese">Portuguese (Português)</option>
+                              </select>
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none select-none">
+                                <ChevronDown className="w-4 h-4" />
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                              {t.botLanguageHelper}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Tone Presets Selector */}
+                        <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+                          <div>
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                              {t.aiToneTitle}
+                            </label>
+                            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{t.aiToneSubtitle}</p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 select-none">
+                            {TONE_OPTIONS.map((opt) => {
+                              const isSelected = aiTone === opt.value;
+                              const Icon = opt.icon;
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => setAiTone(opt.value)}
+                                  className={`p-4 rounded-[var(--radius-lg)] border flex flex-col items-center justify-center text-center cursor-pointer select-none relative active:scale-[0.98] overflow-hidden min-h-[110px] ${
+                                    isSelected 
+                                      ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)] shadow-[var(--shadow-sm)]" 
+                                      : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)]"
+                                  }`}
+                                  style={{ transition: "border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 100ms ease" }}
+                                >
+                                  {/* Selection Checkmark Badge */}
+                                  {isSelected && (
+                                    <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-md">
+                                      <Check className="w-2.5 h-2.5 text-white" />
+                                    </span>
+                                  )}
+                                  
+                                  <motion.div
+                                    animate={{ 
+                                      scale: isSelected ? 1.15 : 1,
+                                      rotate: isSelected ? [0, 6, -6, 0] : 0
+                                    }}
+                                    transition={{ 
+                                      scale: { type: "spring", stiffness: 350, damping: 20 },
+                                      rotate: { duration: 0.4, ease: "easeInOut" }
+                                    }}
+                                  >
+                                    <Icon className={`w-5 h-5 mb-2 ${
+                                      isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"
+                                    }`} />
+                                  </motion.div>
+                                  
+                                  <span className={`text-[12px] font-display font-bold leading-none ${
+                                    isSelected ? "text-[var(--brand-text-strong)]" : "text-[var(--text-primary)]"
+                                  }`}>
+                                    {opt.label}
+                                  </span>
+                                  
+                                  <span className="text-[10px] text-[var(--text-secondary)] leading-tight mt-1 px-1 opacity-85 select-none pointer-events-none">
+                                    {opt.desc}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ─── TAB: Knowledge Vectors ────────────────────────────────── */}
+                    {activeTab === "vectors" && (
+                      <div className="space-y-6">
+                        <div className="border-b border-[var(--border-subtle)] pb-4">
+                          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-[var(--brand-primary)]" />
+                            {t.coreInfoTitle}
+                          </h2>
+                          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.coreInfoSubtitle}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Services & Pricing Field */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <DollarSign className="w-3.5 h-3.5 text-indigo-500" />
+                              {t.services}
+                            </label>
+                            <textarea
+                              value={servicesText}
+                              onChange={(e) => setServicesText(e.target.value)}
+                              placeholder={t.servicesPlaceholder}
+                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                            />
+                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.servicesHelper}</p>
+                          </div>
+
+                          {/* Working Hours Field */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-amber-500" />
+                              {t.hours}
+                            </label>
+                            <textarea
+                              value={hoursText}
+                              onChange={(e) => setHoursText(e.target.value)}
+                              placeholder={t.hoursPlaceholder}
+                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                            />
+                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.hoursHelper}</p>
+                          </div>
+
+                          {/* Payment Methods Field */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5 text-purple-500" />
+                              {t.payments}
+                            </label>
+                            <textarea
+                              value={paymentMethodsText}
+                              onChange={(e) => setPaymentMethodsText(e.target.value)}
+                              placeholder={t.paymentsPlaceholder}
+                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                            />
+                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.paymentsHelper}</p>
+                          </div>
+
+                          {/* Target Audience Field */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                              {t.targetAudience}
+                            </label>
+                            <textarea
+                              value={targetAudienceText}
+                              onChange={(e) => setTargetAudienceText(e.target.value)}
+                              placeholder={t.targetAudiencePlaceholder}
+                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                            />
+                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.targetAudienceHelper}</p>
+                          </div>
+                        </div>
+
+                        {/* Special Rules & Policies Field */}
+                        <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
+                          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
+                            {t.specialRules}
+                          </label>
+                          <textarea
+                            value={rulesText}
+                            onChange={(e) => setRulesText(e.target.value)}
+                            placeholder={t.specialRulesPlaceholder}
+                            className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                          />
+                          <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.specialRulesHelper}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ─── TAB: Prompt Compiler ──────────────────────────────────── */}
+                    {activeTab === "compiler" && (
+                      <div className="space-y-6">
+                        <div className="border-b border-[var(--border-subtle)] pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                              <Terminal className="w-4 h-4 text-[var(--brand-primary)]" />
+                              {t.promptPreview}
+                            </h2>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.promptPreviewSubtitle}</p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleCopyToClipboard}
+                            className="h-9 px-3 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5 cursor-pointer outline-none transition-all duration-150 self-start sm:self-center"
+                          >
+                            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-[var(--text-secondary)]" />}
+                            <span>{isCopied ? t.copied : t.copyBtn}</span>
+                          </button>
+                        </div>
+
+                        {/* Compiler Terminal Mockup */}
+                        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[#070A13] p-0 relative select-text flex flex-col shadow-[var(--shadow-lg)]">
+                          {/* Terminal Header */}
+                          <div className="h-10 bg-[#0B0F19] border-b border-[var(--border-subtle)] flex items-center justify-between px-4 select-none shrink-0">
+                            <div className="flex items-center gap-1.5 select-none pointer-events-none">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                            </div>
+                            <span className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-widest opacity-80 pointer-events-none flex items-center gap-1.5">
+                              <FileText className="w-3 h-3 text-[var(--color-ai)]" />
+                              gemini-system-compiler.sh
+                            </span>
+                            <div className="w-14" /> {/* spacer balance */}
+                          </div>
+
+                          {/* Terminal Workspace body */}
+                          <div className="p-5 text-xs leading-[1.8] font-mono text-slate-300 overflow-y-auto max-h-[360px] whitespace-pre-wrap select-text">
+                            {renderHighlightedPrompt(compiledPrompt)}
+                          </div>
+                        </div>
+
+                        {/* Variable vector stats helper */}
+                        <div className="flex items-start gap-2.5 p-3.5 rounded-[var(--radius-lg)] bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-xs text-[var(--brand-text)] font-sans leading-relaxed">
+                          <Info className="w-4 h-4 shrink-0 text-[var(--brand-primary)] mt-0.5" />
+                          <div>
+                            <span className="font-semibold block">How this compilation works:</span>
+                            The values you customize in the profile and knowledge tabs are dynamically injected as system prompt inputs inside Gemini. This ensures the live WhatsApp chatbot acts with high context and operates strictly within your rules.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ─── TAB: Integrations & Booking ─────────────────────────────── */}
+                    {activeTab === "integrations" && (
+                      <div className="space-y-6">
+                        <div className="border-b border-[var(--border-subtle)] pb-4">
+                          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-[var(--brand-primary)]" />
+                            Integrations & Booking
+                          </h2>
+                          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+                            Connect your external calendar services to empower AI bookings.
+                          </p>
+                        </div>
+
+                        <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm text-[var(--text-primary)]">Google Calendar</span>
+                              {isCalendarConnected ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                  Connected
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
+                                  Not Connected
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] max-w-xl">
+                              Allows your Gemini AI representative to read your schedule, calculate free slots, and book new detailing appointments automatically.
+                            </p>
+                          </div>
+
+                          <div className="shrink-0">
+                            {isCalendarConnected ? (
+                              <button
+                                type="button"
+                                onClick={handleDisconnectCalendar}
+                                className="h-10 px-4 bg-[var(--color-danger-bg)] hover:bg-[var(--color-danger-bg-hover)] border border-[var(--danger-border)] text-[var(--color-danger-text)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-red-500"
+                              >
+                                Disconnect Calendar
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleConnectCalendar}
+                                className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+                              >
+                                <Globe className="w-4 h-4" />
+                                Connect Google Calendar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Calendar Settings */}
+                        {isCalendarConnected && (
+                          <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                                Google Calendar ID
+                              </label>
+                              <input
+                                type="text"
+                                value={gcalCalendarId}
+                                onChange={(e) => {
+                                  setGcalCalendarId(e.target.value);
+                                  setHasChanges(true);
+                                }}
+                                placeholder="primary (default)"
+                                className={`${inputBaseClass} h-11`}
+                              />
+                              <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                                By default, LeadFlow books appointments on your "primary" calendar. Enter a secondary calendar ID here if you want to use a specific schedule sub-calendar.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Reputation Engine Section */}
+                        <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
+                          <div>
+                            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4 text-amber-500" />
+                              Reputation Engine (Pro Feature)
+                            </h3>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+                              Automatically request Google reviews from completed leads. The engine will dispatch a review request 24 hours after a lead is moved to "Completed".
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <Globe className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                              Google Maps Review Link
+                            </label>
+                            <input
+                              type="text"
+                              value={googleReviewLink}
+                              onChange={(e) => {
+                                setGoogleReviewLink(e.target.value);
+                                setHasChanges(true);
+                              }}
+                              placeholder="e.g., https://g.page/r/your-review-id/review"
+                              className={`${inputBaseClass} h-11`}
+                            />
+                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                              Ensure this is a direct, pre-approved Google Review link (e.g. g.page/r/...) so that customers can open the review portal in one click. Leave blank to disable automated review messages.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
 
-            </>
+            </div>
           )}
-
         </div>
       </div>
-
 
       {/* Render Actions in Layout Header Portal */}
       {mounted && typeof document !== "undefined" && document.getElementById("header-cta-portal") ? (
@@ -800,16 +1143,18 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
           <div className="flex items-center gap-2">
             {hasChanges && (
               <button
+                type="button"
                 onClick={handleDiscard}
-                className="h-9 px-3 rounded-[var(--radius-md)] text-[13px] font-display font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-all duration-150"
+                className="h-9 px-3.5 rounded-[var(--radius-lg)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-all duration-150"
               >
                 {t.discard}
               </button>
             )}
             <button
+              type="button"
               onClick={handleSave}
               disabled={isSaving || !hasChanges}
-              className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-md)] text-[13px] font-display font-medium cursor-pointer outline-none flex items-center gap-1.5 active:scale-[0.97] disabled:cursor-not-allowed transition-all duration-150 shadow-[var(--shadow-sm)]"
+              className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none flex items-center gap-1.5 active:scale-[0.97] disabled:cursor-not-allowed transition-all duration-150 shadow-[var(--shadow-sm)]"
             >
               {isSaving ? (
                 <>

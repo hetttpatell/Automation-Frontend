@@ -11,7 +11,8 @@ import {
   Loader2,
   AlertTriangle,
   Send,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -89,6 +90,7 @@ export default function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"all" | "ai" | "human">("all");
@@ -98,16 +100,59 @@ export default function InboxPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const queryParamProcessed = React.useRef(false);
+
+  // Auto-select conversation based on phone number query parameter
+  useEffect(() => {
+    if (typeof window !== "undefined" && conversations.length > 0 && !queryParamProcessed.current) {
+      const params = new URLSearchParams(window.location.search);
+      const phoneParam = params.get("phone");
+      if (phoneParam) {
+        const matchingConvo = conversations.find(
+          (c) => c.customer_phone === phoneParam
+        );
+        if (matchingConvo) {
+          setSelectedConversation(matchingConvo);
+          queryParamProcessed.current = true;
+        }
+      }
+    }
+  }, [conversations]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch threads on mount & setup realtime subscription
   useEffect(() => {
+    async function initUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+      } else {
+        setIsLoading(false);
+      }
+    }
+    initUser();
+  }, []);
+
+  // Fetch threads when user is loaded & setup realtime subscription
+  useEffect(() => {
+    if (!user) return;
     document.title = "Inbox | LeadFlow";
 
     async function fetchConversations() {
@@ -115,6 +160,7 @@ export default function InboxPage() {
       const { data, error } = await supabase
         .from("conversations")
         .select("*, messages(*)")
+        .eq("tenant_id", user.id)
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -140,7 +186,7 @@ export default function InboxPage() {
       .channel("inbox-conversations-channel")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "conversations" },
+        { event: "*", schema: "public", table: "conversations", filter: `tenant_id=eq.${user.id}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
             setConversations((prev) => [payload.new as Conversation, ...prev]);
@@ -172,7 +218,7 @@ export default function InboxPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   // Fetch messages for selected conversation
   useEffect(() => {
@@ -254,7 +300,7 @@ export default function InboxPage() {
 
   // AI Toggle
   const handleToggleAI = async () => {
-    if (!selectedConversation || isToggling) return;
+    if (!selectedConversation || isToggling || !user) return;
     setIsToggling(true);
 
     const convoId = selectedConversation.id;
@@ -274,7 +320,8 @@ export default function InboxPage() {
       const { error } = await supabase
         .from("conversations")
         .update({ is_ai_active: targetStatus })
-        .eq("id", convoId);
+        .eq("id", convoId)
+        .eq("tenant_id", user.id);
 
       if (error) throw error;
     } catch (err: any) {
@@ -339,10 +386,20 @@ export default function InboxPage() {
   });
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden bg-[var(--bg-canvas)]">
+    <div className="h-[calc(100vh-7rem)] lg:h-[calc(100vh-3.5rem)] flex overflow-hidden bg-[var(--bg-canvas)] id-inbox-container">
+      {selectedConversation && (
+        <style dangerouslySetInnerHTML={{__html: `
+          @media (max-width: 1023px) {
+            header.sticky { display: none !important; }
+            .id-inbox-container { height: calc(100vh - 3.5rem) !important; }
+          }
+        `}} />
+      )}
 
       {/* ─── LEFT PANEL: Thread List (320px) ─────────────────────── */}
-      <aside className="w-80 border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none">
+      <aside className={`w-full lg:w-80 border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none ${
+        selectedConversation && isMobile ? "hidden" : "flex"
+      }`}>
 
         {/* Header (52px) */}
         <div className="h-[52px] px-4 flex items-center justify-between border-b border-[var(--border-subtle)] relative shrink-0">
@@ -491,7 +548,9 @@ export default function InboxPage() {
       </aside>
 
       {/* ─── RIGHT PANEL: Chat Canvas ─────────────────────────── */}
-      <section className="flex-1 flex flex-col h-full bg-[var(--bg-canvas)] relative select-text">
+      <section className={`flex-1 flex flex-col h-full bg-[var(--bg-canvas)] relative select-text ${
+        !selectedConversation && isMobile ? "hidden" : "flex"
+      }`}>
 
         <AnimatePresence mode="wait">
           {!selectedConversation ? (
@@ -518,6 +577,15 @@ export default function InboxPage() {
               {/* Canvas Header (64px) */}
               <header className="h-16 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] px-5 flex items-center justify-between shrink-0 select-none z-10">
                 <div className="flex items-center gap-3 min-w-0">
+                  {isMobile && (
+                    <button
+                      onClick={() => setSelectedConversation(null)}
+                      className="mr-1 p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                      aria-label="Back to conversations"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                  )}
                   <Avatar name={selectedConversation.customer_name || selectedConversation.customer_phone} size="md" />
                   <div className="min-w-0">
                     <h2 className="text-[16px] font-semibold text-[var(--text-primary)] truncate font-display">
@@ -529,17 +597,50 @@ export default function InboxPage() {
                   </div>
                 </div>
 
-                {/* Render Actions in Layout Header Portal */}
-                {mounted && typeof document !== "undefined" && document.getElementById("header-cta-portal") ? (
-                  createPortal(
+                {/* Render Actions in Layout Header Portal (Desktop) or Inline (Mobile) */}
+                {mounted && typeof document !== "undefined" ? (
+                  !isMobile ? (
+                    document.getElementById("header-cta-portal") ? (
+                      createPortal(
+                        <div className="flex items-center gap-2 select-none">
+                          <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
+                            AI Autopilot
+                          </span>
+                          <button
+                            onClick={handleToggleAI}
+                            disabled={isToggling}
+                            className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
+                              selectedConversation.is_ai_active
+                                ? "bg-[var(--color-success)]"
+                                : "bg-[var(--bg-muted)]"
+                            }`}
+                            role="switch"
+                            aria-checked={selectedConversation.is_ai_active}
+                            aria-label="AI Autopilot"
+                          >
+                            <motion.div
+                              layout
+                              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                              className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
+                              style={{
+                                marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
+                                marginRight: selectedConversation.is_ai_active ? "0" : "auto"
+                              }}
+                            />
+                          </button>
+                        </div>,
+                        document.getElementById("header-cta-portal")!
+                      )
+                    ) : null
+                  ) : (
                     <div className="flex items-center gap-2 select-none">
-                      <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
+                      <span className="text-[12px] font-sans font-medium text-[var(--text-secondary)] hidden sm:inline">
                         AI Autopilot
                       </span>
                       <button
                         onClick={handleToggleAI}
                         disabled={isToggling}
-                        className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
+                        className={`w-[40px] h-[22px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
                           selectedConversation.is_ai_active
                             ? "bg-[var(--color-success)]"
                             : "bg-[var(--bg-muted)]"
@@ -551,15 +652,14 @@ export default function InboxPage() {
                         <motion.div
                           layout
                           transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                          className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
+                          className="w-[18px] h-[18px] rounded-full shadow-[var(--shadow-sm)] bg-white"
                           style={{
                             marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
                             marginRight: selectedConversation.is_ai_active ? "0" : "auto"
                           }}
                         />
                       </button>
-                    </div>,
-                    document.getElementById("header-cta-portal")!
+                    </div>
                   )
                 ) : null}
               </header>

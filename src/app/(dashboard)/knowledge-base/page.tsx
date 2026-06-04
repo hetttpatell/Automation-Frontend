@@ -89,7 +89,7 @@ function FAQCard({
               e.stopPropagation();
               onDelete(faq.id);
             }}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-[var(--danger-icon)] cursor-pointer"
+            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1.5 rounded-md hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-[var(--danger-icon)] cursor-pointer"
             style={{ transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease" }}
             aria-label="Delete FAQ"
           >
@@ -152,9 +152,19 @@ export default function KnowledgeBasePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tenantId, setTenantId] = useState<string | null>(null);
   
-  // Custom button deploy success state
   const [deploySuccess, setDeploySuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<"deployed" | "train">("deployed");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -310,13 +320,45 @@ export default function KnowledgeBasePage() {
   const canSubmit = newQuestion.trim().length > 0 && newAnswer.trim().length > 0;
 
   return (
-    <div className="h-full flex overflow-hidden bg-[var(--bg-canvas)]">
-      
-      {/* ─── LEFT PANEL: Training Form (420px) ────────────────────────── */}
-      <aside className="w-[420px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none relative">
-        
-        {/* Header Form (52px tall) */}
-        <div className="h-[52px] px-5 flex flex-col justify-center border-b border-[var(--border-subtle)] shrink-0">
+    <div className="h-[calc(100vh-7rem)] lg:h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden bg-[var(--bg-canvas)]">
+      {/* Segmented Control for Mobile */}
+      {isMobile && (
+        <div className="p-3 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 select-none">
+          <div className="flex bg-[var(--bg-subtle)] p-1 rounded-lg border border-[var(--border-subtle)]">
+            <button
+              onClick={() => setActiveTab("deployed")}
+              className={`flex-1 py-2 text-center text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
+                activeTab === "deployed"
+                  ? "bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm font-semibold"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              Deployed Knowledge ({faqs.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("train")}
+              className={`flex-1 py-2 text-center text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
+                activeTab === "train"
+                  ? "bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm font-semibold"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              Train AI
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* ─── LEFT PANEL: Training Form (420px) ────────────────────────── */}
+        <aside className={`${
+          isMobile 
+            ? activeTab === "train" ? "flex w-full" : "hidden" 
+            : "w-[420px] flex"
+        } border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex-col h-full shrink-0 select-none relative`}>
+          
+          {/* Header Form (52px tall) */}
+          <div className="h-[52px] px-5 flex flex-col justify-center border-b border-[var(--border-subtle)] shrink-0">
           <h2 className="text-[15px] font-semibold text-[var(--text-primary)] font-display">
             Train the AI Brain
           </h2>
@@ -385,41 +427,79 @@ export default function KnowledgeBasePage() {
             />
           </div>
 
-          {/* Render Actions in Layout Header Portal */}
-          {mounted && typeof document !== "undefined" && document.getElementById("header-cta-portal") ? (
-            createPortal(
-              <button
-                onClick={handleAdd}
-                disabled={isSubmitting || !canSubmit}
-                className={`h-9 px-4 rounded-[var(--radius-md)] text-[13px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
-                  deploySuccess 
-                    ? "bg-[var(--success-icon)] text-white" 
-                    : canSubmit && !isSubmitting
-                      ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] shadow-[var(--shadow-sm)]"
-                      : "bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)]"
-                }`}
-                style={{
-                  pointerEvents: isSubmitting ? "none" : "auto"
-                }}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="dual-ring-spinner shrink-0" />
-                    <span>Deploying...</span>
-                  </>
-                ) : deploySuccess ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 shrink-0" />
-                    <span>Deployed!</span>
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-3.5 h-3.5 shrink-0" />
-                    <span>Deploy to Live Brain</span>
-                  </>
-                )}
-              </button>,
-              document.getElementById("header-cta-portal")!
+          {/* Render Actions in Layout Header Portal (Desktop) or Inline (Mobile) */}
+          {mounted && typeof document !== "undefined" ? (
+            !isMobile ? (
+              document.getElementById("header-cta-portal") ? (
+                createPortal(
+                  <button
+                    onClick={handleAdd}
+                    disabled={isSubmitting || !canSubmit}
+                    className={`h-9 px-4 rounded-[var(--radius-md)] text-[13px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
+                      deploySuccess 
+                        ? "bg-[var(--success-icon)] text-white" 
+                        : canSubmit && !isSubmitting
+                          ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] shadow-[var(--shadow-sm)]"
+                          : "bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)]"
+                    }`}
+                    style={{
+                      pointerEvents: isSubmitting ? "none" : "auto"
+                    }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="dual-ring-spinner shrink-0" />
+                        <span>Deploying...</span>
+                      </>
+                    ) : deploySuccess ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 shrink-0" />
+                        <span>Deployed!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-3.5 h-3.5 shrink-0" />
+                        <span>Deploy to Live Brain</span>
+                      </>
+                    )}
+                  </button>,
+                  document.getElementById("header-cta-portal")!
+                )
+              ) : null
+            ) : (
+              <div className="pt-2">
+                <button
+                  onClick={handleAdd}
+                  disabled={isSubmitting || !canSubmit}
+                  className={`w-full h-11 rounded-[var(--radius-md)] text-[14px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
+                    deploySuccess 
+                      ? "bg-[var(--success-icon)] text-white" 
+                      : canSubmit && !isSubmitting
+                        ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] shadow-[var(--shadow-sm)]"
+                        : "bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)]"
+                  }`}
+                  style={{
+                    pointerEvents: isSubmitting ? "none" : "auto"
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="dual-ring-spinner shrink-0" />
+                      <span>Deploying...</span>
+                    </>
+                  ) : deploySuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                      <span>Deployed!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-3.5 h-3.5 shrink-0" />
+                      <span>Deploy to Live Brain</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )
           ) : null}
         </div>
@@ -466,7 +546,11 @@ export default function KnowledgeBasePage() {
       </aside>
 
       {/* ─── RIGHT PANEL: Active Catalog List ─────────────────────────── */}
-      <section className="flex-1 flex flex-col h-full bg-[var(--bg-canvas)] select-none">
+      <section className={`${
+        isMobile
+          ? activeTab === "deployed" ? "flex w-full" : "hidden"
+          : "flex-1 flex"
+      } flex-col h-full bg-[var(--bg-canvas)] select-none`}>
         
         {/* Header Deployed Catalog (52px tall) */}
         <div className="h-[52px] px-5 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] shrink-0 shadow-sm z-10">
@@ -510,6 +594,7 @@ export default function KnowledgeBasePage() {
         </div>
       </section>
 
+      </div>
     </div>
   );
 }

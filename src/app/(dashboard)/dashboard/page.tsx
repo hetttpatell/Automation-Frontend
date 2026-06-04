@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   TrendingUp,
@@ -12,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import Avatar from "@/components/ui/Avatar";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Lead {
@@ -20,7 +22,7 @@ interface Lead {
   customer_phone: string;
   service_requested: string | null;
   urgency: "low" | "medium" | "high";
-  kanban_stage: "new" | "contacted" | "converted" | "lost";
+  kanban_stage: "new" | "contacted" | "converted" | "lost" | "completed";
   created_at: string;
   isNew?: boolean;
 }
@@ -38,6 +40,24 @@ function formatDate(iso: string): string {
       minute: "2-digit",
       hour12: true,
     });
+}
+
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.startsWith("91") && cleaned.length === 12) {
+    return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`;
+  }
+  if (cleaned.startsWith("1") && cleaned.length === 11) {
+    return `+1 (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+  }
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  if (cleaned.length > 10) {
+    return `+${cleaned.slice(0, cleaned.length - 10)} ${cleaned.slice(cleaned.length - 10, cleaned.length - 5)} ${cleaned.slice(cleaned.length - 5)}`;
+  }
+  return phone;
 }
 
 // Urgency badge configuration
@@ -81,6 +101,11 @@ const stageConfig = {
     text: "var(--text-tertiary)",
     label: "Lost",
   },
+  completed: {
+    border: "#8B5CF6",
+    text: "#8B5CF6",
+    label: "Completed",
+  },
 };
 
 // ─── Row Skeleton Loader ─────────────────────────────────────────────
@@ -110,26 +135,83 @@ export default function LeadsDashboard() {
   const { info } = useToast();
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [syncTime, setSyncTime] = useState<string>("0s");
   const [lastSyncSeconds, setLastSyncSeconds] = useState(0);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  
+  // New interactive and filtering states
+  const [urgencyFilter, setUrgencyFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const [draggedOverStage, setDraggedOverStage] = useState<string | null>(null);
 
-  const handleUpdateStage = async (id: string, nextStage: "new" | "contacted" | "converted" | "lost") => {
+  // Custom portal dropdown states
+  const [activeDropdownLead, setActiveDropdownLead] = useState<Lead | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const handleClose = () => {
+      setActiveDropdownLead(null);
+      setDropdownPosition(null);
+    };
+    window.addEventListener("resize", handleClose);
+    window.addEventListener("scroll", handleClose, true);
+    return () => {
+      window.removeEventListener("resize", handleClose);
+      window.removeEventListener("scroll", handleClose, true);
+    };
+  }, []);
+
+  const handleToggleDropdown = (e: React.MouseEvent<HTMLButtonElement>, lead: Lead) => {
+    e.stopPropagation();
+    if (activeDropdownLead?.id === lead.id) {
+      setActiveDropdownLead(null);
+      setDropdownPosition(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setActiveDropdownLead(lead);
+      setDropdownPosition({
+        top: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  };
+
+  const handleUpdateStage = async (id: string, nextStage: "new" | "contacted" | "converted" | "lost" | "completed") => {
+    const leadToUpdate = leads.find((l) => l.id === id);
+    if (!leadToUpdate || !user) return;
+    const originalStage = leadToUpdate.kanban_stage;
+
+    // Optimistic update on the UI
     setLeads((current) =>
       current.map((l) => (l.id === id ? { ...l, kanban_stage: nextStage } : l))
     );
+
     const { error } = await supabase
       .from("leads")
       .update({ kanban_stage: nextStage })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("tenant_id", user.id);
+
     if (error) {
       console.error("[Stage Update Error]:", error.message);
       info("Failed to update status");
+      // Rollback to original stage if database mutation fails
+      setLeads((current) =>
+        current.map((l) => (l.id === id ? { ...l, kanban_stage: originalStage } : l))
+      );
     } else {
       info(`Lead moved to ${nextStage}`);
     }
   };
+
+  // Filter leads based on selected urgency
+  const filteredLeads = urgencyFilter === "all"
+    ? leads
+    : leads.filter((l) => l.urgency === urgencyFilter);
 
   // Stats
   const totalLeads = leads.length;
@@ -159,6 +241,19 @@ export default function LeadsDashboard() {
   }, []);
 
   useEffect(() => {
+    async function initUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+      } else {
+        setIsLoading(false);
+      }
+    }
+    initUser();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
     document.title = "Leads Dashboard | LeadFlow";
 
     async function fetchLeads() {
@@ -166,6 +261,7 @@ export default function LeadsDashboard() {
       const { data, error } = await supabase
         .from("leads")
         .select("*")
+        .eq("tenant_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -185,7 +281,7 @@ export default function LeadsDashboard() {
       .channel("realtime-leads-crm")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "leads" },
+        { event: "INSERT", schema: "public", table: "leads", filter: `tenant_id=eq.${user.id}` },
         (payload) => {
           const newLead = { ...payload.new as Lead, isNew: true };
           setLeads((current) => [newLead, ...current]);
@@ -201,7 +297,7 @@ export default function LeadsDashboard() {
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "leads" },
+        { event: "UPDATE", schema: "public", table: "leads", filter: `tenant_id=eq.${user.id}` },
         (payload) => {
           setLeads((current) =>
             current.map((lead) =>
@@ -226,7 +322,7 @@ export default function LeadsDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   // ─── Stat Card Component ──────────────────────
   const StatCard = ({ icon: Icon, label, value, iconColor }: {
@@ -275,36 +371,56 @@ export default function LeadsDashboard() {
         </span>
       </div>
 
-      {/* ─── View Toggle ─────────────────────────── */}
-      <div className="flex items-center justify-between shrink-0 select-none pb-1 pt-1">
+      {/* ─── View Toggle & Filter Row ─────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 select-none pb-1 pt-1">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] font-display flex items-center gap-1.5">
           Prospects CRM
           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] select-none">
-            {leads.length} captured
+            {filteredLeads.length} {filteredLeads.length !== leads.length ? `of ${leads.length}` : ""} captured
           </span>
         </h3>
 
-        <div className="flex bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-0.5">
-          <button
-            onClick={() => setViewMode("table")}
-            className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] ${
-              viewMode === "table"
-                ? "bg-[var(--brand-primary)] text-white shadow-xs"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            Data Table
-          </button>
-          <button
-            onClick={() => setViewMode("kanban")}
-            className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] ${
-              viewMode === "kanban"
-                ? "bg-[var(--brand-primary)] text-white shadow-xs"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            Kanban Board
-          </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Filter by Urgency */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-[var(--text-secondary)] font-sans">
+              Filter by Urgency:
+            </span>
+            <select
+              value={urgencyFilter}
+              onChange={(e) => setUrgencyFilter(e.target.value as "all" | "high" | "medium" | "low")}
+              className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] cursor-pointer hover:border-[var(--border-strong)] transition-all"
+            >
+              <option value="all">All</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-0.5">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] ${
+                viewMode === "table"
+                  ? "bg-[var(--brand-primary)] text-white shadow-xs"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              Data Table
+            </button>
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] ${
+                viewMode === "kanban"
+                  ? "bg-[var(--brand-primary)] text-white shadow-xs"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              Kanban Board
+            </button>
+          </div>
         </div>
       </div>
 
@@ -312,25 +428,25 @@ export default function LeadsDashboard() {
         /* ─── TABLE VIEW ─────────────────────────────── */
         <div className="bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] shadow-[var(--shadow-sm)] overflow-hidden select-none">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px]" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
+            <table className="w-full min-w-[720px] table-fixed" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
               <thead>
                 <tr className="h-10 bg-[var(--bg-subtle)]">
                   <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[140px] border-b border-[var(--border-subtle)]">
                     Date / Time
                   </th>
-                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[180px] border-b border-[var(--border-subtle)]">
-                    Customer
+                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[200px] border-b border-[var(--border-subtle)]">
+                    Lead
                   </th>
                   <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] border-b border-[var(--border-subtle)]">
                     Service Requested
                   </th>
-                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[100px] border-b border-[var(--border-subtle)]">
+                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[90px] border-b border-[var(--border-subtle)]">
                     Urgency
                   </th>
-                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[120px] border-b border-[var(--border-subtle)]">
+                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[110px] border-b border-[var(--border-subtle)]">
                     Status
                   </th>
-                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[80px] border-b border-[var(--border-subtle)]">
+                  <th className="px-3 text-left font-sans text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] w-[100px] border-b border-[var(--border-subtle)]">
                     Actions
                   </th>
                 </tr>
@@ -339,30 +455,31 @@ export default function LeadsDashboard() {
               <tbody className="select-text">
                 {isLoading ? (
                   [...Array(4)].map((_, i) => <SkeletonRow key={i} index={i} />)
-                ) : leads.length === 0 ? (
+                ) : filteredLeads.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-16 text-center select-none">
                       <div className="flex flex-col items-center justify-center">
                         <Users className="w-12 h-12 text-[var(--text-tertiary)] mb-4" />
                         <h3 className="text-sm font-semibold text-[var(--text-primary)] font-sans">
-                          No leads captured yet
+                          {leads.length === 0 ? "No leads captured yet" : "No matching leads"}
                         </h3>
                         <p className="text-[var(--text-secondary)] text-xs mt-1 max-w-[280px] leading-relaxed mx-auto">
-                          The AI will automatically extract and list leads from WhatsApp conversations here.
+                          {leads.length === 0 
+                            ? "The AI will automatically extract and list leads from WhatsApp conversations here."
+                            : "No leads found matching the selected urgency filter."}
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   <AnimatePresence initial={false}>
-                    {leads.map((lead) => {
+                    {filteredLeads.map((lead) => {
                       const urg = urgencyConfig[lead.urgency] || urgencyConfig.medium;
                       const stage = stageConfig[lead.kanban_stage] || stageConfig.new;
 
                       return (
                         <motion.tr
                           key={lead.id}
-                          layout
                           initial={{ opacity: 0, y: -8 }}
                           animate={{
                             opacity: 1,
@@ -378,32 +495,35 @@ export default function LeadsDashboard() {
                           }`}
                           style={{ backgroundColor: "var(--bg-surface)" }}
                         >
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2 w-[140px]">
                             <span className="font-mono text-[13px] text-[var(--text-secondary)] whitespace-nowrap">
                               {formatDate(lead.created_at)}
                             </span>
                           </td>
 
-                          <td className="px-3 py-2">
-                            <div className="min-w-0 pr-2">
-                              <p className="text-[14px] font-sans font-medium text-[var(--text-primary)] truncate">
-                                {lead.customer_name || "Prospect User"}
-                              </p>
-                              <p className="text-[12px] text-[var(--text-tertiary)] font-mono truncate mt-0.5">
-                                {lead.customer_phone}
-                              </p>
+                          <td className="px-3 py-2 w-[200px]">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Avatar name={lead.customer_name || lead.customer_phone} size="sm" />
+                              <div className="min-w-0">
+                                <p className="text-[14px] font-sans font-medium text-[var(--text-primary)] truncate">
+                                  {lead.customer_name || "Prospect User"}
+                                </p>
+                                <p className="text-[12px] text-[var(--text-tertiary)] font-mono truncate mt-0.5">
+                                  {formatPhoneNumber(lead.customer_phone)}
+                                </p>
+                              </div>
                             </div>
                           </td>
 
                           <td className="px-3 py-2">
-                            <span className="text-[13px] text-[var(--text-primary)] font-sans leading-relaxed">
+                            <span className="text-[13px] text-[var(--text-primary)] font-sans leading-relaxed truncate block">
                               {lead.service_requested || (
                                 <span className="text-[var(--text-tertiary)] italic font-mono select-none">—</span>
                               )}
                             </span>
                           </td>
 
-                          <td className="px-3 py-2 select-none">
+                          <td className="px-3 py-2 select-none w-[90px]">
                             <span
                               className="inline-flex items-center px-2.5 py-1 rounded-full font-sans text-[11px] font-semibold"
                               style={{
@@ -415,28 +535,42 @@ export default function LeadsDashboard() {
                             </span>
                           </td>
 
-                          <td className="px-3 py-2 select-none">
-                            <span
-                              className="inline-flex items-center px-2.5 py-1 rounded-full font-sans text-[11px] font-medium bg-transparent"
+                          <td className="px-3 py-2 w-[110px]">
+                            <button
+                              onClick={(e) => handleToggleDropdown(e, lead)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-sans text-[11px] font-medium bg-transparent hover:bg-[var(--bg-subtle)] border transition-all active:scale-[0.98] cursor-pointer"
                               style={{
-                                border: `1.5px solid ${stage.border}`,
+                                borderColor: stage.border,
                                 color: stage.text,
                               }}
+                              aria-haspopup="true"
+                              aria-expanded={activeDropdownLead?.id === lead.id}
                             >
-                              {stage.label}
-                            </span>
+                              <span>{stage.label}</span>
+                              <svg
+                                className="w-2.5 h-2.5 opacity-70 transition-transform duration-200"
+                                style={{ transform: activeDropdownLead?.id === lead.id ? "rotate(180deg)" : "rotate(0)" }}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
                           </td>
 
-                          <td className="px-3 py-2 select-none">
+                          <td className="px-3 py-2 select-none w-[100px]">
                             <button
                               onClick={() => {
-                                info(`Navigating to conversation for ${lead.customer_name}`);
-                                router.push(`/inbox`);
+                                info(`Navigating to conversation for ${lead.customer_name || lead.customer_phone}`);
+                                router.push(`/inbox?phone=${lead.customer_phone}`);
                               }}
-                              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)]"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-subtle)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] transition-all active:scale-[0.97]"
                               aria-label="Open conversation"
                             >
-                              <ExternalLink className="w-[16px] h-[16px]" />
+                              <MessageSquareIcon className="w-3.5 h-3.5" />
+                              <span>Open Chat</span>
                             </button>
                           </td>
                         </motion.tr>
@@ -450,20 +584,43 @@ export default function LeadsDashboard() {
         </div>
       ) : (
         /* ─── KANBAN VIEW ─────────────────────────────── */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 select-none pb-6">
-          {(["new", "contacted", "converted", "lost"] as const).map((stageKey) => {
-            const columnLeads = leads.filter((l) => l.kanban_stage === stageKey);
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 select-none pb-6">
+          {(["new", "contacted", "converted", "lost", "completed"] as const).map((stageKey) => {
+            const columnLeads = filteredLeads.filter((l) => l.kanban_stage === stageKey);
             const colConfig = {
               new: { title: "New Leads", color: "var(--brand-primary)" },
               contacted: { title: "Contacted", color: "var(--warning-icon)" },
               converted: { title: "Converted", color: "var(--success-icon)" },
               lost: { title: "Lost", color: "var(--text-tertiary)" },
+              completed: { title: "Completed", color: "#8B5CF6" },
             }[stageKey];
 
             return (
               <div
                 key={stageKey}
-                className="bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-3 flex flex-col min-h-[450px]"
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDraggedOverStage(stageKey);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDragLeave={() => {
+                  setDraggedOverStage(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDraggedOverStage(null);
+                  const leadId = e.dataTransfer.getData("text/plain");
+                  if (leadId) {
+                    handleUpdateStage(leadId, stageKey);
+                  }
+                }}
+                className={`bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border p-3 flex flex-col min-h-[450px] transition-all duration-200 ${
+                  draggedOverStage === stageKey
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/20 shadow-inner"
+                    : "border-[var(--border-subtle)]"
+                }`}
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between mb-3.5 px-1 shrink-0">
@@ -489,15 +646,23 @@ export default function LeadsDashboard() {
                     <AnimatePresence initial={false}>
                       {columnLeads.map((lead) => {
                         const urg = urgencyConfig[lead.urgency] || urgencyConfig.medium;
-                        const stagesArray = ["new", "contacted", "converted", "lost"] as const;
+                        const stagesArray = ["new", "contacted", "converted", "lost", "completed"] as const;
                         const currentIdx = stagesArray.indexOf(lead.kanban_stage);
 
                         return (
                           <motion.div
                             key={lead.id}
                             layout
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", lead.id);
+                              e.currentTarget.classList.add("opacity-50");
+                            }}
+                            onDragEnd={(e) => {
+                              e.currentTarget.classList.remove("opacity-50");
+                            }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-3.5 relative group flex flex-col gap-2.5 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)]"
+                            className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-3.5 relative group flex flex-col gap-2.5 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)] cursor-grab active:cursor-grabbing"
                           >
                             <div className="flex items-center justify-between shrink-0 select-none">
                               <span className="text-[10px] font-mono text-[var(--text-tertiary)]">
@@ -511,13 +676,16 @@ export default function LeadsDashboard() {
                               </span>
                             </div>
 
-                            <div className="min-w-0 flex-1">
-                              <h5 className="text-[13px] font-semibold font-sans text-[var(--text-primary)] truncate">
-                                {lead.customer_name || "Prospect User"}
-                              </h5>
-                              <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-0.5">
-                                {lead.customer_phone}
-                              </p>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Avatar name={lead.customer_name || lead.customer_phone} size="sm" />
+                              <div className="min-w-0 flex-1">
+                                <h5 className="text-[13px] font-semibold font-sans text-[var(--text-primary)] truncate">
+                                  {lead.customer_name || "Prospect User"}
+                                </h5>
+                                <p className="text-[11px] font-mono text-[var(--text-secondary)] mt-0.5">
+                                  {formatPhoneNumber(lead.customer_phone)}
+                                </p>
+                              </div>
                             </div>
 
                             {lead.service_requested ? (
@@ -533,8 +701,8 @@ export default function LeadsDashboard() {
                             <div className="flex items-center justify-between mt-1 pt-2 border-t border-[var(--border-subtle)] shrink-0 select-none">
                               <button
                                 onClick={() => {
-                                  info(`Navigating to conversation for ${lead.customer_name}`);
-                                  router.push(`/inbox`);
+                                  info(`Navigating to conversation for ${lead.customer_name || lead.customer_phone}`);
+                                  router.push(`/inbox?phone=${lead.customer_phone}`);
                                 }}
                                 className="text-[11px] font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] flex items-center gap-1 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)]"
                               >
@@ -575,6 +743,57 @@ export default function LeadsDashboard() {
             );
           })}
         </div>
+      )}
+
+      {/* React Portal for Custom Dropdown Menu */}
+      {isMounted && activeDropdownLead && dropdownPosition && createPortal(
+        <>
+          {/* Overlay to close dropdown when clicking outside */}
+          <div
+            className="fixed inset-0 z-[9998] bg-transparent cursor-default"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveDropdownLead(null);
+              setDropdownPosition(null);
+            }}
+          />
+          {/* Custom dropdown option menu list */}
+          <div
+            className="fixed bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] z-[9999] py-1 flex flex-col min-w-[120px]"
+            style={{
+              top: `${dropdownPosition.top + 6}px`, // Slight offset below the badge button
+              left: `${dropdownPosition.left}px`,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            {(["new", "contacted", "converted", "lost", "completed"] as const).map((stageKey) => {
+              const itemStage = stageConfig[stageKey];
+              const isSelected = activeDropdownLead.kanban_stage === stageKey;
+              return (
+                <button
+                  key={stageKey}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUpdateStage(activeDropdownLead.id, stageKey);
+                    setActiveDropdownLead(null);
+                    setDropdownPosition(null);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-[11px] font-medium flex items-center gap-2 cursor-pointer transition-colors hover:bg-[var(--bg-subtle)] ${
+                    isSelected ? "bg-[var(--bg-muted)] font-semibold" : ""
+                  }`}
+                  style={{ color: itemStage.text }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: itemStage.border }}
+                  />
+                  {itemStage.label}
+                </button>
+              );
+            })}
+          </div>
+        </>,
+        document.body
       )}
 
     </div>

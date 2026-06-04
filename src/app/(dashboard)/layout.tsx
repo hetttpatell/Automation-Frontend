@@ -5,6 +5,7 @@ import {
   Users,
   MessageSquare,
   BookOpen,
+  Megaphone,
   Settings,
   LogOut,
   ChevronRight,
@@ -30,6 +31,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "Leads", subtitle: "AI-extracted prospect database" },
   "/inbox": { title: "Inbox", subtitle: "Live WhatsApp conversations" },
   "/knowledge-base": { title: "Knowledge", subtitle: "Train the AI brain" },
+  "/campaigns": { title: "Campaigns", subtitle: "Blast reactivation messages" },
   "/settings": { title: "Settings", subtitle: "Business profile & AI config" },
 };
 
@@ -38,7 +40,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const supabase = createClient();
   const { theme, toggleTheme } = useTheme();
-  const { success, error: toastError } = useToast();
+  const { success, error: toastError, info } = useToast();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("LeadFlow");
@@ -60,7 +62,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, []);
 
   useEffect(() => {
-    async function fetchUser() {
+    async function checkOnboardingAndFetchUser() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -68,20 +70,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           const { data: tenant } = await supabase
             .from("tenants")
-            .select("business_name")
+            .select("business_name, services_text")
             .eq("owner_email", user.email)
             .single();
 
-          if (tenant?.business_name) {
+          if (tenant && tenant.business_name) {
             setBusinessName(tenant.business_name);
+          }
+
+          const isIncomplete = !tenant || 
+                               !tenant.services_text || 
+                               tenant.services_text.trim() === "" || 
+                               tenant.business_name === "My Business";
+
+          const redirectKey = `leadflow_redirected_${user.id}`;
+          const hasRedirected = typeof window !== "undefined" ? localStorage.getItem(redirectKey) === "true" : true;
+
+          if (isIncomplete && !hasRedirected && pathname !== "/settings") {
+            if (typeof window !== "undefined") {
+              localStorage.setItem(redirectKey, "true");
+            }
+            router.push("/settings");
+            info("Welcome to LeadFlow! Please complete your Business Profile to activate your AI engine.");
           }
         }
       } catch (err) {
-        console.error("[Auth User Fetch Error]:", err);
+        console.error("[Auth/Onboarding Fetch Error]:", err);
       }
     }
-    fetchUser();
-  }, []);
+    checkOnboardingAndFetchUser();
+  }, [pathname, router, info, supabase]);
 
   const handleLogout = async () => {
     try {
@@ -112,6 +130,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/knowledge-base",
       icon: BookOpen,
       isActive: pathname === "/knowledge-base" || pathname?.startsWith("/knowledge-base/"),
+    },
+    {
+      name: "Campaigns",
+      href: "/campaigns",
+      icon: Megaphone,
+      isActive: pathname === "/campaigns" || pathname?.startsWith("/campaigns/"),
     },
     {
       name: "Settings",
