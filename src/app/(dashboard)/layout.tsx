@@ -12,7 +12,8 @@ import {
   ChevronLeft,
   Sun,
   Moon,
-  ChevronsUpDown
+  ChevronsUpDown,
+  CreditCard
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
@@ -33,6 +34,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/knowledge-base": { title: "Knowledge", subtitle: "Train the AI brain" },
   "/campaigns": { title: "Campaigns", subtitle: "Blast reactivation messages" },
   "/settings": { title: "Settings", subtitle: "Business profile & AI config" },
+  "/pricing": { title: "Pricing", subtitle: "SaaS Plan & Credit Upgrades" },
 };
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -46,6 +48,61 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [businessName, setBusinessName] = useState("LeadFlow");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [creditsLimit, setCreditsLimit] = useState<number | null>(null);
+
+  // Realtime credits synchronization
+  useEffect(() => {
+    let isCancelled = false;
+    let channel: any = null;
+
+    async function setupRealtimeCredits() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (isCancelled || !user) return;
+
+      // Initial query for credits
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("id, ai_credits_balance, ai_credits_limit")
+        .eq("owner_email", user.email)
+        .single();
+
+      if (isCancelled || !tenant) return;
+
+      setCreditsBalance(tenant.ai_credits_balance ?? 50);
+      setCreditsLimit(tenant.ai_credits_limit ?? 50);
+
+      // Realtime Subscription with a unique channel name to prevent cache collision
+      const channelName = `realtime-credits-${tenant.id}-${Math.random().toString(36).substring(2, 11)}`;
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "tenants",
+            filter: `id=eq.${tenant.id}`,
+          },
+          (payload) => {
+            const updated = payload.new as any;
+            setCreditsBalance(updated.ai_credits_balance ?? 50);
+            setCreditsLimit(updated.ai_credits_limit ?? 50);
+          }
+        )
+        .subscribe();
+    }
+
+    setupRealtimeCredits();
+
+    return () => {
+      isCancelled = true;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [supabase]);
 
   // Auto-collapse on laptop sizes (width < 1280px)
   useEffect(() => {
@@ -142,6 +199,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/settings",
       icon: Settings,
       isActive: pathname === "/settings",
+    },
+    {
+      name: "Pricing",
+      href: "/pricing",
+      icon: CreditCard,
+      isActive: pathname === "/pricing",
     },
   ];
 
@@ -324,7 +387,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Right: Portal target for module-specific CTAs */}
-          <div id="header-cta-portal" className="flex items-center gap-3 min-h-10" />
+          <div className="flex items-center gap-4">
+            {creditsBalance !== null && creditsLimit !== null && (
+              <Link href="/pricing" className="outline-none">
+                <div
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:border-[var(--brand-primary)] cursor-pointer select-none transition-all duration-200 ${
+                    creditsBalance < 0.1 * creditsLimit
+                      ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10"
+                      : "text-[var(--text-primary)]"
+                  }`}
+                  title="Click to upgrade or buy credits"
+                >
+                  <span>⚡</span>
+                  <span className="font-mono">{creditsBalance}</span>
+                  <span className="text-[var(--text-tertiary)] font-normal">/</span>
+                  <span className="text-[var(--text-tertiary)] font-mono">{creditsLimit}</span>
+                  <span className="text-[10px] text-[var(--text-secondary)] font-normal ml-0.5">Credits</span>
+                </div>
+              </Link>
+            )}
+            <div id="header-cta-portal" className="flex items-center gap-3 min-h-10" />
+          </div>
         </header>
 
         {/* Module Content */}

@@ -27,7 +27,12 @@ import {
   RefreshCw,
   QrCode,
   Sliders,
-  Activity
+  Activity,
+  Menu,
+  X,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle
 } from "lucide-react";
 
 interface Message {
@@ -86,6 +91,8 @@ const conversation: Message[] = [
 export default function Home() {
   const [step, setStep] = useState(0);
   const [hasReplayed, setHasReplayed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Multi-step loop with precise intervals
@@ -152,7 +159,7 @@ export default function Home() {
       <div className="absolute bottom-10 right-1/4 w-[600px] h-[600px] bg-accent-secondary/5 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Global Header */}
-      <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+      <header className="relative z-20 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5 select-none cursor-pointer">
           <img src="/Logo.png" alt="LeadFlow" className="h-8 w-8 object-contain" />
           <span className="font-sans text-2xl font-extrabold tracking-tight select-none">
@@ -161,21 +168,90 @@ export default function Home() {
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <a href="#features" className="hover:text-accent transition-colors duration-200 cursor-pointer">Features</a>
-          <a href="#solutions" className="hover:text-accent transition-colors duration-200 cursor-pointer">Solutions</a>
-          <a href="#pricing" className="hover:text-accent transition-colors duration-200 cursor-pointer">Pricing</a>
-          <a href="#developers" className="hover:text-accent transition-colors duration-200 cursor-pointer">API</a>
+          <a href="/#features" className="hover:text-accent transition-colors duration-200 cursor-pointer">Features</a>
+          <a href="/#solutions" className="hover:text-accent transition-colors duration-200 cursor-pointer">Solutions</a>
+          <a href="/#pricing" className="hover:text-accent transition-colors duration-200 cursor-pointer">Pricing</a>
+          <a href="/#developers" className="hover:text-accent transition-colors duration-200 cursor-pointer">API</a>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-4">
           <Link href="/login" className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2">
             Sign In
           </Link>
-          <Link href="/login" className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm">
+          <Link href="/register" className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm">
             Get Started
           </Link>
         </div>
+
+        {/* Mobile Menu Hamburger Button */}
+        <button 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 text-slate-600 hover:text-slate-900 focus:outline-none cursor-pointer"
+          aria-label="Toggle Menu"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
       </header>
+
+      {/* Mobile Menu Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden bg-white border-b border-slate-200 absolute top-20 left-0 w-full z-30 overflow-hidden shadow-lg"
+          >
+            <div className="flex flex-col px-6 py-5 space-y-4 text-base font-semibold text-slate-700">
+              <a 
+                href="/#features" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
+              >
+                Features
+              </a>
+              <a 
+                href="/#solutions" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
+              >
+                Solutions
+              </a>
+              <a 
+                href="/#pricing" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
+              >
+                Pricing
+              </a>
+              <a 
+                href="/#developers" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
+              >
+                API
+              </a>
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                <Link 
+                  href="/login" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2 w-1/2 text-center"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  href="/register" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 text-center active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm w-1/2"
+                >
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Hero Section */}
       <main className="relative z-10 flex-1 flex items-center max-w-7xl w-full mx-auto px-6 py-12 lg:py-20">
@@ -203,7 +279,7 @@ export default function Home() {
 
             {/* CTA Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-              <Link href="/login" className="group cursor-pointer inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-accent to-accent-secondary text-white font-semibold font-sans shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
+              <Link href="/register" className="group cursor-pointer inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-accent to-accent-secondary text-white font-semibold font-sans shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
@@ -982,6 +1058,294 @@ export default function Home() {
 
           </div>
         </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="relative z-10 w-full max-w-7xl mx-auto px-6 py-28 border-t border-slate-200/50">
+        
+        {/* Header */}
+        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-20">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-xs font-mono font-bold tracking-wider text-accent uppercase mb-4 select-none">
+            <Sparkles className="w-3.5 h-3.5" />
+            PLANS & PRICING
+          </div>
+          <h2 className="font-calistoga text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight mb-4">
+            Simple, Transparent Pricing for Indian Businesses.
+          </h2>
+          <p className="text-lg text-slate-600 font-sans leading-relaxed">
+            Choose a plan that fits your business stage. No hidden fees or onboarding costs.
+          </p>
+        </div>
+
+        {/* 3-Column Pricing Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-24">
+          
+          {/* Starter Tier */}
+          <div className="flex flex-col bg-white border border-slate-200/80 rounded-3xl p-8 justify-between hover:shadow-xl transition-all duration-300 relative shadow-md group cursor-pointer hover:border-slate-300">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-400 uppercase font-mono tracking-wider">Starter</span>
+                <h3 className="font-calistoga text-2xl text-slate-900">Perfect for Solo Professionals</h3>
+                <p className="text-sm text-slate-500 font-sans leading-relaxed">
+                  Start automating your customer queries and booking notifications on WhatsApp.
+                </p>
+              </div>
+              <div className="flex items-baseline gap-1 select-none py-2 border-y border-slate-100">
+                <span className="text-4xl font-extrabold text-slate-900 font-sans">₹1,499</span>
+                <span className="text-sm text-slate-400 font-medium font-sans">/ month</span>
+              </div>
+              <ul className="space-y-4 text-sm text-slate-600 font-sans">
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>500 AI Credits</strong> / month</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>250 CRM Leads</strong></span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span>Unified Chat Inbox</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>1 Staff Seat</strong></span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-8">
+              <Link 
+                href="/register" 
+                className="w-full py-3.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-sm font-semibold text-slate-900 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shadow-xs"
+              >
+                Get Started
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Growth Tier [MOST POPULAR] */}
+          <div className="flex flex-col bg-white border-2 border-indigo-500 rounded-3xl p-8 justify-between hover:shadow-2xl transition-all duration-300 scale-100 md:scale-105 shadow-xl relative z-10">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-accent to-accent-secondary text-white text-[10px] font-extrabold uppercase tracking-widest shadow-md flex items-center gap-1 select-none">
+              <Flame className="w-3.5 h-3.5 animate-pulse" />
+              Most Popular Choice
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-2 pt-2">
+                <span className="text-xs font-bold text-accent uppercase font-mono tracking-wider">Growth</span>
+                <h3 className="font-calistoga text-2xl text-slate-900">Highly Recommended for Scaling</h3>
+                <p className="text-sm text-slate-500 font-sans leading-relaxed">
+                  Unlock automatic campaigns and unlimited lead extractions to scale your customer outreach.
+                </p>
+              </div>
+              <div className="flex items-baseline gap-1 select-none py-2 border-y border-slate-100">
+                <span className="text-5xl font-black text-slate-900 font-sans">₹2,999</span>
+                <span className="text-sm text-slate-400 font-medium font-sans">/ month</span>
+              </div>
+              <ul className="space-y-4 text-sm text-slate-600 font-sans">
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>2,500 AI Credits</strong> / month</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>Unlimited CRM Leads</strong></span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>Outbound Campaigns Engine</strong></span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>3 Staff Seats</strong></span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-8">
+              <Link 
+                href="/register" 
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent to-accent-secondary hover:from-indigo-600 hover:to-indigo-700 text-sm font-semibold text-white flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
+              >
+                Start 14-Day Free Trial
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Domination Tier [DARK MODE] */}
+          <div className="flex flex-col bg-slate-950 border border-slate-800 rounded-3xl p-8 justify-between hover:shadow-2xl transition-all duration-300 relative shadow-xl text-slate-100 group cursor-pointer hover:border-slate-700">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-400 uppercase font-mono tracking-wider">Domination</span>
+                <h3 className="font-calistoga text-2xl text-white">Total Business Autopilot</h3>
+                <p className="text-sm text-slate-400 font-sans leading-relaxed">
+                  The ultimate suite for enterprise-level automation and custom AI brain configurations.
+                </p>
+              </div>
+              <div className="flex items-baseline gap-1 select-none py-2 border-y border-slate-800">
+                <span className="text-4xl font-extrabold text-white font-sans">₹4,999</span>
+                <span className="text-sm text-slate-500 font-medium font-sans">/ month</span>
+              </div>
+              <ul className="space-y-4 text-sm text-slate-300 font-sans">
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>10,000 AI Credits</strong> / month</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>Auto-Review Reputation Engine</strong></span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span>Zero-Touch Calendar Booking</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent stroke-[3]" />
+                  </div>
+                  <span><strong>Unlimited Seats</strong></span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-8">
+              <Link 
+                href="/register" 
+                className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer border border-slate-800 hover:border-slate-700"
+              >
+                Get Started
+                <ArrowRight className="w-4 h-4 text-slate-500" />
+              </Link>
+            </div>
+          </div>
+
+        </div>
+
+        {/* FAQ Accordion Section */}
+        <div className="max-w-3xl mx-auto pt-16 border-t border-slate-200/50">
+          <div className="text-center space-y-3 mb-12 select-none">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-xs font-semibold text-accent uppercase font-mono tracking-wider">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Got Questions?
+            </div>
+            <h3 className="font-calistoga text-3xl text-slate-900">
+              Frequently Asked Questions
+            </h3>
+            <p className="text-sm text-slate-500 font-sans font-medium">
+              Have questions about credits, billing, or WhatsApp integration? We've got answers.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            
+            {/* FAQ 1 */}
+            <div className="border border-slate-200/80 rounded-2xl bg-white overflow-hidden transition-all duration-200 shadow-xs hover:border-slate-300">
+              <button
+                onClick={() => setActiveFaq(activeFaq === 0 ? null : 0)}
+                className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-sans font-bold text-slate-800 hover:text-slate-900 focus:outline-none cursor-pointer"
+              >
+                <span>What is an AI Credit?</span>
+                <span className="p-1 rounded-lg bg-slate-50 border border-slate-100 text-slate-500">
+                  {activeFaq === 0 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {activeFaq === 0 && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-6 pb-5 pt-1 text-slate-600 text-sm font-sans leading-relaxed border-t border-slate-50">
+                      An AI Credit covers one message exchange (incoming customer query processed + AI response generated and sent via WhatsApp). Simple conversations typically take 3-5 credits. You can monitor your credit usage in real time from your dashboard.
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* FAQ 2 */}
+            <div className="border border-slate-200/80 rounded-2xl bg-white overflow-hidden transition-all duration-200 shadow-xs hover:border-slate-300">
+              <button
+                onClick={() => setActiveFaq(activeFaq === 1 ? null : 1)}
+                className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-sans font-bold text-slate-800 hover:text-slate-900 focus:outline-none cursor-pointer"
+              >
+                <span>Can I upgrade later?</span>
+                <span className="p-1 rounded-lg bg-slate-50 border border-slate-100 text-slate-500">
+                  {activeFaq === 1 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {activeFaq === 1 && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-6 pb-5 pt-1 text-slate-600 text-sm font-sans leading-relaxed border-t border-slate-50">
+                      Yes! You can upgrade, downgrade, or cancel your subscription plan at any time directly from your billing settings. Upgrades happen instantly, while downgrades take effect at the end of your billing cycle.
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* FAQ 3 */}
+            <div className="border border-slate-200/80 rounded-2xl bg-white overflow-hidden transition-all duration-200 shadow-xs hover:border-slate-300">
+              <button
+                onClick={() => setActiveFaq(activeFaq === 2 ? null : 2)}
+                className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-sans font-bold text-slate-800 hover:text-slate-900 focus:outline-none cursor-pointer"
+              >
+                <span>Do you support UPI?</span>
+                <span className="p-1 rounded-lg bg-slate-50 border border-slate-100 text-slate-500">
+                  {activeFaq === 2 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {activeFaq === 2 && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-6 pb-5 pt-1 text-slate-600 text-sm font-sans leading-relaxed border-t border-slate-50">
+                      Absolutely. We support all local Indian payment methods, including UPI (Google Pay, PhonePe, Paytm, BHIM), NetBanking, and credit/debit cards processed securely via Razorpay.
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+          </div>
+        </div>
+
       </section>
 
       {/* Global Footer */}

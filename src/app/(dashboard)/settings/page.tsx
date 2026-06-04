@@ -210,6 +210,7 @@ export default function SettingsPage() {
   const [isCalendarConnected, setIsCalendarConnected] = useState(false);
   const [gcalCalendarId, setGcalCalendarId] = useState("");
   const [googleReviewLink, setGoogleReviewLink] = useState("");
+  const [subscriptionTier, setSubscriptionTier] = useState("free");
 
   // Dynamic UI Language
   const [formLanguage, setFormLanguage] = useState<"en" | "hi" | "gu">("en");
@@ -272,7 +273,7 @@ export default function SettingsPage() {
 
     const { data, error } = await supabase
       .from("tenants")
-      .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
+      .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier")
       .eq("owner_email", user.email)
       .single();
 
@@ -305,14 +306,14 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
           payment_methods_text: "Cash, UPI, Cards",
           target_audience_text: "General segment",
         })
-        .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
+        .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier")
         .single();
 
       if (createError) {
         if (createError.code === "23505" || createError.message?.includes("unique constraint")) {
           const { data: existingTenant, error: fetchError } = await supabase
             .from("tenants")
-            .select("id, is_calendar_connected, gcal_calendar_id, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text")
+            .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier")
             .eq("owner_email", user.email)
             .single();
           if (!fetchError) tenantConfig = existingTenant;
@@ -335,6 +336,7 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
       const calConnected = tenantConfig.is_calendar_connected || false;
       const calId = tenantConfig.gcal_calendar_id || "";
       const googleLink = tenantConfig.google_review_link || "";
+      const tier = tenantConfig.subscription_tier || "free";
 
       setBusinessName(name);
       setServicesText(services);
@@ -348,6 +350,7 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
       setIsCalendarConnected(calConnected);
       setGcalCalendarId(calId);
       setGoogleReviewLink(googleLink);
+      setSubscriptionTier(tier);
 
       setOriginalData({
         businessName: name,
@@ -1111,16 +1114,30 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
                               <Globe className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
                               Google Maps Review Link
                             </label>
-                            <input
-                              type="text"
-                              value={googleReviewLink}
-                              onChange={(e) => {
-                                setGoogleReviewLink(e.target.value);
-                                setHasChanges(true);
-                              }}
-                              placeholder="e.g., https://g.page/r/your-review-id/review"
-                              className={`${inputBaseClass} h-11`}
-                            />
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={googleReviewLink}
+                                disabled={subscriptionTier !== "domination"}
+                                onChange={(e) => {
+                                  setGoogleReviewLink(e.target.value);
+                                  setHasChanges(true);
+                                }}
+                                placeholder="e.g., https://g.page/r/your-review-id/review"
+                                className={`${inputBaseClass} h-11 ${
+                                  subscriptionTier !== "domination"
+                                    ? "opacity-60 cursor-not-allowed bg-[var(--bg-muted)] pr-36"
+                                    : ""
+                                }`}
+                              />
+                              {subscriptionTier !== "domination" && (
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 select-none">
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded bg-violet-600/90 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm font-sans">
+                                    Advance Feature Required
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                             <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
                               Ensure this is a direct, pre-approved Google Review link (e.g. g.page/r/...) so that customers can open the review portal in one click. Leave blank to disable automated review messages.
                             </p>

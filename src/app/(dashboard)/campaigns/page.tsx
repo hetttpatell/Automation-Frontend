@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Lead {
@@ -39,10 +40,12 @@ export default function CampaignsPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ─── State ────────────────────────────────────────────────────────
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [businessName, setBusinessName] = useState("My Business");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>("free");
 
   // Composer state
   const [campaignName, setCampaignName] = useState("");
@@ -65,15 +68,20 @@ export default function CampaignsPage() {
       if (user) {
         setUser(user);
 
-        // Fetch business name
+        // Fetch business name AND subscription tier
         const { data: tenant } = await supabase
           .from("tenants")
-          .select("business_name")
+          .select("business_name, subscription_tier")
           .eq("owner_email", user.email)
           .single();
 
-        if (tenant?.business_name) {
-          setBusinessName(tenant.business_name);
+        if (tenant) {
+          if (tenant.business_name) {
+            setBusinessName(tenant.business_name);
+          }
+          if (tenant.subscription_tier) {
+            setSubscriptionTier(tenant.subscription_tier);
+          }
         }
 
         // Fetch leads
@@ -196,7 +204,30 @@ export default function CampaignsPage() {
 
   // ─── Render ───────────────────────────────────────────────────────
   return (
-    <div className="h-full overflow-y-auto bg-[var(--bg-canvas)]">
+    <div className="h-full overflow-y-auto bg-[var(--bg-canvas)] relative">
+      {(subscriptionTier === "free" || subscriptionTier === "starter") && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-md z-40 flex items-center justify-center p-4">
+          <div className="bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] shadow-2xl p-8 max-w-md w-full text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center mx-auto text-violet-500">
+              <Megaphone className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-display font-extrabold text-[var(--text-primary)]">
+                Upgrade to Growth
+              </h3>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Upgrade to the Growth Plan to instantly build outbound marketing campaigns.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push("/pricing")}
+              className="w-full h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110 text-white rounded-[var(--radius-lg)] text-sm font-semibold transition-all active:scale-[0.98] shadow-md cursor-pointer flex items-center justify-center"
+            >
+              Upgrade Now
+            </button>
+          </div>
+        </div>
+      )}
       <div className="px-6 py-6 space-y-5 max-w-[1400px] mx-auto">
         {/* ─── Page Header ──────────────────────────────── */}
         <div className="flex items-center gap-3 select-none">
