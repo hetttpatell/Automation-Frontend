@@ -2,6 +2,9 @@
 
 export const dynamic = "force-dynamic";
 
+// Backend API URL — routes to our dedicated Node.js server
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Send,
@@ -150,9 +153,16 @@ export default function CampaignsPage() {
     setIsSending(true);
 
     try {
-      const res = await fetch("/api/campaigns/send", {
+      // Get current session token for backend auth
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || "";
+
+      const res = await fetch(`${API_URL}/api/campaigns/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           campaign_name: campaignName.trim(),
           custom_message_body: customMessage.trim(),

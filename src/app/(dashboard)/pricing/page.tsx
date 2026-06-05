@@ -9,6 +9,9 @@ import { motion } from "framer-motion";
 
 export const dynamic = "force-dynamic";
 
+// Backend API URL — routes to our dedicated Node.js server
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 // Load Razorpay Script dynamically helper
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -56,10 +59,17 @@ export default function PricingPage() {
     setLoadingStates((prev) => ({ ...prev, [tier]: true }));
 
     try {
+      // Get current session token for backend auth
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || "";
+
       // 1. Create subscription on the backend
-      const res = await fetch("/api/razorpay/create-subscription", {
+      const res = await fetch(`${API_URL}/api/razorpay/create-subscription`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ planId: tier }),
       });
 
@@ -122,10 +132,17 @@ export default function PricingPage() {
     setLoadingStates((prev) => ({ ...prev, [packId]: true }));
 
     try {
+      // Get current session token for backend auth
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || "";
+
       // 1. Create order on the backend
-      const res = await fetch("/api/razorpay/create-order", {
+      const res = await fetch(`${API_URL}/api/razorpay/create-order`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ packId }),
       });
 

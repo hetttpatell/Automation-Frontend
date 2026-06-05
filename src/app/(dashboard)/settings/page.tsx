@@ -601,7 +601,8 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
       return;
     }
     // Open OAuth endpoint in a new tab to bypass iframe sandboxing limits
-    window.open(`http://localhost:3001/api/calendar/auth?tenant_id=${tenantId}`, '_blank');
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    window.open(`${apiUrl}/api/calendar/auth?tenant_id=${tenantId}`, '_blank');
   }
 
   async function handleDisconnectCalendar() {
