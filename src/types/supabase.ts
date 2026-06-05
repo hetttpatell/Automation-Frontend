@@ -195,6 +195,7 @@ export type Database = {
           waba_id: string | null
           whatsapp_access_token: string | null
           whatsapp_phone_number_id: string | null
+          whatsapp_business_account_id: string | null
         }
         Insert: {
           ai_model?: string | null
@@ -210,6 +211,7 @@ export type Database = {
           waba_id?: string | null
           whatsapp_access_token?: string | null
           whatsapp_phone_number_id?: string | null
+          whatsapp_business_account_id?: string | null
         }
         Update: {
           ai_model?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           waba_id?: string | null
           whatsapp_access_token?: string | null
           whatsapp_phone_number_id?: string | null
+          whatsapp_business_account_id?: string | null
         }
         Relationships: []
       }

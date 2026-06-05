@@ -32,6 +32,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 
+interface TenantConfig {
+  id: string;
+  is_calendar_connected?: boolean | null;
+  gcal_calendar_id?: string | null;
+  google_review_link?: string | null;
+  ai_system_instruction?: string | null;
+  ai_tone?: string | null;
+  business_name?: string | null;
+  services_text?: string | null;
+  hours_text?: string | null;
+  rules_text?: string | null;
+  bot_language?: string | null;
+  payment_methods_text?: string | null;
+  target_audience_text?: string | null;
+  subscription_tier?: string | null;
+  whatsapp_access_token?: string | null;
+  whatsapp_phone_number_id?: string | null;
+  whatsapp_business_account_id?: string | null;
+}
+
 // ─── Tone Preset Options ────────────────────────────────────────────
 const TONE_OPTIONS = [
   { value: "Professional", label: "Professional", icon: Briefcase, desc: "Formal, clear, trustworthy" },
@@ -289,7 +309,7 @@ export default function SettingsPage() {
       .eq("owner_email", user.email)
       .single();
 
-    let tenantConfig = data;
+    let tenantConfig: TenantConfig | null = data as TenantConfig | null;
     const defaultBusinessName = user.email
       ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) + "'s Business"
       : "My Business";
@@ -325,13 +345,13 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
         if (createError.code === "23505" || createError.message?.includes("unique constraint")) {
           const { data: existingTenant, error: fetchError } = await supabase
             .from("tenants")
-            .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier")
+            .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier, whatsapp_access_token, whatsapp_phone_number_id, whatsapp_business_account_id")
             .eq("owner_email", user.email)
             .single();
-          if (!fetchError) tenantConfig = existingTenant;
+          if (!fetchError) tenantConfig = existingTenant as TenantConfig | null;
         }
       } else {
-        tenantConfig = newTenant;
+        tenantConfig = newTenant as TenantConfig | null;
       }
     }
 
