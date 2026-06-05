@@ -317,7 +317,7 @@ export default function SettingsPage() {
       : "My Business";
 
     if (error && error.code === "PGRST116") {
-      const initialPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${defaultBusinessName}. 
+      const initialPrompt = `You are the AI Assistant for ${defaultBusinessName}, an elite, hyper-efficient representative. 
 You must communicate primarily in English.
 Our services are: General support. 
 Our hours are: Monday to Friday: 9:00 AM - 6:00 PM. 
@@ -468,7 +468,7 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
   }, [hasProfileChanges, hasVectorChanges, hasIntegrationChanges, hasWhatsappChanges]);
 
   // Compile instructions preview
-  const compiledPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${businessName || "My Business"}. 
+  const compiledPrompt = `You are the AI Assistant for ${businessName || "My Business"}, an elite, hyper-efficient representative. 
 You must communicate primarily in ${botLanguage}.
 Our services are: ${servicesText || "General services and business support"}. 
 Our hours are: ${hoursText || "Monday to Friday: 9:00 AM - 6:00 PM"}. 
