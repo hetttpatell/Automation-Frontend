@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Users,
   MessageSquare,
@@ -42,7 +42,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { theme, toggleTheme } = useTheme();
   const { success, error: toastError, info } = useToast();
 

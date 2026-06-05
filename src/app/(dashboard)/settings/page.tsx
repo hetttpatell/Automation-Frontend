@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { 
   Save, 
@@ -214,7 +214,7 @@ const TRANSLATIONS = {
 };
 
 export default function SettingsPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { success: toastSuccess, error: toastError } = useToast();
 
   // Active navigation tab
@@ -412,21 +412,36 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
     setIsLoading(false);
   }, [supabase]);
 
+  // Sync calendar connection status on tab focus without overwriting other unsaved form inputs
+  const syncCalendarConnection = React.useCallback(async () => {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || !user.email) return;
+
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("is_calendar_connected")
+      .eq("owner_email", user.email)
+      .single();
+
+    if (!error && data) {
+      setIsCalendarConnected(data.is_calendar_connected || false);
+    }
+  }, [supabase]);
+
   // Initial fetch on mount
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
-  // Re-fetch config on tab focus (syncs connected state if they completed OAuth in the newly opened tab)
+  // Re-fetch only calendar connection status on tab focus to sync OAuth states without losing user inputs
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleFocus = () => {
-      // Re-fetch silently without showing full-screen loader to keep it seamless
-      fetchConfig(false);
+      syncCalendarConnection();
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [fetchConfig]);
+  }, [syncCalendarConnection]);
 
   // Check which tabs have unsaved edits
   const hasProfileChanges = 
