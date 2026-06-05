@@ -65,7 +65,7 @@ export default function CampaignsPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (user) {
+      if (user && user.email) {
         setUser(user);
 
         // Fetch business name AND subscription tier

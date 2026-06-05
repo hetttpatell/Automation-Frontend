@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     async function setupRealtimeCredits() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (isCancelled || !user) return;
+      if (isCancelled || !user || !user.email) return;
 
       // Initial query for credits
       const { data: tenant } = await supabase
@@ -122,8 +122,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     async function checkOnboardingAndFetchUser() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserEmail(user.email ?? null);
+        if (user && user.email) {
+          setUserEmail(user.email);
 
           const { data: tenant } = await supabase
             .from("tenants")

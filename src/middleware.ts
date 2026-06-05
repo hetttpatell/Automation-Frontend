@@ -1,19 +1,2 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/utils/supabase/middleware";
+// Deprecated in Next.js 16. Replaced by src/proxy.ts.
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
-}
-
-export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (completely bypasses all API endpoints from auth checks)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-  ],
-};

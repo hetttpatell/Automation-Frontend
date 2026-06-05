@@ -277,8 +277,8 @@ export default function SettingsPage() {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      console.error("[Settings Auth Error]:", authError?.message || "No user found");
+    if (authError || !user || !user.email) {
+      console.error("[Settings Auth Error]:", authError?.message || "No user or email found");
       setIsLoading(false);
       return;
     }
@@ -488,8 +488,8 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      console.error("[Save Config Error]: No User Session");
+    if (authError || !user || !user.email) {
+      console.error("[Save Config Error]: No User Session or email");
       toastError("Failed to authenticate session");
       setIsSaving(false);
       return;
@@ -585,7 +585,7 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
   async function handleDisconnectCalendar() {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("No user found");
+      if (authError || !user || !user.email) throw new Error("No user or email found");
 
       const { error } = await supabase
         .from("tenants")

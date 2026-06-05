@@ -181,8 +181,8 @@ export default function KnowledgeBasePage() {
 
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-      if (authError || !user) {
-        console.error("[KB Auth Error]:", authError?.message || "No user found");
+      if (authError || !user || !user.email) {
+        console.error("[KB Auth Error]:", authError?.message || "No user or email found");
         setIsLoading(false);
         return;
       }

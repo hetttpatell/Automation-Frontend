@@ -32,8 +32,8 @@ export default function PricingPage() {
   useEffect(() => {
     async function loadUserContext() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email || "");
+      if (user && user.email) {
+        setUserEmail(user.email);
         const { data: tenant } = await supabase
           .from("tenants")
           .select("subscription_tier, ai_credits_balance")
