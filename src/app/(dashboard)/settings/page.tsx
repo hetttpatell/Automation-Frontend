@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { 
@@ -33,6 +31,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
+
+export const dynamic = "force-dynamic";
 
 interface TenantConfig {
   id: string;

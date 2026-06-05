@@ -1,13 +1,13 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import React, { useState, useEffect } from "react";
 import { Check, Loader2, Sparkles, CreditCard, Flame, Zap, Shield, HelpCircle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { motion } from "framer-motion";
+
+export const dynamic = "force-dynamic";
 
 // Load Razorpay Script dynamically helper
 const loadRazorpayScript = () => {

@@ -23,6 +23,8 @@ import { useTheme } from "@/components/ui/ThemeProvider";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
 
+export const dynamic = "force-dynamic";
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }

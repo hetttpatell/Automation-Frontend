@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -16,6 +14,8 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
+
+export const dynamic = "force-dynamic";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Lead {
