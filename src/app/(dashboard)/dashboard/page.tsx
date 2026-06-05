@@ -598,17 +598,17 @@ export default function LeadsDashboard() {
             return (
               <div
                 key={stageKey}
-                onDragEnter={(e) => {
+                onDragEnter={(e: React.DragEvent<HTMLDivElement>) => {
                   e.preventDefault();
                   setDraggedOverStage(stageKey);
                 }}
-                onDragOver={(e) => {
+                onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
                   e.preventDefault();
                 }}
                 onDragLeave={() => {
                   setDraggedOverStage(null);
                 }}
-                onDrop={(e) => {
+                onDrop={(e: React.DragEvent<HTMLDivElement>) => {
                   e.preventDefault();
                   setDraggedOverStage(null);
                   const leadId = e.dataTransfer.getData("text/plain");
@@ -654,12 +654,14 @@ export default function LeadsDashboard() {
                             key={lead.id}
                             layout
                             draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData("text/plain", lead.id);
-                              e.currentTarget.classList.add("opacity-50");
+                            onDragStart={(e: any) => {
+                              const dragEvent = e as React.DragEvent<HTMLDivElement>;
+                              dragEvent.dataTransfer.setData("text/plain", lead.id);
+                              dragEvent.currentTarget.classList.add("opacity-50");
                             }}
-                            onDragEnd={(e) => {
-                              e.currentTarget.classList.remove("opacity-50");
+                            onDragEnd={(e: any) => {
+                              const dragEvent = e as React.DragEvent<HTMLDivElement>;
+                              dragEvent.currentTarget.classList.remove("opacity-50");
                             }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
                             className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-3.5 relative group flex flex-col gap-2.5 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)] cursor-grab active:cursor-grabbing"
