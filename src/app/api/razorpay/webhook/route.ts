@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
-// Initialize high-privilege Supabase admin client (required to bypass RLS in webhook contexts)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
-
 export async function POST(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+  if (!supabaseUrl || !supabaseServiceRole) {
+    console.error("[Razorpay Webhook Error] Supabase credentials missing during execution.");
+    return NextResponse.json({ error: "Supabase URL and Service Role Key are required" }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRole);
+
   const signature = request.headers.get("x-razorpay-signature") || "";
   const rawBody = await request.text();
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
