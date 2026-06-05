@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (authError || !user || !user.email) {
       return NextResponse.json({ error: "Unauthorized user session." }, { status: 401 });
     }
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         tenant_id: tenant.id,
         subscription_tier: planId,
       },
-    });
+    } as any);
 
     return NextResponse.json(subscription, { status: 200 });
   } catch (error: any) {

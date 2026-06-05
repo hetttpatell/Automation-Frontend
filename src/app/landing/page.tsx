@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Navbar from "@/components/Navbar";
 import { 
   ArrowRight, 
   Check, 
@@ -151,30 +152,7 @@ export default function Home() {
       <div className="absolute bottom-10 right-1/4 w-[600px] h-[600px] bg-accent-secondary/5 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Global Header */}
-      <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 select-none cursor-pointer">
-          <img src="/Logo.png" alt="LeadFlow" className="h-8 w-8 object-contain" />
-          <span className="font-sans text-2xl font-extrabold tracking-tight select-none">
-            <span className="text-slate-900">Lead</span><span className="text-[#6366F1]">Flow</span>
-          </span>
-        </div>
-
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <a href="#features" className="hover:text-accent transition-colors duration-200 cursor-pointer">Features</a>
-          <a href="#solutions" className="hover:text-accent transition-colors duration-200 cursor-pointer">Solutions</a>
-          <a href="#pricing" className="hover:text-accent transition-colors duration-200 cursor-pointer">Pricing</a>
-          <a href="#developers" className="hover:text-accent transition-colors duration-200 cursor-pointer">API</a>
-        </nav>
-
-        <div className="flex items-center gap-4">
-          <a href="/login" className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2">
-            Sign In
-          </a>
-          <a href="/login" className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm">
-            Get Started
-          </a>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Hero Section */}
       <main className="relative z-10 flex-1 flex items-center max-w-7xl w-full mx-auto px-6 py-12 lg:py-20">

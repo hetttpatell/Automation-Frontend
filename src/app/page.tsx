@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import Navbar from "@/components/Navbar";
 import { 
   ArrowRight, 
   Check, 
@@ -91,7 +92,6 @@ const conversation: Message[] = [
 export default function Home() {
   const [step, setStep] = useState(0);
   const [hasReplayed, setHasReplayed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -159,99 +159,7 @@ export default function Home() {
       <div className="absolute bottom-10 right-1/4 w-[600px] h-[600px] bg-accent-secondary/5 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Global Header */}
-      <header className="relative z-20 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 select-none cursor-pointer">
-          <img src="/Logo.png" alt="LeadFlow" className="h-8 w-8 object-contain" />
-          <span className="font-sans text-2xl font-extrabold tracking-tight select-none">
-            <span className="text-slate-900">Lead</span><span className="text-[#6366F1]">Flow</span>
-          </span>
-        </div>
-
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <a href="/#features" className="hover:text-accent transition-colors duration-200 cursor-pointer">Features</a>
-          <a href="/#solutions" className="hover:text-accent transition-colors duration-200 cursor-pointer">Solutions</a>
-          <a href="/#pricing" className="hover:text-accent transition-colors duration-200 cursor-pointer">Pricing</a>
-          <a href="/#developers" className="hover:text-accent transition-colors duration-200 cursor-pointer">API</a>
-        </nav>
-
-        <div className="hidden md:flex items-center gap-4">
-          <Link href="/login" className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2">
-            Sign In
-          </Link>
-          <Link href="/register" className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm">
-            Get Started
-          </Link>
-        </div>
-
-        {/* Mobile Menu Hamburger Button */}
-        <button 
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-slate-600 hover:text-slate-900 focus:outline-none cursor-pointer"
-          aria-label="Toggle Menu"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </header>
-
-      {/* Mobile Menu Drawer */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden bg-white border-b border-slate-200 absolute top-20 left-0 w-full z-30 overflow-hidden shadow-lg"
-          >
-            <div className="flex flex-col px-6 py-5 space-y-4 text-base font-semibold text-slate-700">
-              <a 
-                href="/#features" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
-              >
-                Features
-              </a>
-              <a 
-                href="/#solutions" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
-              >
-                Solutions
-              </a>
-              <a 
-                href="/#pricing" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
-              >
-                Pricing
-              </a>
-              <a 
-                href="/#developers" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-accent transition-colors duration-200 cursor-pointer py-1"
-              >
-                API
-              </a>
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
-                <Link 
-                  href="/login" 
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="cursor-pointer text-sm font-medium text-slate-700 hover:text-accent transition-colors duration-200 px-4 py-2 w-1/2 text-center"
-                >
-                  Sign In
-                </Link>
-                <Link 
-                  href="/register" 
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="cursor-pointer text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 text-center active:bg-slate-950 transition-colors duration-200 px-5 py-2.5 rounded-xl shadow-sm w-1/2"
-                >
-                  Get Started
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Navbar />
 
       {/* Main Hero Section */}
       <main className="relative z-10 flex-1 flex items-center max-w-7xl w-full mx-auto px-6 py-12 lg:py-20">

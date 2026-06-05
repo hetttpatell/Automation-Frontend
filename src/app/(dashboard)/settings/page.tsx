@@ -23,7 +23,10 @@ import {
   Terminal,
   CreditCard,
   ShieldCheck,
-  FileText
+  FileText,
+  Eye,
+  EyeOff,
+  MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -205,6 +208,12 @@ export default function SettingsPage() {
   const [botLanguage, setBotLanguage] = useState("English");
   const [aiTone, setAiTone] = useState("Professional");
 
+  // WhatsApp Credentials States
+  const [whatsappAccessToken, setWhatsappAccessToken] = useState("");
+  const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState("");
+  const [whatsappBusinessAccountId, setWhatsappBusinessAccountId] = useState("");
+  const [showToken, setShowToken] = useState(false);
+
   // Google Calendar States
   const [tenantId, setTenantId] = useState("");
   const [isCalendarConnected, setIsCalendarConnected] = useState(false);
@@ -236,6 +245,9 @@ export default function SettingsPage() {
     aiTone: "Professional",
     gcalCalendarId: "",
     googleReviewLink: "",
+    whatsappAccessToken: "",
+    whatsappPhoneNumberId: "",
+    whatsappBusinessAccountId: "",
   });
 
   const [mounted, setMounted] = useState(false);
@@ -273,7 +285,7 @@ export default function SettingsPage() {
 
     const { data, error } = await supabase
       .from("tenants")
-      .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier")
+      .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier, whatsapp_access_token, whatsapp_phone_number_id, whatsapp_business_account_id")
       .eq("owner_email", user.email)
       .single();
 
@@ -306,7 +318,7 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
           payment_methods_text: "Cash, UPI, Cards",
           target_audience_text: "General segment",
         })
-        .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier")
+        .select("id, is_calendar_connected, gcal_calendar_id, google_review_link, ai_system_instruction, ai_tone, business_name, services_text, hours_text, rules_text, bot_language, payment_methods_text, target_audience_text, subscription_tier, whatsapp_access_token, whatsapp_phone_number_id, whatsapp_business_account_id")
         .single();
 
       if (createError) {
@@ -337,6 +349,9 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
       const calId = tenantConfig.gcal_calendar_id || "";
       const googleLink = tenantConfig.google_review_link || "";
       const tier = tenantConfig.subscription_tier || "free";
+      const waToken = tenantConfig.whatsapp_access_token || "";
+      const waPhoneId = tenantConfig.whatsapp_phone_number_id || "";
+      const waBusinessId = tenantConfig.whatsapp_business_account_id || "";
 
       setBusinessName(name);
       setServicesText(services);
@@ -351,6 +366,9 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
       setGcalCalendarId(calId);
       setGoogleReviewLink(googleLink);
       setSubscriptionTier(tier);
+      setWhatsappAccessToken(waToken);
+      setWhatsappPhoneNumberId(waPhoneId);
+      setWhatsappBusinessAccountId(waBusinessId);
 
       setOriginalData({
         businessName: name,
@@ -363,6 +381,9 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
         aiTone: tone,
         gcalCalendarId: calId,
         googleReviewLink: googleLink,
+        whatsappAccessToken: waToken,
+        whatsappPhoneNumberId: waPhoneId,
+        whatsappBusinessAccountId: waBusinessId,
       });
     }
 
@@ -399,11 +420,15 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
     rulesText !== originalData.rulesText;
 
   const hasIntegrationChanges = gcalCalendarId !== originalData.gcalCalendarId || googleReviewLink !== originalData.googleReviewLink;
+  const hasWhatsappChanges =
+    whatsappAccessToken !== originalData.whatsappAccessToken ||
+    whatsappPhoneNumberId !== originalData.whatsappPhoneNumberId ||
+    whatsappBusinessAccountId !== originalData.whatsappBusinessAccountId;
 
   // Track global dirty changes
   useEffect(() => {
-    setHasChanges(hasProfileChanges || hasVectorChanges || hasIntegrationChanges);
-  }, [hasProfileChanges, hasVectorChanges, hasIntegrationChanges]);
+    setHasChanges(hasProfileChanges || hasVectorChanges || hasIntegrationChanges || hasWhatsappChanges);
+  }, [hasProfileChanges, hasVectorChanges, hasIntegrationChanges, hasWhatsappChanges]);
 
   // Compile instructions preview
   const compiledPrompt = `You are the LeadFlow AI Assistant, an elite, hyper-efficient sales representative for ${businessName || "My Business"}. 
@@ -485,7 +510,10 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
           bot_language: botLanguage,
           ai_tone: aiTone,
           gcal_calendar_id: gcalCalendarId || null,
-          google_review_link: googleReviewLink || null
+          google_review_link: googleReviewLink || null,
+          whatsapp_access_token: whatsappAccessToken || null,
+          whatsapp_phone_number_id: whatsappPhoneNumberId || null,
+          whatsapp_business_account_id: whatsappBusinessAccountId || null,
         })
         .eq("owner_email", user.email);
 
@@ -502,6 +530,9 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
         aiTone,
         gcalCalendarId,
         googleReviewLink,
+        whatsappAccessToken,
+        whatsappPhoneNumberId,
+        whatsappBusinessAccountId,
       });
       setHasChanges(false);
       
@@ -527,6 +558,9 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
     setBotLanguage(originalData.botLanguage);
     setAiTone(originalData.aiTone);
     setGoogleReviewLink(originalData.googleReviewLink);
+    setWhatsappAccessToken(originalData.whatsappAccessToken);
+    setWhatsappPhoneNumberId(originalData.whatsappPhoneNumberId);
+    setWhatsappBusinessAccountId(originalData.whatsappBusinessAccountId);
     toastSuccess("Modifications discarded");
   }
 
@@ -1096,6 +1130,94 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
                             </div>
                           </div>
                         )}
+
+                        {/* WhatsApp Credentials Section */}
+                        <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
+                          <div>
+                            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                              <MessageSquare className="w-4 h-4 text-emerald-500" />
+                              WhatsApp API Settings
+                            </h3>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+                              Configure your custom Meta / WhatsApp Business Cloud API credentials. Leave blank to gracefully fall back to the system developer default configuration.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* WhatsApp Phone Number ID */}
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                                Phone Number ID
+                              </label>
+                              <input
+                                type="text"
+                                value={whatsappPhoneNumberId}
+                                onChange={(e) => {
+                                  setWhatsappPhoneNumberId(e.target.value);
+                                  setHasChanges(true);
+                                }}
+                                placeholder="e.g. 104847294829"
+                                className={`${inputBaseClass} h-11`}
+                              />
+                              <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                                The unique ID of your registered WhatsApp business phone number.
+                              </p>
+                            </div>
+
+                            {/* WhatsApp Business Account ID */}
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                                Business Account ID (WABA)
+                              </label>
+                              <input
+                                type="text"
+                                value={whatsappBusinessAccountId}
+                                onChange={(e) => {
+                                  setWhatsappBusinessAccountId(e.target.value);
+                                  setHasChanges(true);
+                                }}
+                                placeholder="e.g. 293847294729"
+                                className={`${inputBaseClass} h-11`}
+                              />
+                              <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                                Your Meta WhatsApp Business Account Identifier.
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* WhatsApp Access Token */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              Meta Permanent Access Token
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={showToken ? "text" : "password"}
+                                value={whatsappAccessToken}
+                                onChange={(e) => {
+                                  setWhatsappAccessToken(e.target.value);
+                                  setHasChanges(true);
+                                }}
+                                placeholder="EAAG..."
+                                className={`${inputBaseClass} h-11 pr-12 font-mono text-xs`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowToken(!showToken)}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-colors"
+                              >
+                                {showToken ? (
+                                  <EyeOff className="w-4 h-4" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+                              Meta Graph API access token. We recommend using a permanent system user access token for production environments.
+                            </p>
+                          </div>
+                        </div>
 
                         {/* Reputation Engine Section */}
                         <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">

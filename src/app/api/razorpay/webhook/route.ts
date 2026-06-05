@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import Razorpay from "razorpay";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 // Initialize high-privilege Supabase admin client (required to bypass RLS in webhook contexts)
 const supabase = createClient(
@@ -20,7 +20,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing signature" }, { status: 400 });
     }
 
-    const isValid = Razorpay.validateWebhookSignature(rawBody, signature, secret);
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody)
+      .digest("hex");
+    const isValid = signature === expectedSignature;
+
     if (!isValid) {
       console.error("[Razorpay Webhook] Signature verification failed.");
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
