@@ -235,6 +235,7 @@ export default function SettingsPage() {
   const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState("");
   const [whatsappBusinessAccountId, setWhatsappBusinessAccountId] = useState("");
   const [showToken, setShowToken] = useState(false);
+  const [isMetaConnecting, setIsMetaConnecting] = useState(false);
 
   // Google Calendar States
   const [tenantId, setTenantId] = useState("");
@@ -276,6 +277,83 @@ export default function SettingsPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Inject Facebook JavaScript SDK dynamically
+  useEffect(() => {
+    if (typeof window !== "undefined" && !(window as any).FB) {
+      (window as any).fbAsyncInit = function () {
+        (window as any).FB.init({
+          appId: process.env.NEXT_PUBLIC_META_APP_ID || "1586663712852403",
+          cookie: true,
+          xfbml: true,
+          version: "v19.0",
+        });
+      };
+
+      const script = document.createElement("script");
+      script.src = "https://connect.facebook.net/en_US/sdk.js";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  const handleMetaLogin = () => {
+    if (typeof window === "undefined" || !(window as any).FB) {
+      toastError("Facebook SDK is not loaded yet. Please try again in a few seconds.");
+      return;
+    }
+
+    setIsMetaConnecting(true);
+
+    (window as any).FB.login(
+      async (response: any) => {
+        if (response.authResponse && response.authResponse.accessToken) {
+          const clientToken = response.authResponse.accessToken;
+          console.log("[Meta OAuth] Login success. Exchanging short-lived token...");
+
+          try {
+            // Get current Supabase session
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session?.access_token) {
+              throw new Error("Could not resolve current Supabase authorization session.");
+            }
+
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+            const res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ accessToken: clientToken }),
+            });
+
+            const responseData = await res.json();
+            if (!res.ok) {
+              throw new Error(responseData.error || "Token exchange endpoint returned an error.");
+            }
+
+            toastSuccess("Meta WhatsApp integration connected successfully!");
+            // Refresh config to sync credentials state (tokens, IDs)
+            await fetchConfig(false);
+          } catch (err: any) {
+            console.error("[Meta OAuth Exchange Error]:", err);
+            toastError(err.message || "Failed to exchange access token.");
+          } finally {
+            setIsMetaConnecting(false);
+          }
+        } else {
+          console.warn("[Meta OAuth] Facebook login dialog closed or authorization refused.");
+          toastError("Facebook authorization was cancelled or failed.");
+          setIsMetaConnecting(false);
+        }
+      },
+      {
+        scope: "whatsapp_business_management,whatsapp_business_messaging,business_management",
+      }
+    );
+  };
 
   // Listen to search params for Google Calendar connection notifications
   useEffect(() => {
@@ -1169,93 +1247,66 @@ Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount.
                           </div>
                         )}
 
-                        {/* WhatsApp Credentials Section */}
-                        <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
-                          <div>
-                            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                              <MessageSquare className="w-4 h-4 text-emerald-500" />
-                              WhatsApp API Settings
-                            </h3>
-                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                              Configure your custom Meta / WhatsApp Business Cloud API credentials. Leave blank to gracefully fall back to the system developer default configuration.
-                            </p>
-                          </div>
+                         {/* WhatsApp Credentials Section */}
+                         <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
+                           <div>
+                             <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                               <MessageSquare className="w-4 h-4 text-emerald-500" />
+                               WhatsApp API Settings
+                             </h3>
+                             <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+                               Connect your Meta WhatsApp Business Account via secure OAuth flow.
+                             </p>
+                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* WhatsApp Phone Number ID */}
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                                Phone Number ID
-                              </label>
-                              <input
-                                type="text"
-                                value={whatsappPhoneNumberId}
-                                onChange={(e) => {
-                                  setWhatsappPhoneNumberId(e.target.value);
-                                  setHasChanges(true);
-                                }}
-                                placeholder="e.g. 104847294829"
-                                className={`${inputBaseClass} h-11`}
-                              />
-                              <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                                The unique ID of your registered WhatsApp business phone number.
-                              </p>
-                            </div>
+                           <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                             <div className="space-y-1 text-left">
+                               <div className="flex items-center gap-2">
+                                 <span className="font-semibold text-sm text-[var(--text-primary)]">WhatsApp Account Connection</span>
+                                 {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
+                                     <Check className="w-3 h-3 text-emerald-500" />
+                                     Connected
+                                   </span>
+                                 ) : (
+                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
+                                     Not Connected
+                                   </span>
+                                 )}
+                               </div>
+                               <p className="text-xs text-[var(--text-secondary)] max-w-xl">
+                                 {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                                   <>
+                                     Connected to Phone Number ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappPhoneNumberId}</code> and WABA ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappBusinessAccountId}</code>.
+                                   </>
+                                 ) : (
+                                   "Authorize our application to manage your business's WhatsApp messages and customer conversations."
+                                 )}
+                               </p>
+                             </div>
 
-                            {/* WhatsApp Business Account ID */}
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                                Business Account ID (WABA)
-                              </label>
-                              <input
-                                type="text"
-                                value={whatsappBusinessAccountId}
-                                onChange={(e) => {
-                                  setWhatsappBusinessAccountId(e.target.value);
-                                  setHasChanges(true);
-                                }}
-                                placeholder="e.g. 293847294729"
-                                className={`${inputBaseClass} h-11`}
-                              />
-                              <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                                Your Meta WhatsApp Business Account Identifier.
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* WhatsApp Access Token */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              Meta Permanent Access Token
-                            </label>
-                            <div className="relative">
-                              <input
-                                type={showToken ? "text" : "password"}
-                                value={whatsappAccessToken}
-                                onChange={(e) => {
-                                  setWhatsappAccessToken(e.target.value);
-                                  setHasChanges(true);
-                                }}
-                                placeholder="EAAG..."
-                                className={`${inputBaseClass} h-11 pr-12 font-mono text-xs`}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowToken(!showToken)}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-colors"
-                              >
-                                {showToken ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                              Meta Graph API access token. We recommend using a permanent system user access token for production environments.
-                            </p>
-                          </div>
-                        </div>
+                             <div className="shrink-0">
+                               <button
+                                 type="button"
+                                 onClick={handleMetaLogin}
+                                 disabled={isMetaConnecting}
+                                 className="h-10 px-4 bg-[#1877F2] hover:bg-[#166FE5] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#1877F2] disabled:cursor-not-allowed"
+                               >
+                                 {isMetaConnecting ? (
+                                   <>
+                                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                     <span>Connecting...</span>
+                                   </>
+                                 ) : (
+                                   <>
+                                     <MessageSquare className="w-4 h-4" />
+                                     <span>{whatsappPhoneNumberId ? "Reconnect Meta Account" : "Connect Meta Account"}</span>
+                                   </>
+                                 )}
+                               </button>
+                             </div>
+                           </div>
+                         </div>
 
                         {/* Reputation Engine Section */}
                         <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
