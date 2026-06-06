@@ -46,7 +46,8 @@ export async function updateSession(request: NextRequest) {
     pathname === "/knowledge" || pathname.startsWith("/knowledge/") ||
     pathname === "/knowledge-base" || pathname.startsWith("/knowledge-base/") ||
     pathname === "/campaigns" || pathname.startsWith("/campaigns/") ||
-    pathname === "/settings" || pathname.startsWith("/settings/");
+    pathname === "/settings" || pathname.startsWith("/settings/") ||
+    pathname === "/pricing" || pathname.startsWith("/pricing/");
 
   // If user is NOT authenticated and trying to access a protected dashboard route
   if (!user && isDashboardRoute) {
