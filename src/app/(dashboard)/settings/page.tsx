@@ -354,7 +354,7 @@ export default function SettingsPage() {
         }
       },
       {
-        scope: "whatsapp_business_management,whatsapp_business_messaging,business_management",
+        scope: "whatsapp_business_management,whatsapp_business_messaging",
       }
     );
   };
