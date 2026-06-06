@@ -307,42 +307,46 @@ export default function SettingsPage() {
     setIsMetaConnecting(true);
 
     (window as any).FB.login(
-      async (response: any) => {
+      (response: any) => {
         if (response.authResponse && response.authResponse.accessToken) {
           const clientToken = response.authResponse.accessToken;
           console.log("[Meta OAuth] Login success. Exchanging short-lived token...");
 
-          try {
-            // Get current Supabase session
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !session?.access_token) {
-              throw new Error("Could not resolve current Supabase authorization session.");
+          const exchangeToken = async () => {
+            try {
+              // Get current Supabase session
+              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+              if (sessionError || !session?.access_token) {
+                throw new Error("Could not resolve current Supabase authorization session.");
+              }
+
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+              const res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ accessToken: clientToken }),
+              });
+
+              const responseData = await res.json();
+              if (!res.ok) {
+                throw new Error(responseData.error || "Token exchange endpoint returned an error.");
+              }
+
+              toastSuccess("Meta WhatsApp integration connected successfully!");
+              // Refresh config to sync credentials state (tokens, IDs)
+              await fetchConfig(false);
+            } catch (err: any) {
+              console.error("[Meta OAuth Exchange Error]:", err);
+              toastError(err.message || "Failed to exchange access token.");
+            } finally {
+              setIsMetaConnecting(false);
             }
+          };
 
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-            const res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ accessToken: clientToken }),
-            });
-
-            const responseData = await res.json();
-            if (!res.ok) {
-              throw new Error(responseData.error || "Token exchange endpoint returned an error.");
-            }
-
-            toastSuccess("Meta WhatsApp integration connected successfully!");
-            // Refresh config to sync credentials state (tokens, IDs)
-            await fetchConfig(false);
-          } catch (err: any) {
-            console.error("[Meta OAuth Exchange Error]:", err);
-            toastError(err.message || "Failed to exchange access token.");
-          } finally {
-            setIsMetaConnecting(false);
-          }
+          exchangeToken();
         } else {
           console.warn("[Meta OAuth] Facebook login dialog closed or authorization refused.");
           toastError("Facebook authorization was cancelled or failed.");
