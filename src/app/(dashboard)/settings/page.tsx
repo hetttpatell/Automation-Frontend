@@ -549,20 +549,32 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
     setHasChanges(hasProfileChanges || hasVectorChanges || hasIntegrationChanges || hasWhatsappChanges);
   }, [hasProfileChanges, hasVectorChanges, hasIntegrationChanges, hasWhatsappChanges]);
 
-  // Compile instructions preview
+  // Compile instructions preview — mirrors the backend's actual prompt structure
   const compiledPrompt = `You are the AI Assistant for ${businessName || "My Business"}, an elite, hyper-efficient representative. 
 You must communicate primarily in ${botLanguage}.
-Our services are: ${servicesText || "General services and business support"}. 
-Our hours are: ${hoursText || "Monday to Friday: 9:00 AM - 6:00 PM"}. 
-We accept these payments: ${paymentMethodsText || "Cash, UPI, Cards"}.
-Our target audience is: ${targetAudienceText || "General segment"}.
-Follow these rules strictly: ${rulesText || "Customer satisfaction is paramount."}`;
+Your communication tone is: ${aiTone}.
+
+Our Services & Pricing:
+${servicesText || "General services and business support"}
+
+Operating Hours & Location:
+${hoursText || "Monday to Friday: 9:00 AM - 6:00 PM"}
+
+Payment Methods Accepted:
+${paymentMethodsText || "Cash, UPI, Cards"}
+
+Target Audience & Brand Positioning:
+${targetAudienceText || "General segment"}
+
+Business Rules, Policies & FAQs:
+${rulesText || "Customer satisfaction is paramount."}`;
 
   // Helper to compile and highlight active variables inside terminal preview
   const renderHighlightedPrompt = (text: string) => {
     const variables = [
       { key: businessName || "My Business", label: "businessName", style: "bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: botLanguage, label: "botLanguage", style: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
+      { key: aiTone, label: "aiTone", style: "bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: servicesText || "General services and business support", label: "servicesText", style: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] border border-[var(--info-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: hoursText || "Monday to Friday: 9:00 AM - 6:00 PM", label: "hoursText", style: "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border border-[var(--warning-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
       { key: paymentMethodsText || "Cash, UPI, Cards", label: "paymentMethods", style: "bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded font-mono font-bold mx-0.5 inline-block" },
