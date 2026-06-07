@@ -95,6 +95,9 @@ export type Database = {
           service_requested: string | null
           tenant_id: string
           urgency: string | null
+          requires_human_support: boolean | null
+          intent_category: string | null
+          summary_of_needs: string | null
         }
         Insert: {
           conversation_id?: string | null
@@ -106,6 +109,9 @@ export type Database = {
           service_requested?: string | null
           tenant_id: string
           urgency?: string | null
+          requires_human_support?: boolean | null
+          intent_category?: string | null
+          summary_of_needs?: string | null
         }
         Update: {
           conversation_id?: string | null
@@ -117,6 +123,9 @@ export type Database = {
           service_requested?: string | null
           tenant_id?: string
           urgency?: string | null
+          requires_human_support?: boolean | null
+          intent_category?: string | null
+          summary_of_needs?: string | null
         }
         Relationships: [
           {

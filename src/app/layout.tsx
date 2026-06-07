@@ -28,6 +28,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "LeadFlow | WhatsApp AI Automation Dashboard",
   description: "Automate WhatsApp conversations with AI. Manage leads, train your AI brain, and handle customer inquiries — all from one dashboard.",
+  icons: {
+    icon: "/Logo.png",
+    shortcut: "/Logo.png",
+    apple: "/Logo.png",
+  },
 };
 
 export default function RootLayout({

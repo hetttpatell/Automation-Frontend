@@ -275,13 +275,13 @@ export default function PricingPage() {
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                     <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                   </div>
-                  <span><strong>500 AI Credits</strong> / month</span>
+                  <span><strong className="text-[var(--text-primary)]">500 AI Credits</strong> / month</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                     <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                   </div>
-                  <span><strong>250 CRM Leads</strong></span>
+                  <span><strong className="text-[var(--text-primary)]">250 CRM Leads</strong></span>
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
@@ -293,7 +293,7 @@ export default function PricingPage() {
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                     <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                   </div>
-                  <span><strong>1 Staff Seat</strong></span>
+                  <span><strong className="text-[var(--text-primary)]">1 Staff Seat</strong></span>
                 </li>
               </ul>
             </div>
@@ -330,12 +330,13 @@ export default function PricingPage() {
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-[var(--brand-primary)]/10 rounded-full blur-3xl pointer-events-none group-hover:scale-125 transition-all duration-500" />
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[var(--brand-secondary)]/10 rounded-full blur-3xl pointer-events-none group-hover:scale-125 transition-all duration-500" />
 
-            <div className="flex-1 flex flex-col bg-[var(--bg-surface)] rounded-[var(--radius-xl)] p-7 justify-between relative overflow-hidden">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white text-[10px] font-bold uppercase tracking-wider shadow-md flex items-center gap-1 select-none font-mono">
-                <Flame className="w-3.5 h-3.5 animate-pulse text-amber-300" />
-                Recommended Plan
-              </span>
+            {/* Recommended Plan Badge - Placed outside of overflow-hidden inner card */}
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white text-[10px] font-bold uppercase tracking-wider shadow-md flex items-center gap-1 select-none font-mono z-20">
+              <Flame className="w-3.5 h-3.5 animate-pulse text-amber-300" />
+              Recommended Plan
+            </span>
 
+            <div className="flex-1 flex flex-col bg-[var(--bg-surface)] rounded-[var(--radius-xl)] p-7 justify-between relative overflow-hidden">
               {currentTier === "growth" && (
                 <span className="absolute top-4 right-4 px-2.5 py-1 rounded bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] text-[10px] font-bold uppercase tracking-wider select-none font-mono">
                   Active Plan
@@ -345,14 +346,14 @@ export default function PricingPage() {
               <div className="space-y-6 pt-2">
                 <div className="space-y-2">
                   <span className="text-[11px] font-bold text-[var(--brand-primary)] uppercase font-mono tracking-wider">Pro Plan</span>
-                  <h3 className="text-xl font-display font-extrabold text-[var(--text-primary)] leading-tight">Highly Recommended for Scaling</h3>
+                  <h3 className="text-xl font-display font-bold text-[var(--text-primary)] leading-tight">Highly Recommended for Scaling</h3>
                   <p className="text-xs text-[var(--text-secondary)] font-sans leading-relaxed">
                     Unlock automatic campaigns and unlimited lead extractions to scale your customer outreach.
                   </p>
                 </div>
 
                 <div className="flex items-baseline gap-1 select-none border-y border-[var(--border-subtle)] py-3">
-                  <span className="text-4xl font-extrabold text-[var(--text-primary)]">₹2,999</span>
+                  <span className="text-3xl font-extrabold text-[var(--text-primary)]">₹2,999</span>
                   <span className="text-xs text-[var(--text-tertiary)] font-medium">/ month</span>
                 </div>
 
@@ -373,13 +374,13 @@ export default function PricingPage() {
                     <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                     </div>
-                    <span><strong>Outbound Campaigns Engine</strong></span>
+                    <span><strong className="text-[var(--text-primary)]">Outbound Campaigns Engine</strong></span>
                   </li>
                   <li className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                     </div>
-                    <span><strong>3 Staff Seats</strong></span>
+                    <span><strong className="text-[var(--text-primary)]">3 Staff Seats</strong></span>
                   </li>
                 </ul>
               </div>
@@ -437,13 +438,13 @@ export default function PricingPage() {
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                     <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                   </div>
-                  <span><strong>10,000 AI Credits</strong> / month</span>
+                  <span><strong className="text-[var(--text-primary)]">10,000 AI Credits</strong> / month</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                     <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                   </div>
-                  <span><strong>Auto-Review Reputation Engine</strong></span>
+                  <span><strong className="text-[var(--text-primary)]">Auto-Review Reputation Engine</strong></span>
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
@@ -455,7 +456,7 @@ export default function PricingPage() {
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
                     <Check className="w-3.5 h-3.5 text-[var(--brand-primary)] stroke-[3]" />
                   </div>
-                  <span><strong>Unlimited Seats</strong></span>
+                  <span><strong className="text-[var(--text-primary)]">Unlimited Seats</strong></span>
                 </li>
               </ul>
             </div>

@@ -27,6 +27,9 @@ interface Lead {
   kanban_stage: "new" | "contacted" | "converted" | "lost" | "completed";
   created_at: string;
   isNew?: boolean;
+  requires_human_support?: boolean | null;
+  intent_category?: string | null;
+  summary_of_needs?: string | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -78,6 +81,25 @@ const urgencyConfig = {
     bg: "var(--color-success-bg)",
     text: "var(--color-success-text)",
     label: "Low",
+  },
+};
+
+// Intent badge configuration
+const intentConfig: Record<string, { bg: string; text: string; label: string }> = {
+  SALES: {
+    bg: "rgba(139, 92, 246, 0.15)", // Subtle violet bg for sales
+    text: "#8B5CF6", // Violet text
+    label: "Sales",
+  },
+  SUPPORT: {
+    bg: "var(--color-danger-bg)", // Crimson bg for support
+    text: "var(--color-danger-text)",
+    label: "Support",
+  },
+  GENERAL: {
+    bg: "var(--bg-subtle)",
+    text: "var(--text-secondary)",
+    label: "General",
   },
 };
 
@@ -507,9 +529,23 @@ export default function LeadsDashboard() {
                             <div className="flex items-center gap-3 min-w-0">
                               <Avatar name={lead.customer_name || lead.customer_phone} size="sm" />
                               <div className="min-w-0">
-                                <p className="text-[14px] font-sans font-medium text-[var(--text-primary)] truncate">
-                                  {lead.customer_name || "Prospect User"}
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-[14px] font-sans font-medium text-[var(--text-primary)] truncate">
+                                    {lead.customer_name || "Prospect User"}
+                                  </p>
+                                  {lead.intent_category && (
+                                    <span
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase select-none border border-current"
+                                      style={{
+                                        backgroundColor: (intentConfig[lead.intent_category.toUpperCase()] || intentConfig.GENERAL).bg,
+                                        color: (intentConfig[lead.intent_category.toUpperCase()] || intentConfig.GENERAL).text,
+                                        borderColor: "transparent"
+                                      }}
+                                    >
+                                      {(intentConfig[lead.intent_category.toUpperCase()] || intentConfig.GENERAL).label}
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-[12px] text-[var(--text-tertiary)] font-mono truncate mt-0.5">
                                   {formatPhoneNumber(lead.customer_phone)}
                                 </p>
@@ -518,11 +554,18 @@ export default function LeadsDashboard() {
                           </td>
 
                           <td className="px-3 py-2">
-                            <span className="text-[13px] text-[var(--text-primary)] font-sans leading-relaxed truncate block">
-                              {lead.service_requested || (
-                                <span className="text-[var(--text-tertiary)] italic font-mono select-none">—</span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[13px] text-[var(--text-primary)] font-sans leading-relaxed truncate block max-w-[300px]">
+                                {lead.service_requested || lead.summary_of_needs || (
+                                  <span className="text-[var(--text-tertiary)] italic font-mono select-none">—</span>
+                                )}
+                              </span>
+                              {lead.summary_of_needs && lead.service_requested && (
+                                <span className="text-[11px] text-[var(--text-secondary)] font-sans truncate block max-w-[300px]">
+                                  {lead.summary_of_needs}
+                                </span>
                               )}
-                            </span>
+                            </div>
                           </td>
 
                           <td className="px-3 py-2 select-none w-[90px]">
@@ -669,9 +712,23 @@ export default function LeadsDashboard() {
                             className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-3.5 relative group flex flex-col gap-2.5 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)] cursor-grab active:cursor-grabbing"
                           >
                             <div className="flex items-center justify-between shrink-0 select-none">
-                              <span className="text-[10px] font-mono text-[var(--text-tertiary)]">
-                                {formatDate(lead.created_at).split(" · ")[0]}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-mono text-[var(--text-tertiary)]">
+                                  {formatDate(lead.created_at).split(" · ")[0]}
+                                </span>
+                                {lead.intent_category && (
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-wide uppercase border border-current"
+                                    style={{
+                                      backgroundColor: (intentConfig[lead.intent_category.toUpperCase()] || intentConfig.GENERAL).bg,
+                                      color: (intentConfig[lead.intent_category.toUpperCase()] || intentConfig.GENERAL).text,
+                                      borderColor: "transparent"
+                                    }}
+                                  >
+                                    {(intentConfig[lead.intent_category.toUpperCase()] || intentConfig.GENERAL).label}
+                                  </span>
+                                )}
+                              </div>
                               <span
                                 className="px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase"
                                 style={{ backgroundColor: urg.bg, color: urg.text }}
@@ -692,13 +749,20 @@ export default function LeadsDashboard() {
                               </div>
                             </div>
 
-                            {lead.service_requested ? (
-                              <div className="bg-[var(--bg-subtle)] px-2 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-sans text-[var(--text-secondary)] leading-relaxed border border-[var(--border-subtle)]">
-                                {lead.service_requested}
+                            {lead.service_requested || lead.summary_of_needs ? (
+                              <div className="bg-[var(--bg-subtle)] px-2.5 py-2 rounded-[var(--radius-sm)] text-[11px] font-sans text-[var(--text-secondary)] leading-relaxed border border-[var(--border-subtle)] space-y-1">
+                                <p className="font-medium text-[var(--text-primary)]">
+                                  {lead.service_requested || lead.summary_of_needs}
+                                </p>
+                                {lead.summary_of_needs && lead.service_requested && (
+                                  <p className="text-[10px] text-[var(--text-tertiary)]">
+                                    {lead.summary_of_needs}
+                                  </p>
+                                )}
                               </div>
                             ) : (
                               <div className="text-[11px] italic font-sans text-[var(--text-tertiary)] select-none">
-                                No service specified
+                                No service or need specified
                               </div>
                             )}
 

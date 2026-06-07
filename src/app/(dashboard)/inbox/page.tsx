@@ -14,7 +14,14 @@ import {
   AlertTriangle,
   Send,
   SlidersHorizontal,
-  ChevronLeft
+  ChevronLeft,
+  Smartphone,
+  Sparkles,
+  CheckCheck,
+  X,
+  ChevronRight,
+  AlertCircle,
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -104,6 +111,13 @@ export default function InboxPage() {
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // States for Insights Sidebar (Right) and WhatsApp Phone Simulator (Left-Center)
+  const [showSidebar, setShowSidebar] = useState(true); // WhatsApp Demo
+  const [showInsights, setShowInsights] = useState(true); // CRM Insights
+  const [leadInfo, setLeadInfo] = useState<any | null>(null);
+  const [isLoadingLead, setIsLoadingLead] = useState(false);
+  const [isUpdatingLead, setIsUpdatingLead] = useState(false);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -139,7 +153,7 @@ export default function InboxPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch threads on mount & setup realtime subscription
+  // Fetch threads on mount
   useEffect(() => {
     async function initUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -287,6 +301,66 @@ export default function InboxPage() {
     };
   }, [selectedConversation?.id]);
 
+  // Fetch active CRM lead details
+  useEffect(() => {
+    if (!selectedConversation || !selectedConversation.customer_phone) {
+      setLeadInfo(null);
+      return;
+    }
+
+    async function fetchLeadInfo() {
+      setIsLoadingLead(true);
+      try {
+        const { data, error } = await supabase
+          .from("leads")
+          .select("*")
+          .eq("customer_phone", selectedConversation.customer_phone)
+          .maybeSingle();
+
+        if (error) {
+          console.error("[Fetch Lead Error]:", error.message);
+        } else {
+          setLeadInfo(data || null);
+        }
+      } catch (err) {
+        console.error("[Fetch Lead Exception]:", err);
+      } finally {
+        setIsLoadingLead(false);
+      }
+    }
+
+    fetchLeadInfo();
+  }, [selectedConversation?.customer_phone]);
+
+  // Realtime subscription for lead updates
+  useEffect(() => {
+    if (!selectedConversation || !selectedConversation.customer_phone) return;
+
+    const channel = supabase
+      .channel(`inbox-lead-realtime-${selectedConversation.customer_phone}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "leads",
+          filter: `customer_phone=eq.${selectedConversation.customer_phone}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setLeadInfo(null);
+          } else {
+            setLeadInfo(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConversation?.customer_phone]);
+
   // Auto-scroll & focus
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -375,6 +449,78 @@ export default function InboxPage() {
     }
   };
 
+  // CRM: Update Urgency
+  const handleUpdateUrgency = async (newUrgency: "low" | "medium" | "high") => {
+    if (!leadInfo || isUpdatingLead) return;
+    setIsUpdatingLead(true);
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({ urgency: newUrgency })
+        .eq("id", leadInfo.id);
+
+      if (error) throw error;
+      setLeadInfo((prev: any) => prev ? { ...prev, urgency: newUrgency } : null);
+      success(`Urgency updated to ${newUrgency}`);
+    } catch (err: any) {
+      console.error("[Update Urgency Error]:", err.message);
+      toastError("Failed to update urgency");
+    } finally {
+      setIsUpdatingLead(false);
+    }
+  };
+
+  // CRM: Update Stage
+  const handleUpdateStage = async (newStage: string) => {
+    if (!leadInfo || isUpdatingLead) return;
+    setIsUpdatingLead(true);
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({ kanban_stage: newStage })
+        .eq("id", leadInfo.id);
+
+      if (error) throw error;
+      setLeadInfo((prev: any) => prev ? { ...prev, kanban_stage: newStage } : null);
+      success(`Lead moved to ${newStage}`);
+    } catch (err: any) {
+      console.error("[Update Stage Error]:", err.message);
+      toastError("Failed to update stage");
+    } finally {
+      setIsUpdatingLead(false);
+    }
+  };
+
+  // CRM: Toggle Human Assistance Flag
+  const handleToggleHumanSupport = async () => {
+    if (!leadInfo || isUpdatingLead) return;
+    setIsUpdatingLead(true);
+
+    const targetStatus = !leadInfo.requires_human_support;
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({ requires_human_support: targetStatus })
+        .eq("id", leadInfo.id);
+
+      if (error) throw error;
+      setLeadInfo((prev: any) => prev ? { ...prev, requires_human_support: targetStatus } : null);
+      if (targetStatus) {
+        warning("Human assistance requested");
+      } else {
+        success("Assistance request resolved");
+      }
+    } catch (err: any) {
+      console.error("[Toggle Human Support Error]:", err.message);
+      toastError("Failed to update assistance flag");
+    } finally {
+      setIsUpdatingLead(false);
+    }
+  };
+
   // Filter & search
   const filteredConversations = conversations.filter((c) => {
     const name = (c.customer_name || "").toLowerCase();
@@ -399,19 +545,19 @@ export default function InboxPage() {
         `}} />
       )}
 
-      {/* ─── LEFT PANEL: Thread List (320px) ─────────────────────── */}
-      <aside className={`w-full lg:w-80 border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none ${
+      {/* ─── PANEL 1: Thread List (Leftmost, 300px) ─────────────────── */}
+      <aside className={`w-full lg:w-[300px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none ${
         selectedConversation && isMobile ? "hidden" : "flex"
       }`}>
 
-        {/* Header (52px) */}
+        {/* Header */}
         <div className="h-[52px] px-4 flex items-center justify-between border-b border-[var(--border-subtle)] relative shrink-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-[16px] font-semibold text-[var(--text-primary)] font-display">
-              Inbox
+            <h1 className="text-[14px] font-bold text-[var(--text-primary)] font-display tracking-tight uppercase">
+              Inbox Threads
             </h1>
             {filteredConversations.length > 0 && (
-              <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] tabular-nums">
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] tabular-nums select-none leading-none">
                 {filteredConversations.length}
               </span>
             )}
@@ -420,14 +566,14 @@ export default function InboxPage() {
           <div className="relative">
             <button
               onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none"
+              className="p-1.5 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none transition-colors"
               aria-label="Filter threads"
             >
-              <SlidersHorizontal className="w-[18px] h-[18px]" />
+              <SlidersHorizontal className="w-[17px] h-[17px]" />
             </button>
 
             {isFilterDropdownOpen && (
-              <div className="absolute right-0 mt-1.5 w-44 bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-1 z-50">
+              <div className="absolute right-0 mt-1.5 w-44 bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-1 z-50 animate-fade-in">
                 {(["all", "ai", "human"] as const).map((mode) => (
                   <button
                     key={mode}
@@ -437,11 +583,11 @@ export default function InboxPage() {
                     }}
                     className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-sans cursor-pointer ${
                       filterMode === mode
-                        ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)] font-medium"
+                        ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)] font-semibold"
                         : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
                     }`}
                   >
-                    {mode === "all" ? "All Threads" : mode === "ai" ? "AI Active" : "Human Takeover"}
+                    {mode === "all" ? "All Threads" : mode === "ai" ? "AI Autopilot" : "Human Takeover"}
                   </button>
                 ))}
               </div>
@@ -460,7 +606,7 @@ export default function InboxPage() {
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pl-9 pr-3 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)]"
+              className="w-full h-9 pl-9 pr-3 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[13px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] transition-all"
             />
           </div>
         </div>
@@ -473,10 +619,10 @@ export default function InboxPage() {
             <div className="flex flex-col items-center justify-center p-8 text-center h-48 select-none">
               <MessageSquare className="w-8 h-8 text-[var(--text-tertiary)] mb-2" />
               <p className="text-[var(--text-primary)] text-xs font-semibold">
-                {searchQuery ? "No matching conversations" : "No active threads"}
+                {searchQuery ? "No matching threads" : "No active threads"}
               </p>
               <p className="text-[var(--text-secondary)] text-[10px] mt-1 max-w-[180px] leading-relaxed mx-auto">
-                {searchQuery ? "Adjust your keywords or filter." : "New WhatsApp messages will appear here."}
+                {searchQuery ? "Adjust your keywords or filters." : "New WhatsApp messages will appear here."}
               </p>
             </div>
           ) : (
@@ -497,13 +643,13 @@ export default function InboxPage() {
                 <div
                   key={convo.id}
                   onClick={() => setSelectedConversation(convo)}
-                  className={`h-[72px] px-4 py-3 flex items-center gap-3 cursor-pointer border-b border-[var(--border-subtle)] relative hover:bg-[var(--bg-subtle)] ${
+                  className={`h-[72px] px-4 py-3 flex items-center gap-3 cursor-pointer border-b border-[var(--border-subtle)] relative hover:bg-[var(--bg-subtle)]/50 transition-all duration-150 ${
                     isSelected
-                      ? "bg-[var(--color-info-bg)]"
+                      ? "bg-[var(--brand-subtle)]"
                       : "bg-transparent"
                   }`}
                   style={{
-                    borderLeft: isSelected ? "3px solid var(--brand-primary)" : "3px solid transparent",
+                    borderLeft: isSelected ? "4px solid var(--brand-primary)" : "4px solid transparent",
                   }}
                   role="button"
                   tabIndex={0}
@@ -523,19 +669,32 @@ export default function InboxPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <h3 className={`text-[14px] font-medium truncate font-sans ${
-                        isSelected ? "text-[var(--brand-primary)] font-semibold" : "text-[var(--text-primary)]"
-                      }`}>
-                        {convo.customer_name || "Customer"}
-                      </h3>
-                      <span className="text-[var(--text-tertiary)] text-[11px] font-mono shrink-0 ml-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h3 className={`text-[13.5px] font-semibold truncate font-sans ${
+                          isSelected ? "text-[var(--brand-text-strong)]" : "text-[var(--text-primary)]"
+                        }`}>
+                          {convo.customer_name || "Customer"}
+                        </h3>
+                        {convo.is_ai_active ? (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] text-[9px] font-bold tracking-wide border border-[var(--ai-border)] select-none leading-none">
+                            <Bot className="w-2.5 h-2.5 shrink-0" />
+                            AI
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] text-[9px] font-bold tracking-wide border border-[var(--warning-border)] select-none leading-none">
+                            <User className="w-2.5 h-2.5 shrink-0" />
+                            Human
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[var(--text-tertiary)] text-[10px] font-mono shrink-0 ml-1">
                         {formatConversationTime(convo.updated_at)}
                       </span>
                     </div>
                     {lastMessage && (
                       <div className="flex items-center gap-1 text-[12px] text-[var(--text-secondary)] truncate">
                         {isLastMessageFromAI && (
-                          <span className="inline-flex items-center bg-[var(--color-ai-bg)] text-[var(--color-ai)] text-[9px] font-semibold px-1 rounded-sm shrink-0">
+                          <span className="inline-flex items-center bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] text-[9px] font-semibold px-1 rounded-sm shrink-0">
                             AI
                           </span>
                         )}
@@ -550,7 +709,136 @@ export default function InboxPage() {
         </div>
       </aside>
 
-      {/* ─── RIGHT PANEL: Chat Canvas ─────────────────────────── */}
+      {/* ─── PANEL 2: WhatsApp Phone Simulator (Center-Left, 290px) ───── */}
+      {showSidebar && selectedConversation && (
+        <aside className="hidden xl:flex flex-col w-[290px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] h-full shrink-0 select-none overflow-hidden animate-fade-in">
+          
+          {/* Header */}
+          <div className="h-[52px] px-4 flex items-center justify-between border-b border-[var(--border-subtle)] shrink-0 select-none">
+            <h2 className="text-[12px] font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
+              WhatsApp Demo (Customer View)
+            </h2>
+            <button
+              onClick={() => setShowSidebar(false)}
+              className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-colors"
+              title="Hide Demo"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* White / Light Theme Phone Mockup Body */}
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-center bg-[var(--bg-subtle)]/40 scrollbar-none">
+            
+            {/* iOS Device Frame (Light/Silver Theme) */}
+            <div className="w-[254px] h-[435px] rounded-[38px] border-[8px] border-slate-200 dark:border-slate-800 bg-[#f4f1eb] dark:bg-[#0b141a] shadow-lg overflow-hidden relative mx-auto flex flex-col select-none border-t-[10px] border-b-[10px] relative">
+              
+              {/* Notch mock */}
+              <div className="absolute top-[2px] left-1/2 -translate-x-1/2 w-16 h-3 bg-slate-900 rounded-full z-50 flex items-center justify-center gap-1">
+                <div className="w-6 h-[1.5px] bg-neutral-800 rounded-full" />
+                <div className="w-1 h-1 bg-neutral-800 rounded-full" />
+              </div>
+
+              {/* Status Bar */}
+              <div className="h-5 bg-white dark:bg-[#202c33] flex items-center justify-between px-5 text-[9px] text-slate-800 dark:text-slate-250 select-none font-sans font-semibold shrink-0">
+                <span>12:45</span>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-1.5 bg-slate-800 dark:bg-slate-200 rounded-xs" />
+                  <span className="w-1 h-1 bg-slate-800 dark:bg-slate-200 rounded-full" />
+                </div>
+              </div>
+
+              {/* WhatsApp Light Header */}
+              <div className="h-10 bg-white dark:bg-[#202c33] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between px-2.5 text-slate-850 dark:text-slate-100 select-none shrink-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[13px] text-slate-500 select-none">←</span>
+                  <div className="w-6.5 h-6.5 rounded-full bg-slate-100 dark:bg-[#2a3942] flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-350 shrink-0">
+                    {selectedConversation.customer_name ? selectedConversation.customer_name.substring(0, 2).toUpperCase() : "WA"}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-[10px] font-bold leading-none truncate w-[100px] text-slate-800 dark:text-slate-100">
+                      {user?.email ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) : "Detailing Shop"}
+                    </h4>
+                    <span className="text-[8px] text-emerald-500 font-medium leading-none">Online</span>
+                  </div>
+                </div>
+                <div className="text-slate-400 font-bold text-[9px]">
+                  <span>⋮</span>
+                </div>
+              </div>
+
+              {/* Chat Message Box Area (Light Wallpaper) */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-2 flex flex-col scrollbar-none bg-[#f4f1eb] dark:bg-[#0b141a]" style={{ backgroundImage: "radial-gradient(#dfdbd4 0.5px, transparent 0.5px)", backgroundSize: "10px 10px" }}>
+                {messages.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center text-[9px] text-slate-400 select-none">
+                    No messages yet
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isCustomerSent = msg.sender === "customer";
+                    const isButtonMenu = msg.message_text === "[I showed the user the services menu]";
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col max-w-[85%] ${
+                          isCustomerSent ? "self-end items-end" : "self-start items-start"
+                        }`}
+                      >
+                        {/* Chat Bubble */}
+                        <div
+                          className={`p-2 rounded-lg text-[10.5px] font-sans leading-normal break-words relative shadow-xs border ${
+                            isCustomerSent
+                              ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-slate-800 dark:text-slate-100 border-[#bcecb5]/40 dark:border-transparent rounded-tr-none self-end"
+                              : "bg-white dark:bg-[#202c33] text-slate-800 dark:text-slate-100 border-slate-100 dark:border-transparent rounded-tl-none self-start"
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap select-text">{msg.message_text}</p>
+                          
+                          <div className="flex items-center justify-end gap-[3px] mt-1 text-[7.5px] text-slate-400 dark:text-slate-450 select-none leading-none">
+                            <span>{formatMessageTime(msg.created_at)}</span>
+                            {isCustomerSent && (
+                              <span className="text-sky-500 font-bold">✓✓</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* WhatsApp Interactive buttons mockup */}
+                        {isButtonMenu && (
+                          <div className="flex flex-col gap-1 mt-1.5 w-full max-w-[180px] self-start animate-fade-in">
+                            {["Exterior Wash", "Ceramic Coating", "Speak to Human"].map((btnText) => (
+                              <div
+                                key={btnText}
+                                className="w-full py-1 px-2.5 bg-white dark:bg-[#202c33] text-emerald-600 dark:text-emerald-450 rounded-lg text-[9px] font-bold border border-emerald-100 dark:border-emerald-900/30 text-center shadow-xs select-none hover:bg-emerald-50/10 active:bg-emerald-50/20 cursor-pointer"
+                              >
+                                {btnText}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* WhatsApp Light Footer input dock */}
+              <div className="p-1 bg-white dark:bg-[#111b21] border-t border-slate-100 dark:border-slate-800 flex items-center gap-1 select-none shrink-0">
+                <div className="flex-1 h-6 px-2.5 bg-slate-50 dark:bg-[#2a3942] rounded-full flex items-center text-[9.5px] text-slate-400 dark:text-slate-400/60 border border-slate-100/50 dark:border-transparent">
+                  <span>Message...</span>
+                </div>
+                <div className="w-6 h-6 rounded-full bg-[#128C7E] dark:bg-[#00a884] flex items-center justify-center text-white shrink-0">
+                  <span className="text-[10px] font-bold">🎤</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* ─── PANEL 3: Agent Chat Canvas (Center-Right, flex-1) ────────── */}
       <section className={`flex-1 flex flex-col h-full bg-[var(--bg-canvas)] relative select-text ${
         !selectedConversation && isMobile ? "hidden" : "flex"
       }`}>
@@ -565,7 +853,7 @@ export default function InboxPage() {
                 Select a Conversation
               </h3>
               <p className="text-[var(--text-secondary)] text-xs mt-1 max-w-[240px] leading-relaxed mx-auto">
-                Choose a thread from the left to view messages, toggle AI autopilot, or send manual replies.
+                Choose a thread from the left list to view messages, toggle autopilot overlays, or send manual agent overrides.
               </p>
             </div>
           ) : (
@@ -577,7 +865,7 @@ export default function InboxPage() {
               transition={{ duration: 0.15 }}
               className="flex-1 flex flex-col h-full overflow-hidden"
             >
-              {/* Canvas Header (64px) */}
+              {/* Canvas Header */}
               <header className="h-16 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] px-5 flex items-center justify-between shrink-0 select-none z-10">
                 <div className="flex items-center gap-3 min-w-0">
                   {isMobile && (
@@ -591,10 +879,10 @@ export default function InboxPage() {
                   )}
                   <Avatar name={selectedConversation.customer_name || selectedConversation.customer_phone} size="md" />
                   <div className="min-w-0">
-                    <h2 className="text-[16px] font-semibold text-[var(--text-primary)] truncate font-display">
+                    <h2 className="text-[15px] font-bold text-[var(--text-primary)] truncate font-display">
                       {selectedConversation.customer_name || "Customer"}
                     </h2>
-                    <p className="text-[13px] text-[var(--text-secondary)] font-sans flex items-center gap-1 mt-0.5 truncate">
+                    <p className="text-[12px] text-[var(--text-secondary)] font-mono flex items-center gap-1 mt-0.5 truncate">
                       {selectedConversation.customer_phone}
                     </p>
                   </div>
@@ -605,32 +893,64 @@ export default function InboxPage() {
                   !isMobile ? (
                     document.getElementById("header-cta-portal") ? (
                       createPortal(
-                        <div className="flex items-center gap-2 select-none">
-                          <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
-                            AI Autopilot
-                          </span>
+                        <div className="flex items-center gap-4 select-none">
+                          {/* Demo Toggle Button */}
                           <button
-                            onClick={handleToggleAI}
-                            disabled={isToggling}
-                            className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
-                              selectedConversation.is_ai_active
-                                ? "bg-[var(--color-success)]"
-                                : "bg-[var(--bg-muted)]"
+                            onClick={() => setShowSidebar(!showSidebar)}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none outline-none ${
+                              showSidebar
+                                ? "bg-[var(--brand-subtle)] text-[var(--brand-text-strong)] border-[var(--brand-border)] shadow-xs"
+                                : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
                             }`}
-                            role="switch"
-                            aria-checked={selectedConversation.is_ai_active}
-                            aria-label="AI Autopilot"
+                            title="Toggle WhatsApp Device Demo"
                           >
-                            <motion.div
-                              layout
-                              transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                              className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
-                              style={{
-                                marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
-                                marginRight: selectedConversation.is_ai_active ? "0" : "auto"
-                              }}
-                            />
+                            <Smartphone className="w-4 h-4" />
+                            <span>WhatsApp Demo</span>
                           </button>
+
+                          {/* Insights Toggle Button */}
+                          <button
+                            onClick={() => setShowInsights(!showInsights)}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none outline-none ${
+                              showInsights
+                                ? "bg-[var(--brand-subtle)] text-[var(--brand-text-strong)] border-[var(--brand-border)] shadow-xs"
+                                : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
+                            }`}
+                            title="Toggle Customer Insights"
+                          >
+                            <Sparkles className="w-4 h-4 text-amber-500" />
+                            <span>Insights</span>
+                          </button>
+
+                          <div className="h-4 w-[1px] bg-[var(--border-subtle)]" />
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
+                              AI Autopilot
+                            </span>
+                            <button
+                              onClick={handleToggleAI}
+                              disabled={isToggling}
+                              className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
+                                selectedConversation.is_ai_active
+                                  ? "bg-[var(--brand-primary)]"
+                                  : "bg-[var(--bg-muted)]"
+                              }`}
+                              role="switch"
+                              aria-checked={selectedConversation.is_ai_active}
+                              aria-label="AI Autopilot"
+                            >
+                              <motion.div
+                                layout
+                                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                                className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
+                                style={{
+                                  marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
+                                  marginRight: selectedConversation.is_ai_active ? "0" : "auto"
+                                }}
+                              />
+                            </button>
+                          </div>
                         </div>,
                         document.getElementById("header-cta-portal")!
                       )
@@ -645,7 +965,7 @@ export default function InboxPage() {
                         disabled={isToggling}
                         className={`w-[40px] h-[22px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
                           selectedConversation.is_ai_active
-                            ? "bg-[var(--color-success)]"
+                            ? "bg-[var(--brand-primary)]"
                             : "bg-[var(--bg-muted)]"
                         }`}
                         role="switch"
@@ -669,10 +989,10 @@ export default function InboxPage() {
 
               {/* Human Takeover Banner */}
               {!selectedConversation.is_ai_active && (
-                <div className="bg-[var(--color-warning-bg)] border-b border-[var(--warning-border)] px-5 py-1.5 flex items-center gap-2 select-none shrink-0 z-10" style={{ animation: "fadeIn 150ms ease" }}>
+                <div className="bg-[var(--color-warning-bg)] border-b border-[var(--warning-border)] px-5 py-1.5 flex items-center gap-2 select-none shrink-0 z-10 animate-fade-in">
                   <AlertTriangle className="w-[14px] h-[14px] text-[var(--warning-icon)] shrink-0" />
-                  <span className="text-[14px] font-medium text-[var(--color-warning-text)]">
-                    Human Takeover Active — AI paused for this thread
+                  <span className="text-[12.5px] font-semibold text-[var(--color-warning-text)]">
+                    Human Takeover Active — AI chatbot is currently paused on this thread
                   </span>
                 </div>
               )}
@@ -682,15 +1002,15 @@ export default function InboxPage() {
                 role="log"
                 aria-live="polite"
                 aria-label="Conversation messages"
-                className="flex-1 overflow-y-auto px-4 py-6 bg-[var(--bg-canvas)] space-y-3 select-text"
+                className="flex-1 overflow-y-auto px-6 py-6 bg-gradient-to-b from-[var(--bg-canvas)] to-[var(--bg-subtle)]/30 space-y-4 select-text"
               >
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-8 text-center h-48 select-none">
                     <p className="text-[var(--text-secondary)] text-xs font-semibold">No messages in this conversation</p>
-                    <p className="text-[var(--text-tertiary)] text-[10px] mt-1">Messages will appear here as they arrive.</p>
+                    <p className="text-[var(--text-tertiary)] text-[10px] mt-1">Direct customer inbound messages will appear here.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {messages.map((message) => {
                       const isCustomer = message.sender === "customer";
                       const isAI = message.sender === "ai";
@@ -707,7 +1027,7 @@ export default function InboxPage() {
                             /* Customer Message (Left Side) */
                             <div className="flex flex-col max-w-[70%] gap-1">
                               <div
-                                className="px-4 py-3 text-[14px] font-sans leading-[1.55] break-words bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[18px] rounded-tl-[3px] shadow-xs"
+                                className="px-4 py-2.5 text-[13.5px] font-sans leading-[1.55] break-words bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[18px] rounded-tl-[3px] shadow-sm"
                               >
                                 <p className="whitespace-pre-wrap select-text">
                                   {message.message_text}
@@ -721,10 +1041,10 @@ export default function InboxPage() {
                             /* Business Response — Agent or AI (Right Side) */
                             <div className="flex flex-col max-w-[70%] gap-1 items-end">
                               <div
-                                className={`px-4 py-3 text-[14px] font-sans leading-[1.55] break-words ${
+                                className={`px-4 py-2.5 text-[13.5px] font-sans leading-[1.55] break-words ${
                                   isAI
-                                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 dark:from-violet-500 dark:to-purple-700 text-white rounded-[18px] rounded-tr-[3px] shadow-md shadow-purple-500/5"
-                                    : "bg-[var(--brand-primary)] text-white rounded-[18px] rounded-tr-[3px] shadow-sm"
+                                    ? "bg-gradient-to-br from-[var(--color-ai)] to-[#6D28D9] text-white rounded-[18px] rounded-tr-[3px] shadow-md"
+                                    : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-white rounded-[18px] rounded-tr-[3px] shadow-md"
                                 }`}
                               >
                                 {isAI ? (
@@ -793,8 +1113,8 @@ export default function InboxPage() {
                       className="h-14 px-5 flex items-center gap-3 bg-[var(--bg-subtle)] select-none w-full"
                     >
                       <Bot className="w-[18px] h-[18px] text-[var(--color-ai)] shrink-0" />
-                      <span className="text-[13px] font-sans text-[var(--text-secondary)]">
-                        AI Autopilot is managing this conversation
+                      <span className="text-[13px] font-semibold text-[var(--text-secondary)]">
+                        AI Autopilot is dynamically managing this conversation thread
                       </span>
                     </motion.div>
                   ) : (
@@ -811,7 +1131,7 @@ export default function InboxPage() {
                         <div className="flex-1 relative">
                           <textarea
                             ref={textInputRef}
-                            placeholder="Type a reply..."
+                            placeholder="Type a reply as agent..."
                             value={inputMessage}
                             onChange={(e) => setInputMessage(e.target.value)}
                             disabled={isSending}
@@ -824,20 +1144,20 @@ export default function InboxPage() {
                               }
                             }}
                             rows={1}
-                            className="w-full h-10 px-3 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] resize-none"
+                            className="w-full h-10 px-3.5 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[13.5px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] resize-none transition-all"
                           />
                         </div>
                         <button
                           type="submit"
                           disabled={isSending || !inputMessage.trim()}
-                          className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-md)] text-[14px] font-sans font-medium flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] outline-none shrink-0"
+                          className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-md)] text-[13.5px] font-sans font-semibold flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] outline-none shrink-0 transition-all"
                         >
                           {isSending ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             <>
                               <Send className="w-4 h-4" />
-                              <span>Send Reply</span>
+                              <span>Send Overrides</span>
                             </>
                           )}
                         </button>
@@ -850,6 +1170,203 @@ export default function InboxPage() {
           )}
         </AnimatePresence>
       </section>
+
+      {/* ─── PANEL 4: Customer Insights (Rightmost, 320px) ────────────── */}
+      {showInsights && selectedConversation && (
+        <aside className="hidden 2xl:flex flex-col w-[320px] border-l border-[var(--border-subtle)] bg-[var(--bg-surface)] h-full shrink-0 select-none overflow-hidden animate-fade-in">
+          
+          {/* Header */}
+          <div className="h-[52px] px-4 flex items-center justify-between border-b border-[var(--border-subtle)] shrink-0">
+            <h2 className="text-[13px] font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              CRM Insights
+            </h2>
+            <button
+              onClick={() => setShowInsights(false)}
+              className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-colors"
+              title="Hide Insights"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Sidebar Body */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin">
+            
+            {/* Customer Details Card */}
+            <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col items-center text-center">
+              <Avatar name={selectedConversation.customer_name || selectedConversation.customer_phone} size="lg" />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mt-3">
+                {selectedConversation.customer_name || "Customer"}
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5 flex items-center gap-1 font-mono">
+                <Phone className="w-3 h-3 text-[var(--text-tertiary)]" />
+                {selectedConversation.customer_phone}
+              </p>
+            </div>
+
+            {/* CRM Status Card */}
+            {isLoadingLead ? (
+              <div className="space-y-3 py-2 animate-pulse">
+                <div className="h-3.5 bg-[var(--bg-subtle)] rounded w-1/3" />
+                <div className="h-8 bg-[var(--bg-subtle)] rounded" />
+              </div>
+            ) : leadInfo ? (
+              <div className="space-y-4">
+                
+                {/* 1. Urgency Level Override */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider block">
+                    Urgency Level
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["low", "medium", "high"] as const).map((urg) => {
+                      const isActive = leadInfo.urgency === urg;
+                      const activeStyles = {
+                        low: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] border-[var(--info-border)] shadow-xs",
+                        medium: "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--warning-border)] shadow-xs",
+                        high: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] border-[var(--danger-border)] shadow-xs"
+                      };
+                      return (
+                        <button
+                          key={urg}
+                          disabled={isUpdatingLead}
+                          onClick={() => handleUpdateUrgency(urg)}
+                          className={`px-2 py-1.5 rounded-lg border text-xs font-semibold capitalize cursor-pointer transition-all outline-none text-center ${
+                            isActive
+                              ? activeStyles[urg]
+                              : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
+                          }`}
+                        >
+                          {urg}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. CRM Stepper Tracker */}
+                <div className="space-y-2 pt-1">
+                  <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider block">
+                    CRM Stage Tracker
+                  </label>
+                  <div className="flex items-center justify-between relative px-2.5 py-1 select-none">
+                    {/* Stepper Connecting Line */}
+                    <div className="absolute top-[17px] left-8 right-8 h-[2px] bg-[var(--border-subtle)] z-0" />
+                    
+                    {/* Stepper Connecting Active Line */}
+                    {(() => {
+                      const stages = ["new", "contacted", "booking", "completed"];
+                      const activeIdx = stages.indexOf(leadInfo.kanban_stage || "new");
+                      const pct = activeIdx >= 0 ? (activeIdx / (stages.length - 1)) * 100 : 0;
+                      return (
+                        <div
+                          className="absolute top-[17px] left-8 h-[2px] bg-[var(--brand-primary)] transition-all duration-300 z-0"
+                          style={{ width: `calc(${pct}% - ${pct > 0 ? (activeIdx === 3 ? '48px' : '28px') : '0px'})` }}
+                        />
+                      );
+                    })()}
+
+                    {/* Step Dots */}
+                    {["new", "contacted", "booking", "completed"].map((stg, idx) => {
+                      const stages = ["new", "contacted", "booking", "completed"];
+                      const currentIdx = stages.indexOf(leadInfo.kanban_stage || "new");
+                      const isCompleted = idx < currentIdx;
+                      const isActive = idx === currentIdx;
+                      
+                      return (
+                        <button
+                          key={stg}
+                          disabled={isUpdatingLead}
+                          onClick={() => handleUpdateStage(stg)}
+                          className="flex flex-col items-center z-10 focus:outline-none cursor-pointer group"
+                          title={`Move lead to ${stg}`}
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all duration-200 ${
+                              isActive
+                                ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)] shadow-md shadow-indigo-500/20"
+                                : isCompleted
+                                ? "bg-[var(--brand-subtle)] text-[var(--brand-text)] border-[var(--brand-border)]"
+                                : "bg-[var(--bg-surface)] text-[var(--text-tertiary)] border-[var(--border-subtle)] group-hover:border-[var(--text-secondary)]"
+                            }`}
+                          >
+                            {isCompleted ? <CheckCheck className="w-3.5 h-3.5" /> : idx + 1}
+                          </div>
+                          <span
+                            className={`text-[9px] font-bold uppercase tracking-wider mt-1.5 transition-colors duration-200 ${
+                              isActive
+                                ? "text-[var(--brand-primary)] font-extrabold"
+                                : "text-[var(--text-tertiary)]"
+                            }`}
+                          >
+                            {stg === "new" ? "New" : stg === "contacted" ? "Contact" : stg === "booking" ? "Booked" : "Done"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Requires Human Support Flag */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] select-none">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      Flag Human Assistance
+                    </span>
+                    <p className="text-[10px] text-[var(--text-tertiary)] max-w-[200px]">
+                      Flags this customer as requiring urgent human support.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleHumanSupport}
+                    disabled={isUpdatingLead}
+                    className={`w-10 h-6 rounded-full p-[2px] cursor-pointer relative flex items-center outline-none transition-colors duration-200 ${
+                      leadInfo.requires_human_support
+                        ? "bg-amber-500"
+                        : "bg-[var(--bg-muted)]"
+                    }`}
+                  >
+                    <div
+                      className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white transition-all"
+                      style={{
+                        marginLeft: leadInfo.requires_human_support ? "auto" : "0",
+                        marginRight: leadInfo.requires_human_support ? "0" : "auto"
+                      }}
+                    />
+                  </button>
+                </div>
+
+                {/* 4. AI Real-Time Summary */}
+                <div className="p-3.5 rounded-xl bg-violet-500/[0.03] dark:bg-violet-500/[0.06] border border-violet-500/10 space-y-2">
+                  <h4 className="text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wide flex items-center gap-1.5 select-none">
+                    <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                    AI Needs Summary
+                  </h4>
+                  <p className="text-[12px] font-sans leading-relaxed text-[var(--text-secondary)] italic select-text">
+                    {leadInfo.summary_of_needs || leadInfo.service_requested || "AI is currently extracting user service needs from the conversation..."}
+                  </p>
+                  {leadInfo.intent_category && (
+                    <div className="pt-0.5 select-none">
+                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-violet-100/50 dark:bg-violet-955/20 text-violet-750 dark:text-violet-300 text-[9px] font-semibold border border-violet-200/30 dark:border-violet-900/10">
+                        Category: {leadInfo.intent_category}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            ) : (
+              <div className="p-4 text-center border border-dashed border-[var(--border-subtle)] rounded-xl text-xs text-[var(--text-tertiary)] py-6">
+                No active CRM lead entry found.
+              </div>
+            )}
+
+          </div>
+        </aside>
+      )}
 
     </div>
   );
