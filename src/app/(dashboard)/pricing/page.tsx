@@ -86,7 +86,7 @@ export default function PricingPage() {
 
       // 3. Configure Checkout Options
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_dummy",
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID,
         subscription_id: data.id,
         name: "LeadFlow SaaS",
         description: `Upgrade to ${tier.toUpperCase()} Plan`,
@@ -159,7 +159,7 @@ export default function PricingPage() {
 
       // 3. Configure Checkout Options
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_dummy",
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: data.amount,
         currency: "INR",
         name: "LeadFlow SaaS",
