@@ -15,7 +15,6 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
 
-export const dynamic = "force-dynamic";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Lead {

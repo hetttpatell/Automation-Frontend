@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -15,7 +13,6 @@ import {
   Send,
   SlidersHorizontal,
   ChevronLeft,
-  Smartphone,
   Sparkles,
   CheckCheck,
   X,
@@ -111,8 +108,7 @@ export default function InboxPage() {
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // States for Insights Sidebar (Right) and WhatsApp Phone Simulator (Left-Center)
-  const [showSidebar, setShowSidebar] = useState(true); // WhatsApp Demo
+  // States for Insights Sidebar (Right)
   const [showInsights, setShowInsights] = useState(true); // CRM Insights
   const [leadInfo, setLeadInfo] = useState<any | null>(null);
   const [isLoadingLead, setIsLoadingLead] = useState(false);
@@ -183,7 +179,7 @@ export default function InboxPage() {
         console.error("[Fetch Conversations Error]:", error.message);
         toastError("Failed to fetch conversations");
       } else {
-        const sortedConvos = ((data as Conversation[]) || []).map(convo => ({
+        const sortedConvos = ((data as Conversation[] | null) || []).map(convo => ({
           ...convo,
           messages: convo.messages
             ? [...convo.messages].sort(
@@ -209,7 +205,7 @@ export default function InboxPage() {
           } else if (payload.eventType === "UPDATE") {
             setConversations((prev) => {
               const updated = prev.map((c) =>
-                c.id === payload.new.id ? (payload.new as Conversation) : c
+                c.id === payload.new.id ? { ...(payload.new as Conversation), messages: c.messages } : c
               );
               return [...updated].sort(
                 (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -411,8 +407,8 @@ export default function InboxPage() {
   };
 
   // Send Message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e?: React.SyntheticEvent) => {
+    if (e) e.preventDefault();
     if (!selectedConversation || !inputMessage.trim() || isSending) return;
     setIsSending(true);
 
@@ -709,134 +705,6 @@ export default function InboxPage() {
         </div>
       </aside>
 
-      {/* ─── PANEL 2: WhatsApp Phone Simulator (Center-Left, 290px) ───── */}
-      {showSidebar && selectedConversation && (
-        <aside className="hidden xl:flex flex-col w-[290px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] h-full shrink-0 select-none overflow-hidden animate-fade-in">
-          
-          {/* Header */}
-          <div className="h-[52px] px-4 flex items-center justify-between border-b border-[var(--border-subtle)] shrink-0 select-none">
-            <h2 className="text-[12px] font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-              <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
-              WhatsApp Demo (Customer View)
-            </h2>
-            <button
-              onClick={() => setShowSidebar(false)}
-              className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-colors"
-              title="Hide Demo"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* White / Light Theme Phone Mockup Body */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-center bg-[var(--bg-subtle)]/40 scrollbar-none">
-            
-            {/* iOS Device Frame (Light/Silver Theme) */}
-            <div className="w-[254px] h-[435px] rounded-[38px] border-[8px] border-slate-200 dark:border-slate-800 bg-[#f4f1eb] dark:bg-[#0b141a] shadow-lg overflow-hidden relative mx-auto flex flex-col select-none border-t-[10px] border-b-[10px] relative">
-              
-              {/* Notch mock */}
-              <div className="absolute top-[2px] left-1/2 -translate-x-1/2 w-16 h-3 bg-slate-900 rounded-full z-50 flex items-center justify-center gap-1">
-                <div className="w-6 h-[1.5px] bg-neutral-800 rounded-full" />
-                <div className="w-1 h-1 bg-neutral-800 rounded-full" />
-              </div>
-
-              {/* Status Bar */}
-              <div className="h-5 bg-white dark:bg-[#202c33] flex items-center justify-between px-5 text-[9px] text-slate-800 dark:text-slate-250 select-none font-sans font-semibold shrink-0">
-                <span>12:45</span>
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-1.5 bg-slate-800 dark:bg-slate-200 rounded-xs" />
-                  <span className="w-1 h-1 bg-slate-800 dark:bg-slate-200 rounded-full" />
-                </div>
-              </div>
-
-              {/* WhatsApp Light Header */}
-              <div className="h-10 bg-white dark:bg-[#202c33] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between px-2.5 text-slate-850 dark:text-slate-100 select-none shrink-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[13px] text-slate-500 select-none">←</span>
-                  <div className="w-6.5 h-6.5 rounded-full bg-slate-100 dark:bg-[#2a3942] flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-350 shrink-0">
-                    {selectedConversation.customer_name ? selectedConversation.customer_name.substring(0, 2).toUpperCase() : "WA"}
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-[10px] font-bold leading-none truncate w-[100px] text-slate-800 dark:text-slate-100">
-                      {user?.email ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) : "Detailing Shop"}
-                    </h4>
-                    <span className="text-[8px] text-emerald-500 font-medium leading-none">Online</span>
-                  </div>
-                </div>
-                <div className="text-slate-400 font-bold text-[9px]">
-                  <span>⋮</span>
-                </div>
-              </div>
-
-              {/* Chat Message Box Area (Light Wallpaper) */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-2 flex flex-col scrollbar-none bg-[#f4f1eb] dark:bg-[#0b141a]" style={{ backgroundImage: "radial-gradient(#dfdbd4 0.5px, transparent 0.5px)", backgroundSize: "10px 10px" }}>
-                {messages.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center text-[9px] text-slate-400 select-none">
-                    No messages yet
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    const isCustomerSent = msg.sender === "customer";
-                    const isButtonMenu = msg.message_text === "[I showed the user the services menu]";
-
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col max-w-[85%] ${
-                          isCustomerSent ? "self-end items-end" : "self-start items-start"
-                        }`}
-                      >
-                        {/* Chat Bubble */}
-                        <div
-                          className={`p-2 rounded-lg text-[10.5px] font-sans leading-normal break-words relative shadow-xs border ${
-                            isCustomerSent
-                              ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-slate-800 dark:text-slate-100 border-[#bcecb5]/40 dark:border-transparent rounded-tr-none self-end"
-                              : "bg-white dark:bg-[#202c33] text-slate-800 dark:text-slate-100 border-slate-100 dark:border-transparent rounded-tl-none self-start"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap select-text">{msg.message_text}</p>
-                          
-                          <div className="flex items-center justify-end gap-[3px] mt-1 text-[7.5px] text-slate-400 dark:text-slate-450 select-none leading-none">
-                            <span>{formatMessageTime(msg.created_at)}</span>
-                            {isCustomerSent && (
-                              <span className="text-sky-500 font-bold">✓✓</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* WhatsApp Interactive buttons mockup */}
-                        {isButtonMenu && (
-                          <div className="flex flex-col gap-1 mt-1.5 w-full max-w-[180px] self-start animate-fade-in">
-                            {["Exterior Wash", "Ceramic Coating", "Speak to Human"].map((btnText) => (
-                              <div
-                                key={btnText}
-                                className="w-full py-1 px-2.5 bg-white dark:bg-[#202c33] text-emerald-600 dark:text-emerald-450 rounded-lg text-[9px] font-bold border border-emerald-100 dark:border-emerald-900/30 text-center shadow-xs select-none hover:bg-emerald-50/10 active:bg-emerald-50/20 cursor-pointer"
-                              >
-                                {btnText}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* WhatsApp Light Footer input dock */}
-              <div className="p-1 bg-white dark:bg-[#111b21] border-t border-slate-100 dark:border-slate-800 flex items-center gap-1 select-none shrink-0">
-                <div className="flex-1 h-6 px-2.5 bg-slate-50 dark:bg-[#2a3942] rounded-full flex items-center text-[9.5px] text-slate-400 dark:text-slate-400/60 border border-slate-100/50 dark:border-transparent">
-                  <span>Message...</span>
-                </div>
-                <div className="w-6 h-6 rounded-full bg-[#128C7E] dark:bg-[#00a884] flex items-center justify-center text-white shrink-0">
-                  <span className="text-[10px] font-bold">🎤</span>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </aside>
-      )}
 
       {/* ─── PANEL 3: Agent Chat Canvas (Center-Right, flex-1) ────────── */}
       <section className={`flex-1 flex flex-col h-full bg-[var(--bg-canvas)] relative select-text ${
@@ -894,20 +762,6 @@ export default function InboxPage() {
                     document.getElementById("header-cta-portal") ? (
                       createPortal(
                         <div className="flex items-center gap-4 select-none">
-                          {/* Demo Toggle Button */}
-                          <button
-                            onClick={() => setShowSidebar(!showSidebar)}
-                            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none outline-none ${
-                              showSidebar
-                                ? "bg-[var(--brand-subtle)] text-[var(--brand-text-strong)] border-[var(--brand-border)] shadow-xs"
-                                : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
-                            }`}
-                            title="Toggle WhatsApp Device Demo"
-                          >
-                            <Smartphone className="w-4 h-4" />
-                            <span>WhatsApp Demo</span>
-                          </button>
-
                           {/* Insights Toggle Button */}
                           <button
                             onClick={() => setShowInsights(!showInsights)}
@@ -1256,7 +1110,7 @@ export default function InboxPage() {
                     
                     {/* Stepper Connecting Active Line */}
                     {(() => {
-                      const stages = ["new", "contacted", "booking", "completed"];
+                      const stages = ["new", "contacted", "converted", "completed"];
                       const activeIdx = stages.indexOf(leadInfo.kanban_stage || "new");
                       const pct = activeIdx >= 0 ? (activeIdx / (stages.length - 1)) * 100 : 0;
                       return (
@@ -1268,8 +1122,8 @@ export default function InboxPage() {
                     })()}
 
                     {/* Step Dots */}
-                    {["new", "contacted", "booking", "completed"].map((stg, idx) => {
-                      const stages = ["new", "contacted", "booking", "completed"];
+                    {["new", "contacted", "converted", "completed"].map((stg, idx) => {
+                      const stages = ["new", "contacted", "converted", "completed"];
                       const currentIdx = stages.indexOf(leadInfo.kanban_stage || "new");
                       const isCompleted = idx < currentIdx;
                       const isActive = idx === currentIdx;
@@ -1300,7 +1154,7 @@ export default function InboxPage() {
                                 : "text-[var(--text-tertiary)]"
                             }`}
                           >
-                            {stg === "new" ? "New" : stg === "contacted" ? "Contact" : stg === "booking" ? "Booked" : "Done"}
+                            {stg === "new" ? "New" : stg === "contacted" ? "Contact" : stg === "converted" ? "Booked" : "Done"}
                           </span>
                         </button>
                       );

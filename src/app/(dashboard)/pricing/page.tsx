@@ -7,7 +7,6 @@ import { useToast } from "@/components/ui/Toast";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { motion } from "framer-motion";
 
-export const dynamic = "force-dynamic";
 
 // Backend API URL — routes to our dedicated Node.js server
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";

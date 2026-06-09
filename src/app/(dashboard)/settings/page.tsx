@@ -32,7 +32,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 
-export const dynamic = "force-dynamic";
 
 interface TenantConfig {
   id: string;
@@ -354,7 +353,8 @@ export default function SettingsPage() {
         }
       },
       {
-        scope: "whatsapp_business_management,whatsapp_business_messaging",
+        scope: "whatsapp_business_management,whatsapp_business_messaging,business_management",
+        return_scopes: true,
       }
     );
   };
@@ -1262,6 +1262,84 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                             </div>
                           </div>
                         )}
+
+                        {/* Manual API Configuration */}
+                          <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-raised)] space-y-4 shadow-[var(--shadow-sm)] animate-fade-in">
+                            <div className="border-b border-[var(--border-subtle)] pb-2 flex items-center justify-between">
+                              <div>
+                                <h4 className="text-xs font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+                                  <Terminal className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                                  Manual API Configuration
+                                </h4>
+                                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                                  Use this to configure credentials manually if Facebook OAuth is blocked on HTTP/local setups.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {/* Phone Number ID */}
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                                  Phone Number ID
+                                </label>
+                                <input
+                                  type="text"
+                                  value={whatsappPhoneNumberId}
+                                  onChange={(e) => {
+                                    setWhatsappPhoneNumberId(e.target.value);
+                                    setHasChanges(true);
+                                  }}
+                                  placeholder="e.g., 1186481551206471"
+                                  className={`${inputBaseClass} h-11`}
+                                />
+                              </div>
+
+                              {/* WABA ID */}
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                                  WABA ID (Business ID)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={whatsappBusinessAccountId}
+                                  onChange={(e) => {
+                                    setWhatsappBusinessAccountId(e.target.value);
+                                    setHasChanges(true);
+                                  }}
+                                  placeholder="e.g., 1084861251306450"
+                                  className={`${inputBaseClass} h-11`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Access Token */}
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                                Meta Permanent Access Token
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type={showToken ? "text" : "password"}
+                                  value={whatsappAccessToken}
+                                  onChange={(e) => {
+                                    setWhatsappAccessToken(e.target.value);
+                                    setHasChanges(true);
+                                  }}
+                                  placeholder="EA..."
+                                  className={`${inputBaseClass} h-11 pr-10`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowToken(!showToken)}
+                                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none cursor-pointer"
+                                  aria-label={showToken ? "Hide token" : "Show token"}
+                                >
+                                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
 
                          {/* WhatsApp Credentials Section */}
                          <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
