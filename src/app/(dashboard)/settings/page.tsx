@@ -349,27 +349,22 @@ export default function SettingsPage() {
 
     (window as any).FB.login(
       function (response: any) {
-        if (response.authResponse) {
-          // Extract the short-lived token or code depending on Meta's response structure
-          const accessToken = response.authResponse.accessToken;
-          const code = response.authResponse.code;
-          console.log("[Meta OAuth] Config ID Login Success. Token/Code captured.");
-
-          // Pass the valid credential to our backend token exchange function
-          triggerTokenExchange(accessToken || code);
+        if (response.authResponse && response.authResponse.accessToken) {
+          const shortLivedToken = response.authResponse.accessToken;
+          console.log("[Meta OAuth] Config ID Login Success. Token captured.");
+          
+          // Pass the token to the backend for the fb_exchange_token extension
+          triggerTokenExchange(shortLivedToken); 
         } else {
-          console.error("[Meta OAuth] User cancelled login or denied permissions.");
+          console.error("[Meta OAuth] User cancelled login or token was not returned.");
           toastError("Facebook authorization was cancelled or failed.");
           setIsMetaConnecting(false);
         }
       },
       {
-        config_id: metaConfigId,
-        response_type: 'code',              // Meta Embedded Signup returns an auth code
-        override_default_response_type: true,
-        extras: {
-          sessionInfoVersion: 2,             // Required for Embedded Signup v2 session info
-        },
+        config_id: metaConfigId
+        // CRITICAL: Do NOT include response_type: 'code' here. 
+        // We rely on the SDK's default token response to carry the config_id scopes.
       }
     );
   };
