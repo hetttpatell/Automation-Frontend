@@ -326,7 +326,7 @@ export default function SettingsPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ accessToken: credential }),
+          body: JSON.stringify({ code: credential }),
         });
 
         const responseData = await res.json();
@@ -339,7 +339,7 @@ export default function SettingsPage() {
         await fetchConfig(false);
       } catch (err: any) {
         console.error("[Meta OAuth Exchange Error]:", err);
-        toastError(err.message || "Failed to exchange access token.");
+        toastError(err.message || "Failed to exchange authorization code.");
       } finally {
         setIsMetaConnecting(false);
       }
@@ -349,22 +349,25 @@ export default function SettingsPage() {
 
     (window as any).FB.login(
       function (response: any) {
-        if (response.authResponse && response.authResponse.accessToken) {
-          const shortLivedToken = response.authResponse.accessToken;
-          console.log("[Meta OAuth] Config ID Login Success. Token captured.");
+        if (response.authResponse && response.authResponse.code) {
+          const authCode = response.authResponse.code;
+          console.log("[Meta OAuth] Config ID Login Success. Auth Code captured.");
           
-          // Pass the token to the backend for the fb_exchange_token extension
-          triggerTokenExchange(shortLivedToken); 
+          // Pass the code to the backend
+          triggerTokenExchange(authCode); 
         } else {
-          console.error("[Meta OAuth] User cancelled login or token was not returned.");
+          console.error("[Meta OAuth] User cancelled login or code was not returned.");
           toastError("Facebook authorization was cancelled or failed.");
           setIsMetaConnecting(false);
         }
       },
       {
-        config_id: metaConfigId
-        // CRITICAL: Do NOT include response_type: 'code' here. 
-        // We rely on the SDK's default token response to carry the config_id scopes.
+        config_id: metaConfigId,
+        response_type: 'code', // CRITICAL: Must be code
+        override_default_response_type: true,
+        extras: {
+          sessionInfoVersion: 2,
+        },
       }
     );
   };
