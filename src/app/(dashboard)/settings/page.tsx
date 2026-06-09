@@ -311,7 +311,7 @@ export default function SettingsPage() {
 
     setIsMetaConnecting(true);
 
-    const triggerTokenExchange = async (credential: string) => {
+    const triggerTokenExchange = async (payload: { token: string; redirectUri: string }) => {
       try {
         // Get current Supabase session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -326,7 +326,10 @@ export default function SettingsPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ code: credential }),
+          body: JSON.stringify({ 
+            token: payload.token, 
+            redirectUri: payload.redirectUri 
+          }),
         });
 
         const responseData = await res.json();
@@ -351,10 +354,18 @@ export default function SettingsPage() {
       function (response: any) {
         if (response.authResponse && response.authResponse.code) {
           const authCode = response.authResponse.code;
-          console.log("[Meta OAuth] Config ID Login Success. Auth Code captured.");
           
-          // Pass the code to the backend
-          triggerTokenExchange(authCode); 
+          // Capture the exact URL where the user currently is
+          // We strip out search params/hashes to ensure it's clean
+          const currentUrl = window.location.origin + window.location.pathname;
+          
+          console.log("[Meta OAuth] Auth Code captured. Sending to backend with exact redirect URI:", currentUrl);
+          
+          // Pass BOTH the code and the current URL to your backend API call
+          triggerTokenExchange({ 
+            token: authCode, 
+            redirectUri: currentUrl 
+          }); 
         } else {
           console.error("[Meta OAuth] User cancelled login or code was not returned.");
           toastError("Facebook authorization was cancelled or failed.");
