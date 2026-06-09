@@ -202,12 +202,12 @@ export default function RegisterPage() {
         </div>
 
         {/* Center content containing text and iPhone mockup */}
-        <div className="relative z-10 my-auto flex flex-col items-center lg:items-start w-full max-w-lg mx-auto lg:mx-0">
+        <div className="relative z-10 my-auto flex flex-col items-center w-full max-w-lg mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full text-center lg:text-left mb-8"
+            className="w-full text-center mb-8"
           >
             <h2 className="text-3xl lg:text-4xl font-calistoga text-slate-900 leading-[1.25] mb-3.5 tracking-tight">
               Automate your sales pipeline with{" "}
@@ -215,13 +215,13 @@ export default function RegisterPage() {
                 AI
               </span>
             </h2>
-            <p className="text-sm text-slate-600 leading-relaxed font-sans max-w-md">
+            <p className="text-sm text-slate-600 leading-relaxed font-sans max-w-md mx-auto">
               Engage WhatsApp leads 24/7. Deploy custom AI agents to qualify customers, offer service options, and save verified bookings.
             </p>
           </motion.div>
 
           {/* iPhone 15 Pro Container */}
-          <div className="hidden lg:flex items-center justify-center relative w-full scale-[0.85] origin-top-left xl:scale-[0.9]">
+          <div className="hidden lg:flex items-center justify-center relative w-full scale-[0.85] origin-center xl:scale-[0.9]">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] bg-gradient-to-tr from-accent/8 to-accent-secondary/8 rounded-full blur-[60px] -z-10 pointer-events-none" />
 
             <div className="relative w-[320px] h-[620px] border-[6px] border-slate-950 rounded-[2.8rem] bg-slate-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] overflow-visible ring-1 ring-slate-900/10">
