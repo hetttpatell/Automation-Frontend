@@ -70,7 +70,7 @@ export default function PricingPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ planId: tier }),
+        body: JSON.stringify({ planType: tier === "growth" ? "pro" : tier }),
       });
 
       const data = await res.json();
@@ -92,21 +92,38 @@ export default function PricingPage() {
         description: `Upgrade to ${tier.toUpperCase()} Plan`,
         image: "/Logo-2.png",
         handler: async function (response: any) {
-          toastSuccess(`Payment Successful! Signature: ${response.razorpay_signature.slice(0, 10)}...`);
-          toastInfo("Your plan will be updated in a few seconds as the webhook processes.");
-          
-          // Refresh context
-          setTimeout(async () => {
-            const { data: tenant } = await supabase
-              .from("tenants")
-              .select("subscription_tier, ai_credits_balance")
-              .eq("owner_email", userEmail)
-              .single();
-            if (tenant) {
-              setCurrentTier(tenant.subscription_tier || "free");
-              setCreditsBalance(tenant.ai_credits_balance ?? 50);
+          try {
+            toastInfo("Verifying payment...");
+            const verifyRes = await fetch(`${API_URL}/api/razorpay/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                razorpay_subscription_id: response.razorpay_subscription_id || data.id,
+                planType: tier === "growth" ? "pro" : tier
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              throw new Error(verifyData.error || "Payment verification failed.");
             }
-          }, 3000);
+
+            toastSuccess("Payment verified & plan upgraded successfully!");
+            if (verifyData.subscription_tier) {
+              setCurrentTier(verifyData.subscription_tier);
+            }
+            if (verifyData.ai_credits_balance !== undefined) {
+              setCreditsBalance(verifyData.ai_credits_balance);
+            }
+          } catch (verifyErr: any) {
+            console.error(verifyErr);
+            toastError(verifyErr.message || "Failed to verify payment. Please contact support.");
+          }
         },
         prefill: {
           name: userEmail.split("@")[0],
@@ -167,20 +184,35 @@ export default function PricingPage() {
         image: "/Logo-2.png",
         order_id: data.orderId,
         handler: async function (response: any) {
-          toastSuccess(`Payment Captured! ID: ${response.razorpay_payment_id}`);
-          toastInfo("Your credits will be updated shortly.");
-          
-          // Refresh context
-          setTimeout(async () => {
-            const { data: tenant } = await supabase
-              .from("tenants")
-              .select("subscription_tier, ai_credits_balance")
-              .eq("owner_email", userEmail)
-              .single();
-            if (tenant) {
-              setCreditsBalance(tenant.ai_credits_balance ?? 50);
+          try {
+            toastInfo("Verifying payment...");
+            const verifyRes = await fetch(`${API_URL}/api/razorpay/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                razorpay_order_id: response.razorpay_order_id || data.orderId,
+                planType: packId
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              throw new Error(verifyData.error || "Payment verification failed.");
             }
-          }, 3000);
+
+            toastSuccess("Payment verified & credits topped up successfully!");
+            if (verifyData.ai_credits_balance !== undefined) {
+              setCreditsBalance(verifyData.ai_credits_balance);
+            }
+          } catch (verifyErr: any) {
+            console.error(verifyErr);
+            toastError(verifyErr.message || "Failed to verify payment. Please contact support.");
+          }
         },
         prefill: {
           name: userEmail.split("@")[0],

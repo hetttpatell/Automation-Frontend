@@ -225,10 +225,10 @@ export default function CampaignsPage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-xl font-display font-extrabold text-[var(--text-primary)]">
-                Upgrade to Growth
+                Upgrade to Pro
               </h3>
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                Upgrade to the Growth Plan to instantly build outbound marketing campaigns.
+                Upgrade to the Pro Plan to instantly build outbound marketing campaigns.
               </p>
             </div>
             <button
