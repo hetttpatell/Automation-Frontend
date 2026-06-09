@@ -303,9 +303,15 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!process.env.NEXT_PUBLIC_META_CONFIG_ID) {
+      toastError("Meta Configuration ID is missing. Set NEXT_PUBLIC_META_CONFIG_ID in your .env.local file.");
+      console.error("[Meta OAuth] NEXT_PUBLIC_META_CONFIG_ID is not set. Cannot proceed with FB.login.");
+      return;
+    }
+
     setIsMetaConnecting(true);
 
-    const triggerTokenExchange = async (shortLivedToken: string) => {
+    const triggerTokenExchange = async (credential: string) => {
       try {
         // Get current Supabase session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -320,7 +326,7 @@ export default function SettingsPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ accessToken: shortLivedToken }),
+          body: JSON.stringify({ accessToken: credential }),
         });
 
         const responseData = await res.json();
@@ -339,23 +345,31 @@ export default function SettingsPage() {
       }
     };
 
+    const metaConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
+
     (window as any).FB.login(
       function (response: any) {
         if (response.authResponse) {
-          const shortLivedToken = response.authResponse.accessToken;
-          console.log("[Meta OAuth] Frontend login success. Token captured.");
-          
-          // Pass token directly to the backend exchange function
-          triggerTokenExchange(shortLivedToken); 
+          // Extract the short-lived token or code depending on Meta's response structure
+          const accessToken = response.authResponse.accessToken;
+          const code = response.authResponse.code;
+          console.log("[Meta OAuth] Config ID Login Success. Token/Code captured.");
+
+          // Pass the valid credential to our backend token exchange function
+          triggerTokenExchange(accessToken || code);
         } else {
-          console.error("[Meta OAuth] User cancelled login or did not fully authorize.");
+          console.error("[Meta OAuth] User cancelled login or denied permissions.");
           toastError("Facebook authorization was cancelled or failed.");
           setIsMetaConnecting(false);
         }
       },
       {
-        scope: 'whatsapp_business_management,whatsapp_business_messaging',
-        return_scopes: true
+        config_id: metaConfigId,
+        response_type: 'code',              // Meta Embedded Signup returns an auth code
+        override_default_response_type: true,
+        extras: {
+          sessionInfoVersion: 2,             // Required for Embedded Signup v2 session info
+        },
       }
     );
   };
