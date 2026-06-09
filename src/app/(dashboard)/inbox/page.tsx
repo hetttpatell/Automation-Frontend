@@ -16,9 +16,7 @@ import {
   Sparkles,
   CheckCheck,
   X,
-  ChevronRight,
-  AlertCircle,
-  Clock
+  AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -809,7 +807,7 @@ export default function InboxPage() {
                           </button>
                         </div>
                       </div>,
-                      portalTarget
+                      portalTarget as HTMLElement
                     )
                   ) : (
                     <div className="flex items-center gap-4 select-none">
