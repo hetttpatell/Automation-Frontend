@@ -306,13 +306,15 @@ export default function InboxPage() {
       return;
     }
 
+    const customerPhone = selectedConversation.customer_phone;
+
     async function fetchLeadInfo() {
       setIsLoadingLead(true);
       try {
         const { data, error } = await supabase
           .from("leads")
           .select("*")
-          .eq("customer_phone", selectedConversation.customer_phone)
+          .eq("customer_phone", customerPhone)
           .maybeSingle();
 
         if (error) {
