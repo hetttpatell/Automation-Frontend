@@ -113,6 +113,7 @@ export default function InboxPage() {
   const [leadInfo, setLeadInfo] = useState<any | null>(null);
   const [isLoadingLead, setIsLoadingLead] = useState(false);
   const [isUpdatingLead, setIsUpdatingLead] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -125,6 +126,9 @@ export default function InboxPage() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      setPortalTarget(document.getElementById("header-cta-portal"));
+    }
   }, []);
 
   const queryParamProcessed = React.useRef(false);
@@ -756,13 +760,61 @@ export default function InboxPage() {
                   </div>
                 </div>
 
-                {/* Render Actions in Layout Header Portal (Desktop) or Inline (Mobile) */}
-                {mounted && typeof document !== "undefined" ? (
-                  !isMobile ? (
-                    document.getElementById("header-cta-portal") ? (
-                      createPortal(
-                        <div className="flex items-center gap-4 select-none">
-                          {/* Insights Toggle Button */}
+                {/* Render Actions in Layout Header Portal (Desktop) or Inline (Mobile/Fallback) */}
+                {mounted ? (
+                  !isMobile && portalTarget ? (
+                    createPortal(
+                      <div className="flex items-center gap-4 select-none">
+                        {/* Insights Toggle Button */}
+                        <button
+                          onClick={() => setShowInsights(!showInsights)}
+                          className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none outline-none ${
+                            showInsights
+                              ? "bg-[var(--brand-subtle)] text-[var(--brand-text-strong)] border-[var(--brand-border)] shadow-xs"
+                              : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
+                          }`}
+                          title="Toggle Customer Insights"
+                        >
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span>Insights</span>
+                        </button>
+
+                        <div className="h-4 w-[1px] bg-[var(--border-subtle)]" />
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
+                            AI Autopilot
+                          </span>
+                          <button
+                            onClick={handleToggleAI}
+                            disabled={isToggling}
+                            className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
+                              selectedConversation.is_ai_active
+                                ? "bg-[var(--brand-primary)]"
+                                : "bg-[var(--bg-muted)]"
+                            }`}
+                            role="switch"
+                            aria-checked={selectedConversation.is_ai_active}
+                            aria-label="AI Autopilot"
+                          >
+                            <motion.div
+                              layout
+                              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                              className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
+                              style={{
+                                marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
+                                marginRight: selectedConversation.is_ai_active ? "0" : "auto"
+                              }}
+                            />
+                          </button>
+                        </div>
+                      </div>,
+                      portalTarget
+                    )
+                  ) : (
+                    <div className="flex items-center gap-4 select-none">
+                      {!isMobile && (
+                        <>
                           <button
                             onClick={() => setShowInsights(!showInsights)}
                             className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none outline-none ${
@@ -775,67 +827,36 @@ export default function InboxPage() {
                             <Sparkles className="w-4 h-4 text-amber-500" />
                             <span>Insights</span>
                           </button>
-
                           <div className="h-4 w-[1px] bg-[var(--border-subtle)]" />
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-[13px] font-sans font-medium text-[var(--text-secondary)]">
-                              AI Autopilot
-                            </span>
-                            <button
-                              onClick={handleToggleAI}
-                              disabled={isToggling}
-                              className={`w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
-                                selectedConversation.is_ai_active
-                                  ? "bg-[var(--brand-primary)]"
-                                  : "bg-[var(--bg-muted)]"
-                              }`}
-                              role="switch"
-                              aria-checked={selectedConversation.is_ai_active}
-                              aria-label="AI Autopilot"
-                            >
-                              <motion.div
-                                layout
-                                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                                className="w-[20px] h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
-                                style={{
-                                  marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
-                                  marginRight: selectedConversation.is_ai_active ? "0" : "auto"
-                                }}
-                              />
-                            </button>
-                          </div>
-                        </div>,
-                        document.getElementById("header-cta-portal")!
-                      )
-                    ) : null
-                  ) : (
-                    <div className="flex items-center gap-2 select-none">
-                      <span className="text-[12px] font-sans font-medium text-[var(--text-secondary)] hidden sm:inline">
-                        AI Autopilot
-                      </span>
-                      <button
-                        onClick={handleToggleAI}
-                        disabled={isToggling}
-                        className={`w-[40px] h-[22px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
-                          selectedConversation.is_ai_active
-                            ? "bg-[var(--brand-primary)]"
-                            : "bg-[var(--bg-muted)]"
-                        }`}
-                        role="switch"
-                        aria-checked={selectedConversation.is_ai_active}
-                        aria-label="AI Autopilot"
-                      >
-                        <motion.div
-                          layout
-                          transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                          className="w-[18px] h-[18px] rounded-full shadow-[var(--shadow-sm)] bg-white"
-                          style={{
-                            marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
-                            marginRight: selectedConversation.is_ai_active ? "0" : "auto"
-                          }}
-                        />
-                      </button>
+                        </>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] lg:text-[13px] font-sans font-medium text-[var(--text-secondary)] hidden sm:inline">
+                          AI Autopilot
+                        </span>
+                        <button
+                          onClick={handleToggleAI}
+                          disabled={isToggling}
+                          className={`w-[40px] lg:w-[44px] h-[22px] lg:h-[24px] rounded-full p-[2px] cursor-pointer relative flex items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors duration-200 ${
+                            selectedConversation.is_ai_active
+                              ? "bg-[var(--brand-primary)]"
+                              : "bg-[var(--bg-muted)]"
+                          }`}
+                          role="switch"
+                          aria-checked={selectedConversation.is_ai_active}
+                          aria-label="AI Autopilot"
+                        >
+                          <motion.div
+                            layout
+                            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                            className="w-[18px] lg:w-[20px] h-[18px] lg:h-[20px] rounded-full shadow-[var(--shadow-sm)] bg-white"
+                            style={{
+                              marginLeft: selectedConversation.is_ai_active ? "auto" : "0",
+                              marginRight: selectedConversation.is_ai_active ? "0" : "auto"
+                            }}
+                          />
+                        </button>
+                      </div>
                     </div>
                   )
                 ) : null}
