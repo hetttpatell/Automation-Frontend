@@ -535,15 +535,7 @@ export default function InboxPage() {
   });
 
   return (
-    <div className="h-[calc(100vh-7rem)] lg:h-[calc(100vh-3.5rem)] flex overflow-hidden bg-[var(--bg-canvas)] id-inbox-container">
-      {selectedConversation && (
-        <style dangerouslySetInnerHTML={{__html: `
-          @media (max-width: 1023px) {
-            header.sticky { display: none !important; }
-            .id-inbox-container { height: calc(100vh - 3.5rem) !important; }
-          }
-        `}} />
-      )}
+    <div className="h-full flex overflow-hidden bg-[var(--bg-canvas)] id-inbox-container">
 
       {/* ─── PANEL 1: Thread List (Leftmost, 300px) ─────────────────── */}
       <aside className={`w-full lg:w-[300px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col h-full shrink-0 select-none ${
@@ -612,12 +604,21 @@ export default function InboxPage() {
         </div>
 
         {/* Thread Cards */}
-        <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-subtle)]">
+        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-2">
           {isLoading ? (
             [...Array(5)].map((_, i) => <ThreadSkeleton key={i} />)
           ) : filteredConversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center h-48 select-none">
-              <MessageSquare className="w-8 h-8 text-[var(--text-tertiary)] mb-2" />
+            <div className="flex flex-col items-center justify-center p-8 text-center h-52 select-none">
+              <div className="w-12 h-12 rounded-xl bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-tertiary)] mb-3 border border-[var(--border-subtle)]">
+                <motion.svg 
+                  viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  animate={{ scale: [1, 0.95, 1.05, 1] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <motion.line x1="8" y1="10" x2="16" y2="10" animate={{ strokeDasharray: ["0, 20", "12, 0", "0, 20"] }} transition={{ repeat: Infinity, duration: 3 }} />
+                </motion.svg>
+              </div>
               <p className="text-[var(--text-primary)] text-xs font-semibold">
                 {searchQuery ? "No matching threads" : "No active threads"}
               </p>
@@ -643,13 +644,13 @@ export default function InboxPage() {
                 <div
                   key={convo.id}
                   onClick={() => setSelectedConversation(convo)}
-                  className={`h-[72px] px-4 py-3 flex items-center gap-3 cursor-pointer border-b border-[var(--border-subtle)] relative hover:bg-[var(--bg-subtle)]/50 transition-all duration-150 ${
+                  className={`h-[72px] px-3.5 py-2.5 flex items-center gap-3 cursor-pointer rounded-[var(--radius-md)] border transition-all duration-200 ${
                     isSelected
-                      ? "bg-[var(--brand-subtle)]"
-                      : "bg-transparent"
+                      ? "bg-[var(--brand-subtle)] border-[var(--brand-border)] shadow-xs"
+                      : "bg-transparent border-transparent hover:bg-[var(--bg-subtle)]/50"
                   }`}
                   style={{
-                    borderLeft: isSelected ? "4px solid var(--brand-primary)" : "4px solid transparent",
+                    borderLeft: isSelected ? "3.5px solid var(--brand-primary)" : "3.5px solid transparent",
                   }}
                   role="button"
                   tabIndex={0}
@@ -676,13 +677,22 @@ export default function InboxPage() {
                           {convo.customer_name || "Customer"}
                         </h3>
                         {convo.is_ai_active ? (
-                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] text-[9px] font-bold tracking-wide border border-[var(--ai-border)] select-none leading-none">
-                            <Bot className="w-2.5 h-2.5 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] text-[9px] font-bold tracking-wide border border-[var(--ai-border)] select-none leading-none">
+                            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                              <rect x="3" y="11" width="18" height="10" rx="2" />
+                              <circle cx="12" cy="5" r="1" />
+                              <path d="M12 7v4" />
+                              <motion.line x1="8" y1="16" x2="8.01" y2="16" animate={{ scale: [1, 1.8, 1] }} transition={{ repeat: Infinity, duration: 1.5, repeatDelay: 1 }} />
+                              <motion.line x1="16" y1="16" x2="16.01" y2="16" animate={{ scale: [1, 1.8, 1] }} transition={{ repeat: Infinity, duration: 1.5, repeatDelay: 1 }} />
+                            </svg>
                             AI
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] text-[9px] font-bold tracking-wide border border-[var(--warning-border)] select-none leading-none">
-                            <User className="w-2.5 h-2.5 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] text-[9px] font-bold tracking-wide border border-[var(--warning-border)] select-none leading-none">
+                            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                              <motion.path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" animate={{ y: [0, -0.5, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }} />
+                              <motion.circle cx="12" cy="7" r="4" animate={{ y: [0, -0.3, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }} />
+                            </svg>
                             Human
                           </span>
                         )}
@@ -718,8 +728,17 @@ export default function InboxPage() {
         <AnimatePresence mode="wait">
           {!selectedConversation ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full select-none">
-              <div className="w-14 h-14 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-tertiary)] mb-4 shadow-[var(--shadow-sm)]">
-                <MessageSquare className="w-6 h-6" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--bg-surface)] to-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--brand-primary)] mb-4 shadow-md relative overflow-hidden group">
+                <motion.svg 
+                  viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  animate={{ y: [0, -3, 0], rotate: [0, -2, 2, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <motion.circle cx="8" cy="10" r="1.2" fill="currentColor" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.1 }} />
+                  <motion.circle cx="12" cy="10" r="1.2" fill="currentColor" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }} />
+                  <motion.circle cx="16" cy="10" r="1.2" fill="currentColor" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.7 }} />
+                </motion.svg>
               </div>
               <h3 className="text-[var(--text-primary)] font-semibold text-sm font-sans">
                 Select a Conversation
@@ -899,38 +918,38 @@ export default function InboxPage() {
                           className={`flex w-full flex-col ${isCustomer ? "items-start" : "items-end"}`}
                         >
                           {isCustomer ? (
-                            /* Customer Message (Left Side) */
-                            <div className="flex flex-col max-w-[70%] gap-1">
+                            /* Customer Message (Left Side) - Modern Glassmorphic Look */
+                            <div className="flex flex-col max-w-[75%] gap-1">
                               <div
-                                className="px-4 py-2.5 text-[13.5px] font-sans leading-[1.55] break-words bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[18px] rounded-tl-[3px] shadow-sm"
+                                className="px-4 py-2.5 text-[13.5px] font-sans leading-[1.6] break-words bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[20px] rounded-tl-[4px] shadow-[var(--shadow-xs)]"
                               >
                                 <p className="whitespace-pre-wrap select-text">
                                   {message.message_text}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-[6px] px-1 select-none text-[10px] text-[var(--text-tertiary)] mt-1">
+                              <div className="flex items-center gap-[6px] px-2 select-none text-[10px] text-[var(--text-tertiary)] mt-1">
                                 <span className="font-sans font-medium">{formatMessageTime(message.created_at)}</span>
                               </div>
                             </div>
                           ) : (
                             /* Business Response — Agent or AI (Right Side) */
-                            <div className="flex flex-col max-w-[70%] gap-1 items-end">
+                            <div className="flex flex-col max-w-[75%] gap-1 items-end">
                               <div
-                                className={`px-4 py-2.5 text-[13.5px] font-sans leading-[1.55] break-words ${
+                                className={`px-4 py-2.5 text-[13.5px] font-sans leading-[1.6] break-words ${
                                   isAI
-                                    ? "bg-gradient-to-br from-[var(--color-ai)] to-[#6D28D9] text-white rounded-[18px] rounded-tr-[3px] shadow-md"
-                                    : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-white rounded-[18px] rounded-tr-[3px] shadow-md"
+                                    ? "bg-gradient-to-br from-[var(--color-ai)] to-[#6D28D9] text-white rounded-[20px] rounded-tr-[4px] shadow-[0_4px_18px_-4px_rgba(139,92,246,0.35)] dark:shadow-[0_4px_22px_-4px_rgba(139,92,246,0.25)] border border-violet-500/10"
+                                    : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-white rounded-[20px] rounded-tr-[4px] shadow-[0_4px_18px_-4px_rgba(37,99,235,0.35)] dark:shadow-[0_4px_22px_-4px_rgba(37,99,235,0.25)] border border-blue-500/10"
                                 }`}
                               >
                                 {isAI ? (
-                                  <div className="flex items-center gap-1 mb-1.5 text-[10px] text-purple-200/90 font-semibold uppercase tracking-wider select-none">
-                                    <Bot className="w-3.5 h-3.5 text-purple-200/90" />
+                                  <div className="flex items-center gap-1.5 mb-1.5 text-[9px] text-purple-200/90 font-bold uppercase tracking-wider select-none">
+                                    <Bot className="w-3.5 h-3.5 text-purple-200/90 animate-pulse" />
                                     <span>AI Autopilot</span>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-1 mb-1.5 text-[10px] text-indigo-100/90 font-semibold uppercase tracking-wider select-none">
+                                  <div className="flex items-center gap-1.5 mb-1.5 text-[9px] text-indigo-100/90 font-bold uppercase tracking-wider select-none">
                                     <User className="w-3.5 h-3.5 text-indigo-100/90" />
-                                    <span>Agent</span>
+                                    <span>Agent Override</span>
                                   </div>
                                 )}
                                 <p className="whitespace-pre-wrap select-text">
@@ -938,27 +957,27 @@ export default function InboxPage() {
                                 </p>
                               </div>
 
-                              {/* Telemetry and Timestamp */}
-                              <div className="flex items-center flex-wrap gap-[6px] px-1 select-none text-[10px] text-[var(--text-tertiary)] mt-1 justify-end">
-                                <span className="font-sans font-medium">{formatMessageTime(message.created_at)}</span>
+                              {/* Telemetry and Timestamp - Sleek minimal badges */}
+                              <div className="flex items-center flex-wrap gap-[6px] px-1 select-none text-[10px] text-[var(--text-tertiary)] mt-1.5 justify-end">
+                                <span className="font-sans font-medium mr-1">{formatMessageTime(message.created_at)}</span>
                                 {isAI && (
                                   <>
-                                    <span className="text-[var(--text-tertiary)] select-none">·</span>
-                                    <span className="bg-[var(--color-ai-bg)] text-[var(--color-ai-text)] border border-[var(--ai-border)] px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide font-sans">
+                                    <span className="text-[var(--text-tertiary)]/40 select-none">·</span>
+                                    <span className="bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 border border-violet-100/60 dark:border-violet-900/20 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide font-sans">
                                       gemini-2.5-flash
                                     </span>
-                                    <span className="bg-[var(--bg-subtle)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-medium font-sans">
+                                    <span className="bg-slate-100/80 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 border border-slate-200/40 dark:border-zinc-700/40 px-2 py-0.5 rounded-full text-[9px] font-medium font-sans">
                                       {mockMs}ms
                                     </span>
-                                    <span className="bg-[var(--bg-subtle)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-medium font-sans">
+                                    <span className="bg-slate-100/80 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 border border-slate-200/40 dark:border-zinc-700/40 px-2 py-0.5 rounded-full text-[9px] font-medium font-sans">
                                       {mockTokens} tk
                                     </span>
                                   </>
                                 )}
                                 {!isAI && (
                                   <>
-                                    <span className="text-[var(--text-tertiary)] select-none">·</span>
-                                    <span className="bg-[var(--bg-subtle)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded text-[9px] font-medium font-sans">
+                                    <span className="text-[var(--text-tertiary)]/40 select-none">·</span>
+                                    <span className="bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100/60 dark:border-blue-900/20 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide font-sans">
                                       Manual Reply
                                     </span>
                                   </>
@@ -978,19 +997,27 @@ export default function InboxPage() {
               <footer className="bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] z-10 shrink-0">
                 <AnimatePresence mode="wait">
                   {selectedConversation.is_ai_active ? (
-                    /* AI Active — locked footer */
+                    /* AI Active — locked footer - Premium glass dynamic layout */
                     <motion.div
                       key="autopilot-active"
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                      className="h-14 px-5 flex items-center gap-3 bg-[var(--bg-subtle)] select-none w-full"
+                      exit={{ opacity: 0, y: 12 }}
+                      transition={{ type: "spring", stiffness: 320, damping: 24 }}
+                      className="h-14 px-6 flex items-center justify-between bg-gradient-to-r from-violet-500/[0.04] via-indigo-500/[0.01] to-violet-500/[0.04] dark:from-violet-500/[0.06] dark:via-zinc-950/20 dark:to-violet-500/[0.06] border-t border-violet-500/10 backdrop-blur-md select-none w-full"
                     >
-                      <Bot className="w-[18px] h-[18px] text-[var(--color-ai)] shrink-0" />
-                      <span className="text-[13px] font-semibold text-[var(--text-secondary)]">
-                        AI Autopilot is dynamically managing this conversation thread
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex items-center justify-center">
+                          <span className="absolute inline-flex h-3 w-3 rounded-full bg-violet-400 opacity-75 animate-ping" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--color-ai)]" />
+                        </div>
+                        <span className="text-[13px] font-semibold text-[var(--text-secondary)] font-sans">
+                          AI Autopilot is dynamically managing this conversation thread
+                        </span>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-1 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border border-violet-500/20">
+                        Autopilot Active
+                      </div>
                     </motion.div>
                   ) : (
                     /* Human Takeover — text input */
@@ -1158,9 +1185,9 @@ export default function InboxPage() {
                           title={`Move lead to ${stg}`}
                         >
                           <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all duration-200 ${
+                            className={`w-7 h-7 rounded-full flex items-center justify-center border text-[11px] font-bold transition-all ${
                               isActive
-                                ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)] shadow-md shadow-indigo-500/20"
+                                ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)] shadow-md"
                                 : isCompleted
                                 ? "bg-[var(--brand-subtle)] text-[var(--brand-text)] border-[var(--brand-border)]"
                                 : "bg-[var(--bg-surface)] text-[var(--text-tertiary)] border-[var(--border-subtle)] group-hover:border-[var(--text-secondary)]"

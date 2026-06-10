@@ -1,235 +1,370 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
 @config "../../tailwind.config.ts";
 
 /* ════════════════════════════════════════
-   LEADFLOW — CARBON PRECISION DESIGN SYSTEM
-   globals.css — single source of truth
+   LEADFLOW — PREMIUM DESIGN SYSTEM (MINT & CARBON SLATE)
+   globals.css — Single Source of Truth
    ════════════════════════════════════════ */
 
-:root {
-  /* ─── Brand ─────────────────────────────────── */
-  --brand-primary:        #4F46E5;   /* Indigo 600 */
-  --brand-primary-hover:  #4338CA;   /* Indigo 700 */
-  --brand-secondary:      #0EA5E9;   /* Sky 500 */
-  --brand-accent:         #10B981;   /* Emerald 500 */
 
-  /* ─── Legacy Aliases ────────────────────────── */
+:root {
+  /* ─── Premium Brand (Cobalt/Electric Unique Blue Vibe) ────────── */
+  --brand-primary:        #2563eb;   /* Blue 600 */
+  --brand-primary-hover:  #1d4ed8;   /* Blue 700 */
+  --brand-secondary:      #0ea5e9;   /* Sky 500 */
+  --brand-accent:         #3b82f6;   /* Blue 500 */
+
+  /* ─── Aliases & States ────────────────────────── */
   --brand:                var(--brand-primary);
   --brand-hover:          var(--brand-primary-hover);
-  --brand-active:         #3730A3;   /* Indigo 800 */
-  --brand-subtle:         #EEF2FF;   /* Indigo 50 */
-  --brand-muted:          #E0E7FF;   /* Indigo 100 */
-  --brand-border:         #C7D2FE;   /* Indigo 200 */
-  --brand-text:           #4338CA;   /* Indigo 700 */
-  --brand-text-strong:    #312E81;   /* Indigo 900 */
+  --brand-active:         #1e40af;   /* Blue 800 */
+  --brand-subtle:         #eff6ff;   /* Blue 50 */
+  --brand-muted:          #dbeafe;   /* Blue 100 */
+  --brand-border:         #bfdbfe;   /* Blue 200 */
+  --brand-text:           #2563eb;   /* Blue 600 */
+  --brand-text-strong:    #1e40af;   /* Blue 800 */
 
-  /* ─── Backgrounds ───────────────────────────── */
-  --bg-canvas:            #F8F9FA;   /* Page background */
-  --bg-surface:           #FFFFFF;   /* Cards, panels */
-  --bg-surface-raised:    #FFFFFF;   /* Modals, dropdowns */
-  --bg-subtle:            #F1F3F5;   /* Input backgrounds, subtle sections */
-  --bg-muted:             #E9ECEF;   /* Skeleton loaders, dividers */
-  --bg-overlay:           rgba(0, 0, 0, 0.45);
+  /* ─── Canvas & Surface Backgrounds ────────────────────── */
+  --bg-canvas:            #f8fafc;   /* Slate 50 - clean, light base */
+  --bg-surface:           #ffffff;   /* Pure white cards/containers */
+  --bg-surface-raised:    #ffffff;   /* Dropdowns/modals */
+  --bg-subtle:            #f1f5f9;   /* Inputs, subtle grids */
+  --bg-muted:             #e2e8f0;   /* Skeleton loading, dividers */
+  --bg-overlay:           rgba(15, 23, 42, 0.3);
 
-  /* ─── Text ──────────────────────────────────── */
-  --text-primary:         #111827;   /* Headlines, primary content */
-  --text-secondary:       #6B7280;   /* Labels, metadata */
-  --text-tertiary:        #9CA3AF;   /* Placeholders, hints */
-  --text-inverse:         #FFFFFF;
-  --text-brand:           #4F46E5;
-  --text-disabled:        #D1D5DB;
+  /* ─── Typography Text ─────────────────────────── */
+  --text-primary:         #0f172a;   /* Slate 900 - high contrast readability */
+  --text-secondary:       #475569;   /* Slate 600 */
+  --text-tertiary:        #64748b;   /* Slate 500 */
+  --text-inverse:         #ffffff;
+  --text-brand:           var(--brand-primary);
+  --text-disabled:        #cbd5e1;
 
-  /* ─── Borders ───────────────────────────────── */
-  --border-subtle:        #E5E7EB;   /* Default card borders */
-  --border-default:       #D1D5DB;   /* Input borders */
-  --border-strong:        #9CA3AF;   /* Focus rings base */
-  --border-brand:         #C7D2FE;
-  --border-focus:         #4F46E5;
+  /* ─── Minimal Borders ─────────────────────────── */
+  --border-subtle:        #f1f5f9;   /* Extra thin border style */
+  --border-default:       #e2e8f0;   /* Input border standard */
+  --border-strong:        #cbd5e1;   /* Focus borders */
+  --border-brand:         #bfdbfe;
+  --border-focus:         #2563eb;
 
-  /* ─── Semantic States ────────────────────────── */
-  --color-success:        #10B981;
-  --color-success-bg:     #ECFDF5;
-  --color-success-text:   #065F46;
-  --color-warning:        #F59E0B;
-  --color-warning-bg:     #FFFBEB;
-  --color-warning-text:   #92400E;
-  --color-danger:         #EF4444;
-  --color-danger-bg:      #FEF2F2;
-  --color-danger-text:    #991B1B;
-  --color-info:           #3B82F6;
-  --color-info-bg:        #EFF6FF;
-  --color-info-text:      #1E40AF;
+  /* ─── Semantic Colors ─────────────────────────── */
+  --color-success:        #10b981;
+  --color-success-bg:     #ecfdf5;
+  --color-success-text:   #047857;
+  --color-warning:        #f59e0b;
+  --color-warning-bg:     #fffbeb;
+  --color-warning-text:   #b45309;
+  --color-danger:         #ef4444;
+  --color-danger-bg:      #fef2f2;
+  --color-danger-text:    #b91c1c;
+  --color-info:           #3b82f6;
+  --color-info-bg:        #eff6ff;
+  --color-info-text:      #1d4ed8;
 
-  /* Legacy semantic aliases */
   --success-bg:           var(--color-success-bg);
-  --success-border:       #BBF7D0;
+  --success-border:       #a7f3d0;
   --success-text:         var(--color-success-text);
-  --success-icon:         #16A34A;
+  --success-icon:         #10b981;
   --warning-bg:           var(--color-warning-bg);
-  --warning-border:       #FDE68A;
+  --warning-border:       #fde68a;
   --warning-text:         var(--color-warning-text);
-  --warning-icon:         #D97706;
+  --warning-icon:         #f59e0b;
   --danger-bg:            var(--color-danger-bg);
-  --danger-border:        #FECACA;
+  --danger-border:        #fecaca;
   --danger-text:          var(--color-danger-text);
-  --danger-icon:          #DC2626;
+  --danger-icon:          #ef4444;
   --info-bg:              var(--color-info-bg);
-  --info-border:          #BFDBFE;
+  --info-border:          #bfdbfe;
   --info-text:            var(--color-info-text);
-  --info-icon:            #2563EB;
+  --info-icon:            #3b82f6;
 
-  /* ─── AI / Bot Specific ──────────────────────── */
-  --color-ai:             #8B5CF6;   /* Purple — used for AI-origin messages */
-  --color-ai-bg:          #F5F3FF;
-  --color-ai-text:        #4C1D95;
-  --color-human:          #4F46E5;   /* Indigo — used for human-sent messages */
+  /* ─── AI Autopilot System Colors ──────────────── */
+  --color-ai:             #8b5cf6;   /* Autopilot Purple */
+  --color-ai-bg:          #f5f3ff;
+  --color-ai-text:        #5b21b6;
+  --color-human:          #2563eb;   /* Blue Autopilot Takeover */
 
-  /* Legacy AI aliases */
   --ai-bg:                var(--color-ai-bg);
-  --ai-border:            #DDD6FE;
+  --ai-border:            #ddd6fe;
   --ai-text:              var(--color-ai-text);
   --ai-icon:              var(--color-ai);
 
-  /* ─── Shadows ────────────────────────────────── */
-  --shadow-xs:            0 1px 2px rgba(0,0,0,0.03);
-  --shadow-sm:            0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:            0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
-  --shadow-lg:            0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
-  --shadow-xl:            0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.03);
-  --shadow-focus:         0 0 0 3px rgba(79,70,229,0.12);
+  /* ─── Premium Subtle Shadows ──────────────────── */
+  --shadow-xs:            0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  --shadow-sm:            0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md:            0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --shadow-lg:            0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+  --shadow-xl:            0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-focus:         0 0 0 3px rgba(37, 99, 235, 0.15);
 
-  /* ─── Radius ─────────────────────────────────── */
-  --radius-sm:            4px;
-  --radius-md:            8px;
-  --radius-lg:            12px;
-  --radius-xl:            16px;
-  --radius-2xl:           20px;
+  /* ─── Styling Border Radius ───────────────────── */
+  --radius-sm:            6px;
+  --radius-md:            10px;
+  --radius-lg:            16px;
+  --radius-xl:            24px;
+  --radius-2xl:           32px;
   --radius-full:          9999px;
 
-  /* ─── Spacing ─────────────────────────────────── */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
-  --space-10: 40px;
-  --space-12: 48px;
-
-  /* ─── Typography ─────────────────────────────── */
-  --font-display:         'DM Sans', system-ui, sans-serif;
-  --font-body:            'Inter', system-ui, sans-serif;
+  /* ─── Font pairings ──────────────────────────── */
+  --font-display:         'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-sans:            'Inter', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Fira Code', monospace;
 
-  /* ─── Transitions ─────────────────────────────── */
-  --transition-fast:      100ms ease;
-  --transition-base:      150ms ease;
-  --transition-slow:      200ms ease;
-  --transition-enter:     300ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* ─── Smooth Transition Timings ──────────────── */
+  --transition-fast:      100ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base:      200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:      350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-enter:     400ms cubic-bezier(0.16, 1, 0.3, 1);
 
   --background:           var(--bg-canvas);
   --foreground:           var(--text-primary);
 }
 
-/* ══════════════════════════════════════════════════
-   DARK MODE OVERRIDES — Carbon Precision
-   ══════════════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   DARK THEME: Sleek Metallic Carbon
+   ════════════════════════════════════════ */
 [data-theme="dark"] {
-  --brand:                #6366F1;
-  --brand-hover:          #818CF8;
-  --brand-active:         #A5B4FC;
-  --brand-subtle:         rgba(99, 102, 241, 0.08);
-  --brand-muted:          rgba(99, 102, 241, 0.14);
-  --brand-border:         rgba(99, 102, 241, 0.25);
-  --brand-text:           #818CF8;
-  --brand-text-strong:    #C7D2FE;
+  --brand-primary:        #3b82f6;   /* Blue 500 */
+  --brand-primary-hover:  #60a5fa;   /* Blue 400 */
+  --brand-secondary:      #38bdf8;   /* Sky 400 */
+  --brand-accent:         #60a5fa;   /* Blue 400 */
 
-  --brand-primary:        #6366F1;
-  --brand-primary-hover:  #818CF8;
+  --brand:                var(--brand-primary);
+  --brand-hover:          var(--brand-primary-hover);
+  --brand-active:         #2563eb;
+  --brand-subtle:         rgba(59, 130, 246, 0.08);
+  --brand-muted:          rgba(59, 130, 246, 0.14);
+  --brand-border:         rgba(59, 130, 246, 0.25);
+  --brand-text:           #60a5fa;
+  --brand-text-strong:    #93c5fd;
 
-  --bg-canvas:            #0D0F12;
-  --bg-surface:           #161A1F;
-  --bg-surface-raised:    #1E2329;
-  --bg-subtle:            #1E2329;
-  --bg-muted:             #252C35;
-  --bg-overlay:           rgba(2, 4, 10, 0.85);
+  --bg-canvas:            #09090b;   /* Carbon zinc-950 */
+  --bg-surface:           #121214;   /* Deep zinc-900 surface */
+  --bg-surface-raised:    #18181b;   /* Raised components */
+  --bg-subtle:            #1c1c1f;   /* Sleek inputs */
+  --bg-muted:             #27272a;   /* Dark divider, loading blocks */
+  --bg-overlay:           rgba(0, 0, 0, 0.7);
 
-  --text-primary:         #F9FAFB;
-  --text-secondary:       #9CA3AF;
-  --text-tertiary:        #6B7280;
-  --text-inverse:         #111827;
-  --text-brand:           #818CF8;
-  --text-disabled:        #374151;
+  --text-primary:         #fafafa;   /* Zinc 50 */
+  --text-secondary:       #a1a1aa;   /* Zinc 400 */
+  --text-tertiary:        #71717a;   /* Zinc 500 */
+  --text-inverse:         #09090b;
+  --text-brand:           #3b82f6;
+  --text-disabled:        #3f3f46;
 
-  --border-subtle:        #252C35;
-  --border-default:       #2D3748;
-  --border-strong:        #4A5568;
-  --border-brand:         rgba(99, 102, 241, 0.3);
-  --border-focus:         #6366F1;
+  --border-subtle:        #1c1c1f;
+  --border-default:       #27272a;
+  --border-strong:        #3f3f46;
+  --border-brand:         rgba(59, 130, 246, 0.3);
+  --border-focus:         #3b82f6;
 
-  --color-success-bg:     #052E1B;
-  --color-success-text:   #6EE7B7;
-  --color-warning-bg:     #1C1507;
-  --color-warning-text:   #FCD34D;
-  --color-danger-bg:      #1F0707;
-  --color-danger-text:    #FCA5A5;
-  --color-info-bg:        #0C1929;
-  --color-info-text:      #93C5FD;
+  --color-success-bg:     rgba(16, 185, 129, 0.1);
+  --color-success-text:   #34d399;
+  --color-warning-bg:     rgba(245, 158, 11, 0.1);
+  --color-warning-text:   #fbbf24;
+  --color-danger-bg:      rgba(239, 68, 68, 0.1);
+  --color-danger-text:    #fca5a5;
+  --color-info-bg:        rgba(59, 130, 246, 0.1);
+  --color-info-text:      #93c5fd;
 
   --success-bg:           var(--color-success-bg);
-  --success-border:       rgba(16, 185, 129, 0.25);
+  --success-border:       rgba(16, 185, 129, 0.2);
   --success-text:         var(--color-success-text);
-  --success-icon:         #10B981;
+  --success-icon:         #10b981;
   --warning-bg:           var(--color-warning-bg);
-  --warning-border:       rgba(245, 158, 11, 0.25);
+  --warning-border:       rgba(245, 158, 11, 0.2);
   --warning-text:         var(--color-warning-text);
-  --warning-icon:         #F59E0B;
+  --warning-icon:         #f59e0b;
   --danger-bg:            var(--color-danger-bg);
-  --danger-border:        rgba(239, 68, 68, 0.25);
-  --danger-text:          #F87171;
-  --danger-icon:          #EF4444;
+  --danger-border:        rgba(239, 68, 68, 0.2);
+  --danger-text:          #f87171;
+  --danger-icon:          #ef4444;
   --info-bg:              var(--color-info-bg);
-  --info-border:          rgba(59, 130, 246, 0.25);
+  --info-border:          rgba(59, 130, 246, 0.2);
   --info-text:            var(--color-info-text);
-  --info-icon:            #60A5FA;
+  --info-icon:            #60a5fa;
 
-  --color-ai-bg:          #1A1030;
-  --color-ai-text:        #C4B5FD;
-  --color-ai:             #A78BFA;
+  --color-ai-bg:          rgba(139, 92, 246, 0.1);
+  --color-ai-text:        #d8b4fe;
+  --color-ai:             #a78bfa;
   --ai-bg:                var(--color-ai-bg);
-  --ai-border:            rgba(139, 92, 246, 0.25);
+  --ai-border:            rgba(139, 92, 246, 0.2);
   --ai-text:              var(--color-ai-text);
-  --ai-icon:              #A78BFA;
+  --ai-icon:              #a78bfa;
+  --color-human:          #3b82f6;
 
-  --shadow-xs:            0 1px 2px rgba(0,0,0,0.3);
-  --shadow-sm:            0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md:            0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.3);
-  --shadow-lg:            0 10px 15px -3px rgba(0,0,0,0.6), 0 4px 6px -2px rgba(0,0,0,0.4);
-  --shadow-xl:            0 20px 25px -5px rgba(0,0,0,0.7), 0 10px 10px -5px rgba(0,0,0,0.4);
-  --shadow-focus:         0 0 0 3px rgba(99, 102, 241, 0.3);
-
-  --background:           var(--bg-canvas);
-  --foreground:           var(--text-primary);
+  --shadow-xs:            0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm:            0 2px 4px rgba(0, 0, 0, 0.6);
+  --shadow-md:            0 4px 8px rgba(0, 0, 0, 0.7);
+  --shadow-lg:            0 12px 20px rgba(0, 0, 0, 0.8);
+  --shadow-xl:            0 24px 36px rgba(0, 0, 0, 0.9);
+  --shadow-focus:         0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
-/* ── Global Smooth Theme Transition ────────── */
+/* ─── Core CSS Reset & Setup ────────────────── */
 *,
 *::before,
 *::after {
-  transition:
-    background-color 200ms ease,
-    border-color 200ms ease,
-    color 200ms ease;
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
+  box-sizing: border-box;
 }
-/* Exclude transitions that break animations */
+
 .no-transition,
 .no-transition * {
   transition: none !important;
 }
 
-/* ── Tailwind v4 Theme Extension ────────── */
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* ─── Premium Glassmorphism & Cards ────────── */
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+[data-theme="dark"] .glass-card {
+  background-color: rgba(18, 18, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(39, 39, 42, 0.45);
+}
+
+/* Elegant radial dashboard gradient spots */
+.premium-bg-radial {
+  position: relative;
+  overflow: hidden;
+}
+.premium-bg-radial::before {
+  content: "";
+  position: absolute;
+  top: -250px;
+  right: -250px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0) 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+[data-theme="dark"] .premium-bg-radial::before {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.04) 0%, rgba(59, 130, 246, 0) 70%);
+}
+
+/* Subtle dashboard background grids */
+.grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.3) 1px, transparent 1px);
+}
+[data-theme="dark"] .grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(39, 39, 42, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(39, 39, 42, 0.25) 1px, transparent 1px);
+}
+
+/* ─── Glowing pulse elements ────────────────── */
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.4), 0 0 8px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0), 0 0 16px rgba(16, 185, 129, 0.4);
+  }
+}
+
+.premium-online-indicator {
+  animation: glow-pulse 2s infinite ease-in-out;
+}
+
+/* ─── Custom UI Scrollbar ─────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-primary);
+}
+
+/* ─── Animation Presets ───────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-subtle) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+.pulse-dot-ai {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes dual-ring-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.dual-ring-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
+.dual-ring-spinner::after {
+  content: " ";
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: 1px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-color: currentColor transparent currentColor transparent;
+  animation: dual-ring-spin 1s linear infinite;
+}
+
+/* ─── Accessibility: Focus Visible ────────── */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.35);
+}
+[data-theme="dark"] :focus-visible {
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.45);
+}
+
+/* ─── Tailwind Extended Properties ────────── */
 @theme {
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
@@ -285,137 +420,7 @@
   --color-brand-secondary: var(--brand-secondary);
   --color-brand-accent: var(--brand-accent);
 
-  --font-sans: var(--font-inter), sans-serif;
+  --font-sans: var(--font-sans), sans-serif;
   --font-display: var(--font-display), sans-serif;
   --font-mono: var(--font-mono), monospace;
-}
-
-body {
-  background-color: var(--bg-canvas);
-  color: var(--text-primary);
-}
-
-/* ── Status Pulse Dot ────────── */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
-.pulse-dot-ai {
-  animation: pulse-dot 1.5s ease-in-out infinite;
-}
-
-/* ── Dual Ring Spinner ────────── */
-@keyframes dual-ring-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.dual-ring-spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  vertical-align: middle;
-}
-.dual-ring-spinner::after {
-  content: " ";
-  display: block;
-  width: 12px;
-  height: 12px;
-  margin: 1px;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  border-color: currentColor transparent currentColor transparent;
-  animation: dual-ring-spin 1s linear infinite;
-}
-
-/* ── Status Ripple Rings ────────── */
-@keyframes ripple-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
-}
-
-@keyframes ripple-pulse-green {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-@keyframes ripple-pulse-amber {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-}
-
-.ripple-purple {
-  animation: ripple-pulse 2s infinite;
-}
-
-.ripple-green {
-  animation: ripple-pulse-green 2s infinite;
-}
-
-.ripple-amber {
-  animation: ripple-pulse-amber 2s infinite;
-}
-
-/* ── Shimmer Loader ────────── */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--bg-surface) 25%,
-    var(--bg-subtle) 50%,
-    var(--bg-surface) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.8s infinite ease-in-out;
-}
-
-/* ── New Row Highlight Flash ────────── */
-@keyframes row-highlight {
-  0% { background-color: var(--color-warning-bg); }
-  100% { background-color: transparent; }
-}
-
-.animate-row-highlight {
-  animation: row-highlight 1s ease-out forwards;
-}
-
-/* ── Scrollbar Customization ────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-canvas);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-subtle);
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--brand);
-}
-
-/* ── Reduced Motion ────────── */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ── Focus-visible global default ────────── */
-:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
 }

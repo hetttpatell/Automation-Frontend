@@ -335,7 +335,7 @@ export default function PricingPage() {
               className={`mt-8 w-full h-11 rounded-[var(--radius-lg)] border text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed select-none ${
                 currentTier === "starter"
                   ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[var(--success-border)] opacity-90"
-                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-strong)] hover:bg-[var(--bg-subtle)]"
+                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-default)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-subtle)]"
               }`}
             >
               {loadingStates["starter"] ? (
@@ -498,7 +498,7 @@ export default function PricingPage() {
               className={`mt-8 w-full h-11 rounded-[var(--radius-lg)] border text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed select-none ${
                 currentTier === "domination"
                   ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[var(--success-border)] opacity-90"
-                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-strong)] hover:bg-[var(--bg-subtle)]"
+                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-default)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-subtle)]"
               }`}
             >
               {loadingStates["domination"] ? (
@@ -534,11 +534,11 @@ export default function PricingPage() {
             
             {/* Pack: Mini */}
             <motion.div 
-              whileHover={{ scale: 1.015 }}
-              className="bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 flex flex-col justify-between space-y-4 hover:border-[var(--brand-primary)] hover:bg-[var(--bg-surface)] transition-all duration-300 shadow-inner hover:shadow-sm"
+              whileHover={{ y: -4, scale: 1.015 }}
+              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-5.5 flex flex-col justify-between space-y-4 hover:border-[var(--brand-primary)] hover:shadow-[var(--shadow-md)] transition-all duration-300"
             >
               <div className="space-y-1.5">
-                <span className="text-[10px] font-mono font-bold text-[var(--brand-primary)] uppercase tracking-wider bg-[var(--brand-subtle)] px-2 py-0.5 rounded">Mini Pack</span>
+                <span className="text-[10px] font-mono font-bold text-[var(--brand-primary)] uppercase tracking-wider bg-[var(--brand-subtle)] border border-[var(--brand-border)] px-2.5 py-0.5 rounded">Mini Pack</span>
                 <h4 className="text-sm font-bold text-[var(--text-primary)] font-display pt-1">+500 AI Credits</h4>
               </div>
               <div className="flex justify-between items-center select-none pt-2">
@@ -546,7 +546,7 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleTopUp("mini")}
                   disabled={loadingStates["mini"]}
-                  className="px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-md)] text-xs font-semibold flex items-center justify-center min-w-[64px] active:scale-[0.97] cursor-pointer disabled:opacity-50 transition-all select-none"
+                  className="px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold flex items-center justify-center min-w-[64px] active:scale-[0.97] cursor-pointer disabled:opacity-50 transition-all select-none"
                 >
                   {loadingStates["mini"] ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -559,14 +559,14 @@ export default function PricingPage() {
 
             {/* Pack: Pro (Featured Top-Up) */}
             <motion.div 
-              whileHover={{ scale: 1.015 }}
-              className="bg-[var(--bg-subtle)] border-2 border-[var(--brand-primary)] rounded-[var(--radius-lg)] p-5 flex flex-col justify-between space-y-4 hover:bg-[var(--bg-surface)] transition-all duration-300 relative shadow-sm hover:shadow-md"
+              whileHover={{ y: -4, scale: 1.015 }}
+              className="bg-[var(--bg-surface)] border-2 border-[var(--brand-primary)] rounded-[var(--radius-xl)] p-5.5 flex flex-col justify-between space-y-4 hover:shadow-[var(--shadow-md)] transition-all duration-300 relative"
             >
               <span className="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full bg-[var(--brand-primary)] text-white text-[9px] font-bold uppercase tracking-wider select-none font-mono">
                 Best Value
               </span>
               <div className="space-y-1.5">
-                <span className="text-[10px] font-mono font-bold text-[var(--brand-primary)] uppercase tracking-wider bg-[var(--brand-subtle)] px-2 py-0.5 rounded">Pro Pack</span>
+                <span className="text-[10px] font-mono font-bold text-[var(--brand-primary)] uppercase tracking-wider bg-[var(--brand-subtle)] border border-[var(--brand-border)] px-2.5 py-0.5 rounded">Pro Pack</span>
                 <h4 className="text-sm font-bold text-[var(--text-primary)] font-display pt-1">+1,000 AI Credits</h4>
               </div>
               <div className="flex justify-between items-center select-none pt-2">
@@ -574,7 +574,7 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleTopUp("pro")}
                   disabled={loadingStates["pro"]}
-                  className="px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-md)] text-xs font-semibold flex items-center justify-center min-w-[64px] active:scale-[0.97] cursor-pointer disabled:opacity-50 transition-all select-none"
+                  className="px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold flex items-center justify-center min-w-[64px] active:scale-[0.97] cursor-pointer disabled:opacity-50 transition-all select-none"
                 >
                   {loadingStates["pro"] ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -587,11 +587,11 @@ export default function PricingPage() {
 
             {/* Pack: Mega */}
             <motion.div 
-              whileHover={{ scale: 1.015 }}
-              className="bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 flex flex-col justify-between space-y-4 hover:border-[var(--brand-primary)] hover:bg-[var(--bg-surface)] transition-all duration-300 shadow-inner hover:shadow-sm"
+              whileHover={{ y: -4, scale: 1.015 }}
+              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-5.5 flex flex-col justify-between space-y-4 hover:border-[var(--brand-primary)] hover:shadow-[var(--shadow-md)] transition-all duration-300"
             >
               <div className="space-y-1.5">
-                <span className="text-[10px] font-mono font-bold text-[var(--brand-primary)] uppercase tracking-wider bg-[var(--brand-subtle)] px-2 py-0.5 rounded">Mega Pack</span>
+                <span className="text-[10px] font-mono font-bold text-[var(--brand-primary)] uppercase tracking-wider bg-[var(--brand-subtle)] border border-[var(--brand-border)] px-2.5 py-0.5 rounded">Mega Pack</span>
                 <h4 className="text-sm font-bold text-[var(--text-primary)] font-display pt-1">+2,500 AI Credits</h4>
               </div>
               <div className="flex justify-between items-center select-none pt-2">
@@ -599,7 +599,7 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleTopUp("mega")}
                   disabled={loadingStates["mega"]}
-                  className="px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-md)] text-xs font-semibold flex items-center justify-center min-w-[64px] active:scale-[0.97] cursor-pointer disabled:opacity-50 transition-all select-none"
+                  className="px-4 py-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold flex items-center justify-center min-w-[64px] active:scale-[0.97] cursor-pointer disabled:opacity-50 transition-all select-none"
                 >
                   {loadingStates["mega"] ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

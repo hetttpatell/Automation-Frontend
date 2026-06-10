@@ -59,26 +59,26 @@ function FAQCard({
 
   return (
     <div
-      className="bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] hover:border-[var(--border-brand)] hover:shadow-[var(--shadow-sm)] overflow-hidden relative group"
+      className="bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-default)] hover:border-[var(--brand-primary)] hover:shadow-[var(--shadow-md)] overflow-hidden relative group"
       style={{
-        borderColor: isExpanded ? "var(--border-brand)" : undefined,
-        boxShadow: isExpanded ? "var(--shadow-sm)" : "none",
-        transition: "border-color 150ms ease, box-shadow 150ms ease"
+        borderColor: isExpanded ? "var(--brand-primary)" : undefined,
+        boxShadow: isExpanded ? "var(--shadow-md)" : "none",
+        transition: "border-color 200ms ease, box-shadow 200ms ease"
       }}
     >
       {/* Question Collapsed Header Row (56px tall) */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full h-14 px-4 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-[var(--bg-subtle)]"
+        className="w-full h-14 px-5 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-[var(--bg-subtle)]"
         style={{ transition: "background-color 150ms ease" }}
       >
         <div className="flex items-center gap-3 min-w-0">
           {/* Index Badge */}
-          <span className="font-mono text-[11px] font-bold text-[var(--brand-primary)] bg-[var(--brand-subtle)] min-w-[26px] h-[22px] flex items-center justify-center rounded-[var(--radius-sm)] select-none">
+          <span className="font-mono text-[10px] font-bold text-[var(--brand-primary)] bg-[var(--brand-subtle)] border border-[var(--brand-border)] min-w-[26px] h-[22px] flex items-center justify-center rounded-[var(--radius-sm)] select-none">
             {formattedIndex}
           </span>
           {/* Question Title */}
-          <span className="text-[14px] font-sans font-medium text-[var(--text-primary)] truncate pr-4">
+          <span className="text-[13.5px] font-sans font-semibold text-[var(--text-primary)] truncate pr-4">
             {faq.question}
           </span>
         </div>
@@ -90,8 +90,7 @@ function FAQCard({
               e.stopPropagation();
               onDelete(faq.id);
             }}
-            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1.5 rounded-md hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-[var(--danger-icon)] cursor-pointer"
-            style={{ transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease" }}
+            className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-2 rounded-[var(--radius-sm)] hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-[var(--danger-icon)] cursor-pointer transition-all duration-200"
             aria-label="Delete FAQ"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -101,7 +100,7 @@ function FAQCard({
             className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" 
             style={{
               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 200ms ease"
+              transition: "transform 250ms cubic-bezier(0.16, 1, 0.3, 1)"
             }}
           />
         </div>
@@ -114,13 +113,13 @@ function FAQCard({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{ type: "spring", stiffness: 350, damping: 30 }}
             className="overflow-hidden border-t border-[var(--border-subtle)]"
           >
-            <div className="p-3.5 bg-transparent space-y-3 select-text">
+            <div className="p-4 bg-[var(--bg-subtle)]/30 space-y-3.5 select-text">
               <div className="space-y-1">
-                <p className="text-[10px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-wider">Trigger Question</p>
-                <div className="bg-[var(--bg-subtle)] px-3 py-2.5 rounded-[var(--radius-sm)]">
+                <p className="text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-wider">Trigger Question</p>
+                <div className="bg-[var(--bg-canvas)] px-3.5 py-2.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
                   <p className="text-[13px] font-sans font-medium text-[var(--text-primary)] leading-relaxed select-text">
                     {faq.question}
                   </p>
@@ -128,8 +127,8 @@ function FAQCard({
               </div>
 
               <div className="space-y-1">
-                <p className="text-[10px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-wider">AI Response Payload</p>
-                <div className="bg-[var(--bg-subtle)] px-3 py-2.5 rounded-[var(--radius-sm)] font-mono text-[13px] leading-[1.6] select-text text-[var(--text-secondary)] whitespace-pre-wrap">
+                <p className="text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-wider">AI Response Payload</p>
+                <div className="bg-[#0f172a] text-[#f8fafc] px-4 py-3 rounded-[var(--radius-md)] font-mono text-[12.5px] leading-[1.6] select-text whitespace-pre-wrap border border-[#1e293b]">
                   {faq.answer}
                 </div>
               </div>
@@ -321,7 +320,7 @@ export default function KnowledgeBasePage() {
   const canSubmit = newQuestion.trim().length > 0 && newAnswer.trim().length > 0;
 
   return (
-    <div className="h-[calc(100vh-7rem)] lg:h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden bg-[var(--bg-canvas)]">
+    <div className="h-full flex flex-col overflow-hidden bg-[var(--bg-canvas)]">
       {/* Segmented Control for Mobile */}
       {isMobile && (
         <div className="p-3 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 select-none">
@@ -363,7 +362,7 @@ export default function KnowledgeBasePage() {
           <h2 className="text-[15px] font-semibold text-[var(--text-primary)] font-display">
             Train the AI Brain
           </h2>
-          <p className="text-[12px] text-[var(--text-secondary)] font-sans mt-0.5 leading-none">
+          <p className="text-[11px] text-[var(--text-secondary)] font-sans mt-0.5 leading-none">
             Inject precise Q&A context
           </p>
         </div>
@@ -397,8 +396,8 @@ export default function KnowledgeBasePage() {
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
               placeholder='e.g. "Where are you located?"'
-              className="w-full h-10 px-3 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]"
-              style={{ transition: "border-color 150ms ease, box-shadow 150ms ease" }}
+              className="w-full h-10 px-3.5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]"
+              style={{ transition: "border-color 200ms ease, box-shadow 200ms ease" }}
             />
           </div>
 
@@ -423,8 +422,8 @@ export default function KnowledgeBasePage() {
               placeholder="Write the exact response the AI should give..."
               rows={6}
               maxLength={1000}
-              className="w-full px-3 py-[10px] bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[13px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-mono leading-[1.55] resize-none focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]"
-              style={{ height: "130px", transition: "border-color 150ms ease, box-shadow 150ms ease" }}
+              className="w-full px-3.5 py-3 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-mono leading-[1.6] resize-none focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)]"
+              style={{ height: "130px", transition: "border-color 200ms ease, box-shadow 200ms ease" }}
             />
           </div>
 
@@ -436,7 +435,7 @@ export default function KnowledgeBasePage() {
                   <button
                     onClick={handleAdd}
                     disabled={isSubmitting || !canSubmit}
-                    className={`h-9 px-4 rounded-[var(--radius-md)] text-[13px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
+                    className={`h-9 px-4 rounded-[var(--radius-lg)] text-[13px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
                       deploySuccess 
                         ? "bg-[var(--success-icon)] text-white" 
                         : canSubmit && !isSubmitting
@@ -472,7 +471,7 @@ export default function KnowledgeBasePage() {
                 <button
                   onClick={handleAdd}
                   disabled={isSubmitting || !canSubmit}
-                  className={`w-full h-11 rounded-[var(--radius-md)] text-[14px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
+                  className={`w-full h-11 rounded-[var(--radius-lg)] text-[14px] font-display font-medium flex items-center justify-center gap-1.5 select-none active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed transition-all duration-150 ${
                     deploySuccess 
                       ? "bg-[var(--success-icon)] text-white" 
                       : canSubmit && !isSubmitting
@@ -527,7 +526,7 @@ export default function KnowledgeBasePage() {
                     setNewQuestion("");
                     setNewAnswer("");
                   }}
-                  className="px-3 h-8 rounded-[var(--radius-md)] text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none font-sans"
+                  className="px-3.5 h-8 rounded-[var(--radius-lg)] text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none font-sans"
                   style={{ transition: "color 150ms ease, background-color 150ms ease" }}
                 >
                   Discard
@@ -535,7 +534,7 @@ export default function KnowledgeBasePage() {
                 <button
                   onClick={handleAdd}
                   disabled={!canSubmit || isSubmitting}
-                  className="px-3 h-8 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer outline-none font-sans bg-[var(--warning-icon)] hover:bg-[var(--warning-text)] text-white disabled:bg-[var(--bg-muted)] disabled:text-[var(--text-tertiary)] disabled:cursor-not-allowed"
+                  className="px-4.5 h-8 rounded-[var(--radius-lg)] text-[13px] font-medium cursor-pointer outline-none font-sans bg-[var(--warning-icon)] hover:bg-[var(--warning-text)] text-white disabled:bg-[var(--bg-muted)] disabled:text-[var(--text-tertiary)] disabled:cursor-not-allowed"
                   style={{ transition: "background-color 150ms ease" }}
                 >
                   Deploy

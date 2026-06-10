@@ -23,10 +23,125 @@ import { useTheme } from "@/components/ui/ThemeProvider";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
 
-
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
+// ─── Animated SVG Icon Components ──────────────────────────────
+const IconComponents: Record<string, React.ComponentType<{ isActive: boolean; isHovered: boolean }>> = {
+  Leads: ({ isActive, isHovered }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-colors duration-200">
+      <motion.path 
+        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" 
+        animate={isActive || isHovered ? { y: [0, -1.5, 0] } : { y: 0 }}
+        transition={{ duration: 0.35 }}
+      />
+      <motion.circle 
+        cx="9" cy="7" r="4" 
+        animate={isActive || isHovered ? { scale: [1, 1.08, 1], y: [0, -0.8, 0] } : { scale: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      />
+      <motion.path 
+        d="M22 21v-2a4 4 0 0 0-3-3.87" 
+        animate={isActive || isHovered ? { x: [0, 1, 0] } : { x: 0 }}
+        transition={{ duration: 0.4 }}
+      />
+      <motion.path 
+        d="M16 3.13a4 4 0 0 1 0 7.75" 
+        animate={isActive || isHovered ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+        transition={{ duration: 0.4 }}
+      />
+    </svg>
+  ),
+  Inbox: ({ isActive, isHovered }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-colors duration-200">
+      <motion.path 
+        d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" 
+        animate={isActive || isHovered ? { scale: [1, 1.06, 0.96, 1], rotate: [0, -3, 3, 0] } : { scale: 1, rotate: 0 }}
+        transition={{ duration: 0.45 }}
+      />
+      <motion.circle 
+        cx="8" cy="10" r="1.2" fill="currentColor"
+        animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3] } : { opacity: 1 }}
+        transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1.2 }}
+      />
+      <motion.circle 
+        cx="12" cy="10" r="1.2" fill="currentColor"
+        animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3] } : { opacity: 1 }}
+        transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1.2, delay: 0.25 }}
+      />
+      <motion.circle 
+        cx="16" cy="10" r="1.2" fill="currentColor"
+        animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3] } : { opacity: 1 }}
+        transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1.2, delay: 0.5 }}
+      />
+    </svg>
+  ),
+  Knowledge: ({ isActive, isHovered }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-colors duration-200">
+      <motion.path 
+        d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" 
+        animate={isActive || isHovered ? { rotateY: [0, -15, 0] } : { rotateY: 0 }}
+        transition={{ duration: 0.5 }}
+      />
+      <motion.path 
+        d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" 
+        animate={isActive || isHovered ? { rotateY: [0, 15, 0] } : { rotateY: 0 }}
+        transition={{ duration: 0.5 }}
+      />
+    </svg>
+  ),
+  Campaigns: ({ isActive, isHovered }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-colors duration-200">
+      <motion.path 
+        d="M11.66 18H2v-6h9.66" 
+        animate={isActive || isHovered ? { x: [0, -1, 0] } : { x: 0 }}
+      />
+      <motion.path 
+        d="M16 18l5 3v-18l-5 3z" 
+        animate={isActive || isHovered ? { scale: [1, 1.04, 1], rotate: [0, -2, 2, 0] } : { scale: 1, rotate: 0 }}
+        transition={{ duration: 0.4 }}
+      />
+      <motion.path 
+        d="M22 10a4 4 0 0 1 0 4" 
+        initial={{ opacity: 0.4 }}
+        animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3], scale: [1, 1.08, 1] } : { opacity: 0.8 }}
+        transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1 }}
+      />
+      <motion.path 
+        d="M23 8a8 8 0 0 1 0 8" 
+        initial={{ opacity: 0.2 }}
+        animate={isActive || isHovered ? { opacity: [0.1, 1, 0.1], scale: [1, 1.08, 1] } : { opacity: 0.5 }}
+        transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1, delay: 0.2 }}
+      />
+    </svg>
+  ),
+  Settings: ({ isActive, isHovered }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-colors duration-200">
+      <motion.circle 
+        cx="12" cy="12" r="3" 
+        animate={isActive || isHovered ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+        transition={{ duration: 0.4 }}
+      />
+      <motion.path 
+        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+        animate={isActive || isHovered ? { rotate: 360 } : { rotate: 0 }}
+        transition={isActive || isHovered ? { repeat: Infinity, ease: "linear", duration: 6 } : { duration: 0.3 }}
+      />
+    </svg>
+  ),
+  Pricing: ({ isActive, isHovered }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-colors duration-200">
+      <motion.rect 
+        x="2" y="5" width="20" height="14" rx="2" ry="2" 
+        animate={isActive || isHovered ? { y: [0, -1.5, 0], scale: 1.03 } : { y: 0, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      />
+      <line x1="2" y1="10" x2="22" y2="10" />
+      <motion.line 
+        x1="7" y1="15" x2="11" y2="15" 
+        animate={isActive || isHovered ? { x: [0, 2.5, 0] } : { x: 0 }}
+        transition={{ duration: 0.4 }}
+      />
+    </svg>
+  )
+};
 
 // ─── Page Title Map ─────────────────────────────────────────────
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -37,6 +152,8 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/settings": { title: "Settings", subtitle: "Business profile & AI config" },
   "/pricing": { title: "Pricing", subtitle: "SaaS Plan & Credit Upgrades" },
 };
+
+// Active highlight sliding animations are defined in navigation render loops
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
@@ -49,6 +166,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [businessName, setBusinessName] = useState("LeadFlow");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [creditsLimit, setCreditsLimit] = useState<number | null>(null);
@@ -213,12 +331,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const currentPage = PAGE_TITLES[pathname || ""] || { title: "Dashboard", subtitle: "" };
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+    <div className="h-screen w-screen overflow-hidden flex bg-[var(--bg-canvas)] text-[var(--text-primary)]">
 
       {/* ─── SIDEBAR (visible on >= 1024px) ─────────────────────── */}
       <aside
         style={{ width: isCollapsed ? "64px" : "220px" }}
-        className="hidden lg:flex bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] flex-col shrink-0 z-40 relative select-none"
+        className="hidden lg:flex bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] flex-col shrink-0 z-40 h-full select-none"
         role="navigation"
         aria-label="Main navigation"
       >
@@ -248,28 +366,48 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Navigation Items */}
         <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
+          {navItems.map((item, index) => {
+            const IconComp = IconComponents[item.name];
+            const isHovered = hoveredIndex === index;
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className="block outline-none"
+                className="block outline-none relative"
                 title={isCollapsed ? item.name : undefined}
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
               >
+                {/* Sliding Background Pill */}
+                {item.isActive && (
+                  <motion.div
+                    layoutId="active-nav-pill"
+                    className="absolute inset-y-0.5 left-1 right-1 bg-[var(--brand-subtle)] border border-[var(--brand-border)] z-0 rounded-[var(--radius-md)]"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                
+                {/* Sliding Left Border Indicator */}
+                {item.isActive && (
+                  <motion.div
+                    layoutId="active-nav-border"
+                    className="absolute left-1 inset-y-2.5 w-[3.5px] bg-[var(--brand-primary)] rounded-full z-10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+
                 <div
-                  className={`flex items-center gap-2.5 px-3 h-10 rounded-[var(--radius-md)] cursor-pointer relative group select-none mx-1 ${
+                  className={`flex items-center gap-2.5 px-3 h-10 rounded-[var(--radius-md)] cursor-pointer relative select-none mx-1 transition-all duration-200 active:scale-[0.98] z-10 ${
                     item.isActive
-                      ? "text-[var(--brand-primary)] font-semibold bg-[var(--color-ai-bg)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                      ? "text-[var(--brand-primary)] font-semibold"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]/60"
                   }`}
-                  style={{
-                    borderLeft: item.isActive ? "3px solid var(--brand-primary)" : "3px solid transparent",
-                  }}
                 >
-                  <Icon className={`w-[20px] h-[20px] shrink-0 ${
-                    item.isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]"
-                  }`} />
+                  {IconComp && (
+                    <div className={item.isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]"}>
+                      <IconComp isActive={item.isActive} isHovered={isHovered} />
+                    </div>
+                  )}
                   {!isCollapsed && (
                     <span className="text-[14px] font-display font-medium">{item.name}</span>
                   )}
@@ -371,7 +509,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       {/* ─── MAIN CONTENT AREA ─────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden relative bg-[var(--bg-canvas)]">
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[var(--bg-canvas)]">
 
         {/* Top Bar (56px) */}
         <header className="h-[56px] bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] flex items-center justify-between px-6 z-30 select-none shrink-0 sticky top-0">
@@ -419,18 +557,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* ─── BOTTOM MOBILE NAVIGATION (< 1024px) ─────────────────── */}
       <nav className="flex lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] z-40 items-center justify-around select-none shadow-lg">
-        {navItems.map((item) => {
-          const Icon = item.icon;
+        {navItems.map((item, index) => {
+          const IconComp = IconComponents[item.name];
+          const isHovered = hoveredIndex === index;
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg ${
-                item.isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"
-              }`}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              className="flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-all duration-200 relative"
             >
-              <Icon className="w-5 h-5 shrink-0" />
-              <span className="text-[10px] font-sans font-medium mt-0.5">{item.name}</span>
+              {/* Mobile Sliding Underline */}
+              {item.isActive && (
+                <motion.div
+                  layoutId="active-mobile-underline"
+                  className="absolute bottom-1 left-2 right-2 h-0.5 bg-[var(--brand-primary)] rounded-full z-0"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <div className={`relative z-10 flex flex-col items-center transition-transform duration-200 ${item.isActive ? "text-[var(--brand-primary)] scale-105 font-semibold" : "text-[var(--text-secondary)]"}`}>
+                {IconComp && <IconComp isActive={item.isActive} isHovered={isHovered} />}
+                <span className="text-[10px] font-sans font-medium mt-0.5">{item.name}</span>
+              </div>
             </Link>
           );
         })}

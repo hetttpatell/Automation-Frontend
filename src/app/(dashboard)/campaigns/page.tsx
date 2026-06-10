@@ -217,9 +217,9 @@ export default function CampaignsPage() {
   return (
     <div className="h-full overflow-y-auto bg-[var(--bg-canvas)] relative">
       {(subscriptionTier === "free" || subscriptionTier === "starter") && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-md z-40 flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] shadow-2xl p-8 max-w-md w-full text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center mx-auto text-violet-500">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-40 flex items-center justify-center p-4">
+          <div className="bg-[var(--bg-surface-raised)]/95 backdrop-blur-xl border border-[var(--border-subtle)] rounded-[var(--radius-xl)] shadow-2xl p-8 max-w-md w-full text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-[var(--brand-primary)]/10 flex items-center justify-center mx-auto text-[var(--brand-primary)]">
               <Megaphone className="w-8 h-8" />
             </div>
             <div className="space-y-2">
@@ -232,7 +232,7 @@ export default function CampaignsPage() {
             </div>
             <button
               onClick={() => router.push("/pricing")}
-              className="w-full h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110 text-white rounded-[var(--radius-lg)] text-sm font-semibold transition-all active:scale-[0.98] shadow-md cursor-pointer flex items-center justify-center"
+              className="w-full h-11 bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] hover:brightness-110 text-white rounded-[var(--radius-lg)] text-sm font-semibold transition-all active:scale-[0.98] shadow-md cursor-pointer flex items-center justify-center"
             >
               Upgrade Now
             </button>
@@ -242,8 +242,17 @@ export default function CampaignsPage() {
       <div className="px-6 py-6 space-y-5 max-w-[1400px] mx-auto">
         {/* ─── Page Header ──────────────────────────────── */}
         <div className="flex items-center gap-3 select-none">
-          <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] flex items-center justify-center shadow-[var(--shadow-md)]">
-            <Megaphone className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] flex items-center justify-center shadow-[var(--shadow-md)] overflow-hidden">
+            <motion.svg
+              viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"
+              animate={{ rotate: [0, -3, 3, 0], scale: [1, 1.03, 1.03, 1] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            >
+              <path d="M11.66 18H2v-6h9.66" />
+              <path d="M16 18l5 3v-18l-5 3z" />
+              <motion.path d="M22 10a4 4 0 0 1 0 4" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2 }} />
+              <motion.path d="M23 8a8 8 0 0 1 0 8" animate={{ opacity: [0.1, 1, 0.1] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }} />
+            </motion.svg>
           </div>
           <div>
             <h2 className="text-lg font-display font-semibold text-[var(--text-primary)] leading-tight">
@@ -274,7 +283,7 @@ export default function CampaignsPage() {
                   value={campaignName}
                   onChange={(e) => setCampaignName(e.target.value)}
                   placeholder="e.g. Monsoon Ceramic Coating Offer"
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-3.5 py-2.5 text-sm font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all"
+                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] px-3.5 py-2.5 text-sm font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] transition-all duration-200"
                 />
               </div>
 
@@ -293,7 +302,7 @@ export default function CampaignsPage() {
                     onChange={(e) =>
                       setTargetStage(e.target.value as TargetStage)
                     }
-                    className="w-full appearance-none bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-3.5 py-2.5 text-sm font-sans text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent cursor-pointer transition-all pr-10"
+                    className="w-full appearance-none bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] px-3.5 py-2.5 text-sm font-sans text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] cursor-pointer transition-all duration-200 pr-10"
                   >
                     <option value="lost">Lost Leads Only</option>
                     <option value="contacted">Contacted Leads Only</option>
@@ -313,12 +322,19 @@ export default function CampaignsPage() {
                     type="button"
                     id="mode-text-btn"
                     onClick={() => setSendMode("text")}
-                    className={`flex flex-col items-start p-3 rounded-[var(--radius-md)] border text-left cursor-pointer transition-all ${
+                    className={`flex flex-col items-start p-3.5 rounded-[var(--radius-lg)] border text-left cursor-pointer transition-all duration-200 relative overflow-hidden ${
                       sendMode === "text"
-                        ? "bg-[var(--brand-subtle)] border-[var(--brand-primary)] text-[var(--text-primary)] shadow-[var(--shadow-sm)]"
-                        : "bg-[var(--bg-subtle)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                        ? "bg-gradient-to-br from-[var(--brand-subtle)] to-[var(--bg-surface)] dark:from-[var(--brand-subtle)] dark:to-transparent border-[var(--brand-primary)] text-[var(--text-primary)] shadow-sm scale-[1.01]"
+                        : "bg-[var(--bg-subtle)] border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
                     }`}
                   >
+                    {sendMode === "text" && (
+                      <motion.div
+                        layoutId="active-dispatch-indicator"
+                        className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--brand-primary)] shadow-[0_0_8px_var(--brand-primary)]"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
                     <div className="flex items-center gap-2 mb-1">
                       <Send className={`w-3.5 h-3.5 ${sendMode === "text" ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"}`} />
                       <span className="text-xs font-semibold">Standard Text</span>
@@ -333,12 +349,19 @@ export default function CampaignsPage() {
                     type="button"
                     id="mode-template-btn"
                     onClick={() => setSendMode("template")}
-                    className={`flex flex-col items-start p-3 rounded-[var(--radius-md)] border text-left cursor-pointer transition-all ${
+                    className={`flex flex-col items-start p-3.5 rounded-[var(--radius-lg)] border text-left cursor-pointer transition-all duration-200 relative overflow-hidden ${
                       sendMode === "template"
-                        ? "bg-[var(--brand-subtle)] border-[var(--brand-primary)] text-[var(--text-primary)] shadow-[var(--shadow-sm)]"
-                        : "bg-[var(--bg-subtle)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                        ? "bg-gradient-to-br from-[var(--brand-subtle)] to-[var(--bg-surface)] dark:from-[var(--brand-subtle)] dark:to-transparent border-[var(--brand-primary)] text-[var(--text-primary)] shadow-sm scale-[1.01]"
+                        : "bg-[var(--bg-subtle)] border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
                     }`}
                   >
+                    {sendMode === "template" && (
+                      <motion.div
+                        layoutId="active-dispatch-indicator"
+                        className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--brand-primary)] shadow-[0_0_8px_var(--brand-primary)]"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
                     <div className="flex items-center gap-2 mb-1">
                       <Sparkles className={`w-3.5 h-3.5 ${sendMode === "template" ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"}`} />
                       <span className="text-xs font-semibold">Approved Template</span>
@@ -358,7 +381,7 @@ export default function CampaignsPage() {
                     animate={{ height: "auto", opacity: 1, marginTop: 12 }}
                     exit={{ height: 0, opacity: 0, marginTop: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="overflow-hidden space-y-3 bg-[var(--bg-subtle)] p-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)]"
+                    className="overflow-hidden space-y-3 bg-[var(--bg-subtle)] p-4 rounded-[var(--radius-lg)] border border-[var(--border-default)]"
                   >
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -374,7 +397,7 @@ export default function CampaignsPage() {
                           value={templateName}
                           onChange={(e) => setTemplateName(e.target.value)}
                           placeholder="e.g. campaign_blast"
-                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
+                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-2.5 py-1.5 text-xs font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)]"
                         />
                       </div>
                       <div>
@@ -390,7 +413,7 @@ export default function CampaignsPage() {
                           value={templateLang}
                           onChange={(e) => setTemplateLang(e.target.value)}
                           placeholder="e.g. en"
-                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
+                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-2.5 py-1.5 text-xs font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)]"
                         />
                       </div>
                     </div>
@@ -419,7 +442,7 @@ export default function CampaignsPage() {
                   onChange={(e) => setCustomMessage(e.target.value)}
                   placeholder="Hi {customer_name}, we have an exciting offer for you from {business_name}! ✨"
                   rows={6}
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-3.5 py-2.5 text-sm font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all resize-none leading-relaxed"
+                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] px-3.5 py-2.5 text-sm font-sans text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] transition-all duration-200 resize-none leading-relaxed"
                 />
                 <div className="flex items-center justify-between mt-2">
                   {/* Variable Pills */}
@@ -447,56 +470,75 @@ export default function CampaignsPage() {
               </div>
             </div>
 
-            {/* ─── Audience Audit Counter ─────────────────── */}
+            {/* ─── Audience Audit Counter (Bento-style) ─────────────────── */}
             <motion.div
               layout
-              className={`rounded-[var(--radius-lg)] border p-4 flex items-center gap-3 select-none transition-colors ${targetCount > 0
-                ? "bg-[var(--color-info-bg)] border-[var(--info-border)]"
-                : "bg-[var(--color-warning-bg)] border-[var(--warning-border)]"
-                }`}
+              className={`rounded-[var(--radius-xl)] border p-4 flex items-center gap-4 select-none shadow-[var(--shadow-xs)] transition-all duration-300 ${
+                targetCount > 0
+                  ? "bg-gradient-to-br from-[var(--color-info-bg)] via-[var(--bg-surface)] to-[var(--color-info-bg)] dark:from-[var(--color-info-bg)]/20 dark:via-zinc-900/10 dark:to-[var(--color-info-bg)]/20 border-[var(--info-border)]"
+                  : "bg-gradient-to-br from-[var(--color-warning-bg)] via-[var(--bg-surface)] to-[var(--color-warning-bg)] dark:from-[var(--color-warning-bg)]/20 dark:via-zinc-900/10 dark:to-[var(--color-warning-bg)]/20 border-[var(--warning-border)]"
+              }`}
             >
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${targetCount > 0
-                  ? "bg-[var(--brand-primary)]/15"
-                  : "bg-[var(--warning-icon)]/15"
-                  }`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 hover:scale-105 ${
+                  targetCount > 0
+                    ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                    : "bg-[var(--warning-icon)]/10 text-[var(--warning-icon)]"
+                }`}
               >
-                <Target
-                  className={`w-4.5 h-4.5 ${targetCount > 0
-                    ? "text-[var(--brand-primary)]"
-                    : "text-[var(--warning-icon)]"
-                    }`}
-                />
+                {targetCount > 0 ? (
+                  <div className="relative">
+                    <span className="absolute inline-flex h-2 w-2 rounded-full bg-blue-400 opacity-75 animate-ping -top-0.5 -right-0.5" />
+                    <motion.svg
+                      viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="relative"
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="6" />
+                      <circle cx="12" cy="12" r="2" fill="currentColor" />
+                    </motion.svg>
+                  </div>
+                ) : (
+                  <motion.svg
+                    viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    animate={{ rotate: [-4, 4, -4] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <motion.line x1="12" y1="17" x2="12.01" y2="17" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} />
+                  </motion.svg>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 {isLoading ? (
                   <div className="h-4 w-48 bg-[var(--bg-muted)] rounded animate-pulse" />
                 ) : targetCount > 0 ? (
-                  <p className="text-[13px] font-sans text-[var(--text-primary)] leading-relaxed">
-                    <span className="mr-1">🎯</span>
-                    This blast will target{" "}
-                    <span className="font-bold text-[var(--brand-primary)] tabular-nums">
+                  <p className="text-[13.5px] font-sans text-[var(--text-primary)] leading-relaxed">
+                    Targeting{" "}
+                    <span className="font-bold text-[var(--brand-primary)] tabular-nums bg-[var(--brand-subtle)] px-1.5 py-0.5 rounded-md border border-[var(--brand-border)]">
                       {targetCount}
                     </span>{" "}
-                    lead{targetCount !== 1 ? "s" : ""} currently sitting in your{" "}
-                    <span className="font-semibold">&lsquo;{stageLabel}&rsquo;</span>{" "}
-                    pipeline column.
+                    lead{targetCount !== 1 ? "s" : ""} in the{" "}
+                    <span className="font-semibold text-[var(--brand-primary)] bg-[var(--brand-subtle)] px-1.5 py-0.5 rounded-md border border-[var(--brand-border)]">&lsquo;{stageLabel}&rsquo;</span>{" "}
+                    pipeline stage.
                   </p>
                 ) : (
-                  <p className="text-[13px] font-sans text-[var(--color-warning-text)] leading-relaxed">
-                    <span className="mr-1">⚠️</span>
+                  <p className="text-[13.5px] font-sans text-[var(--color-warning-text)] leading-relaxed">
                     No leads found in the{" "}
-                    <span className="font-semibold">&lsquo;{stageLabel}&rsquo;</span>{" "}
+                    <span className="font-semibold bg-[var(--color-warning-bg)] px-1.5 py-0.5 rounded-md border border-[var(--warning-border)]">&lsquo;{stageLabel}&rsquo;</span>{" "}
                     stage. This blast will have zero recipients.
                   </p>
                 )}
               </div>
               {!isLoading && (
                 <div
-                  className={`text-2xl font-display font-bold tabular-nums shrink-0 ${targetCount > 0
-                    ? "text-[var(--brand-primary)]"
-                    : "text-[var(--warning-icon)]"
-                    }`}
+                  className={`text-3xl font-display font-black tracking-tight tabular-nums shrink-0 ${
+                    targetCount > 0
+                      ? "text-[var(--brand-primary)]"
+                      : "text-[var(--warning-icon)]"
+                  }`}
                 >
                   {targetCount}
                 </div>
@@ -545,112 +587,121 @@ export default function CampaignsPage() {
               </span>
             </div>
 
-            {/* WhatsApp Phone Mockup */}
-            <div className="rounded-[var(--radius-xl)] overflow-hidden border border-[var(--border-subtle)] shadow-[var(--shadow-lg)]">
-              {/* WA Header */}
-              <div className="bg-[#1F2C33] px-4 py-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-[#2A3942] flex items-center justify-center shrink-0">
-                  <svg
-                    className="w-5 h-5 text-[#8696A0]"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-sans font-medium text-[#E9EDEF] leading-tight truncate">
-                    Customer-Name
-                  </p>
-                  <p className="text-[11px] font-sans text-[#8696A0] leading-tight">
-                    last seen today at{" "}
-                    {new Date().toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}
-                  </p>
-                </div>
+            {/* WhatsApp Premium Glass Mockup */}
+            <div className="relative mx-auto max-w-[365px] rounded-[36px] border-[8px] border-slate-900 bg-slate-950 p-1.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden">
+              {/* Phone Speaker & Camera Bezel Notch */}
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-28 h-4 bg-slate-900 rounded-full z-40 flex items-center justify-center gap-1.5 px-3">
+                <div className="w-8 h-1 bg-slate-800 rounded-full" />
+                <div className="w-2.5 h-2.5 bg-slate-850 rounded-full border border-slate-750" />
               </div>
 
-              {/* WA Chat Area */}
-              <div
-                className="relative min-h-[340px] p-4 flex flex-col justify-end"
-                style={{
-                  backgroundColor: "#0B141A",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23131d25' fill-opacity='0.6'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                }}
-              >
-                {/* System date chip */}
-                <div className="flex justify-center mb-4">
-                  <span className="px-3 py-1 rounded-lg text-[11px] font-sans text-[#8696A0] bg-[#182229] shadow-sm select-none">
-                    Today
-                  </span>
-                </div>
+              {/* Gloss highlight reflex shine (diagonal line overlay) */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-transparent rotate-12 pointer-events-none z-30" />
 
-                {/* Outgoing message bubble (green) */}
-                <div className="flex justify-end">
-                  <div
-                    className="relative max-w-[85%] rounded-lg px-3 pt-2 pb-1.5 shadow-sm"
-                    style={{
-                      backgroundColor: "#005C4B",
-                      borderTopRightRadius: "2px",
-                    }}
-                  >
-                    {/* Tail */}
-                    <div
-                      className="absolute -right-2 top-0 w-0 h-0"
-                      style={{
-                        borderLeft: "8px solid #005C4B",
-                        borderTop: "0px solid transparent",
-                        borderBottom: "8px solid transparent",
-                      }}
-                    />
-                    <p className="text-[13.5px] font-sans text-[#E9EDEF] leading-[1.45] whitespace-pre-wrap break-words pr-14">
-                      {getPreviewText(customMessage)}
+              <div className="rounded-[28px] overflow-hidden border border-slate-800/20 bg-[#0B141A]">
+                {/* WA Header */}
+                <div className="bg-[#1F2C33] px-4 pt-5 pb-3 flex items-center gap-3 select-none">
+                  <div className="w-8 h-8 rounded-full bg-[#2A3942] flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-4.5 h-4.5 text-[#8696A0]"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-sans font-medium text-[#E9EDEF] leading-tight truncate">
+                      Customer-Name
                     </p>
-                    {/* Timestamp + Read receipt */}
-                    <div className="flex items-center justify-end gap-1 -mt-0.5">
-                      <span className="text-[10.5px] font-sans text-[#8696A0]/80 tabular-nums">
-                        {currentTime}
-                      </span>
-                      {/* Double-check read receipt */}
-                      <svg
-                        className="w-4 h-4 text-[#53BDEB]"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M18 6L7 17l-5-5" />
-                        <path d="M22 6L11 17" />
-                      </svg>
-                    </div>
+                    <p className="text-[10px] font-sans text-[#8696A0] leading-tight mt-0.5">
+                      online
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* WA Bottom input bar */}
-              <div className="bg-[#1F2C33] px-3 py-2.5 flex items-center gap-2">
-                <div className="flex-1 bg-[#2A3942] rounded-full px-4 py-2">
-                  <span className="text-[13px] font-sans text-[#8696A0] select-none">
-                    Type a message
-                  </span>
+                {/* WA Chat Area */}
+                <div
+                  className="relative min-h-[340px] p-4 flex flex-col justify-end"
+                  style={{
+                    backgroundColor: "#0B141A",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23131d25' fill-opacity='0.6'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  }}
+                >
+                  {/* System date chip */}
+                  <div className="flex justify-center mb-4">
+                    <span className="px-3 py-0.5 rounded-md text-[10px] font-sans text-[#8696A0] bg-[#182229] shadow-sm select-none">
+                      Today
+                    </span>
+                  </div>
+
+                  {/* Outgoing message bubble (green) */}
+                  <div className="flex justify-end">
+                    <motion.div
+                      key={customMessage}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="relative max-w-[85%] rounded-lg px-3 pt-2 pb-1.5 shadow-sm"
+                      style={{
+                        backgroundColor: "#005C4B",
+                        borderTopRightRadius: "2px",
+                      }}
+                    >
+                      {/* Tail */}
+                      <div
+                        className="absolute -right-1.5 top-0 w-0 h-0"
+                        style={{
+                          borderLeft: "6px solid #005C4B",
+                          borderTop: "0px solid transparent",
+                          borderBottom: "6px solid transparent",
+                        }}
+                      />
+                      <p className="text-[13px] font-sans text-[#E9EDEF] leading-[1.45] whitespace-pre-wrap break-words pr-12">
+                        {getPreviewText(customMessage)}
+                      </p>
+                      {/* Timestamp + Read receipt */}
+                      <div className="flex items-center justify-end gap-0.5 -mt-0.5">
+                        <span className="text-[9.5px] font-sans text-[#8696A0]/80 tabular-nums">
+                          {currentTime}
+                        </span>
+                        {/* Double-check read receipt */}
+                        <svg
+                          className="w-3.5 h-3.5 text-[#53BDEB]"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M18 6L7 17l-5-5" />
+                          <path d="M22 6L11 17" />
+                        </svg>
+                      </div>
+                    </motion.div>
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-[#00A884] flex items-center justify-center shrink-0">
-                  <svg
-                    className="w-5 h-5 text-white"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
+
+                {/* WA Bottom input bar */}
+                <div className="bg-[#1F2C33] px-3 py-3 flex items-center gap-2 select-none">
+                  <div className="flex-1 bg-[#2A3942] rounded-full px-4 py-1.5">
+                    <span className="text-[12px] font-sans text-[#8696A0] select-none">
+                      Type a message
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-[#00A884] flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 cursor-pointer transition-all duration-150">
+                    <svg
+                      className="w-4 h-4 text-white"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 19V5M5 12l7-7 7 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>

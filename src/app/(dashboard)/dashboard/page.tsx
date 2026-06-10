@@ -354,24 +354,31 @@ export default function LeadsDashboard() {
     value: string | number;
     iconColor: string;
   }) => (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-4 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)]" style={{ transition: "box-shadow 200ms ease, border-color 200ms ease" }}>
-      <div className="flex items-center justify-between mb-3 select-none">
-        <span className="text-[12px] font-sans font-medium text-[var(--text-secondary)] uppercase tracking-[0.5px]">
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01 }}
+      className="glass-card rounded-[var(--radius-lg)] p-5 relative overflow-hidden shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]"
+      style={{ transition: "box-shadow 200ms ease, border-color 200ms ease" }}
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--brand-primary)]/5 rounded-full blur-2xl pointer-events-none" />
+      <div className="flex items-center justify-between mb-3.5 select-none relative z-10">
+        <span className="text-[11px] font-sans font-bold text-[var(--text-secondary)] uppercase tracking-[1px]">
           {label}
         </span>
-        <Icon className="w-5 h-5 shrink-0" style={{ color: iconColor }} />
+        <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center border border-[var(--border-subtle)]">
+          <Icon className="w-4 h-4 shrink-0" style={{ color: iconColor }} />
+        </div>
       </div>
-      <h2 className="font-display text-[28px] font-semibold text-[var(--text-primary)] leading-none select-text">
+      <h2 className="font-display text-[32px] font-extrabold text-[var(--text-primary)] leading-none select-text relative z-10 font-sans tracking-tight">
         {isLoading ? "..." : value}
       </h2>
-    </div>
+    </motion.div>
   );
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6 bg-[var(--bg-canvas)] select-none space-y-4">
+    <div className="h-full overflow-y-auto px-6 py-6 bg-[var(--bg-canvas)] select-none space-y-6 premium-bg-radial">
 
       {/* ─── Stats Header Row ────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={Users} label="Total Captured" value={totalLeads} iconColor="var(--brand-primary)" />
         <StatCard icon={TrendingUp} label="New This Week" value={newThisWeek} iconColor="var(--brand-primary)" />
         <StatCard icon={AlertTriangle} label="High Urgency" value={highUrgencyCount} iconColor="var(--danger-icon)" />
@@ -379,17 +386,18 @@ export default function LeadsDashboard() {
       </div>
 
       {/* ─── LIVE ENGINE STATUS BAR ────────────────────── */}
-      <div className="h-9 bg-[var(--bg-subtle)] rounded-[var(--radius-md)] px-4 flex items-center justify-between select-none border border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2.5">
+      <div className="h-9 bg-[var(--bg-surface)] rounded-[var(--radius-md)] px-4 flex items-center justify-between select-none border border-[var(--border-subtle)] shadow-xs relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-success-bg)]/20 to-transparent pointer-events-none" />
+        <div className="flex items-center gap-2.5 relative z-10">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success-icon)] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success-icon)]"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success-icon)] premium-online-indicator"></span>
           </span>
-          <span className="text-[11px] font-mono font-bold text-[var(--color-success-text)] tracking-[1px] uppercase">
+          <span className="text-[10px] font-mono font-extrabold text-[var(--color-success-text)] tracking-[1.5px] uppercase">
             LIVE ENGINE ACTIVE
           </span>
         </div>
-        <span className="text-[11px] font-mono text-[var(--text-tertiary)]">
+        <span className="text-[10px] font-mono text-[var(--text-tertiary)] relative z-10">
           Auto-updating · Last sync {syncTime}
         </span>
       </div>
@@ -398,7 +406,7 @@ export default function LeadsDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 select-none pb-1 pt-1">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] font-display flex items-center gap-1.5">
           Prospects CRM
-          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] select-none">
+          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] select-none">
             {filteredLeads.length} {filteredLeads.length !== leads.length ? `of ${leads.length}` : ""} captured
           </span>
         </h3>
@@ -412,22 +420,22 @@ export default function LeadsDashboard() {
             <select
               value={urgencyFilter}
               onChange={(e) => setUrgencyFilter(e.target.value as "all" | "high" | "medium" | "low")}
-              className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] cursor-pointer hover:border-[var(--border-strong)] transition-all"
+              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer hover:border-[var(--border-strong)] transition-all outline-none"
             >
-              <option value="all">All</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="all">All Urgencies</option>
+              <option value="high">High Urgency</option>
+              <option value="medium">Medium Urgency</option>
+              <option value="low">Low Urgency</option>
             </select>
           </div>
 
           {/* View Toggle */}
-          <div className="flex bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-0.5">
+          <div className="flex bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-1">
             <button
               onClick={() => setViewMode("table")}
-              className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] transition-all ${
                 viewMode === "table"
-                  ? "bg-[var(--brand-primary)] text-white shadow-xs"
+                  ? "bg-[var(--brand-primary)] text-white shadow-sm font-bold"
                   : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
@@ -435,9 +443,9 @@ export default function LeadsDashboard() {
             </button>
             <button
               onClick={() => setViewMode("kanban")}
-              className={`px-3 py-1 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)] transition-all ${
                 viewMode === "kanban"
-                  ? "bg-[var(--brand-primary)] text-white shadow-xs"
+                  ? "bg-[var(--brand-primary)] text-white shadow-sm font-bold"
                   : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
@@ -660,9 +668,9 @@ export default function LeadsDashboard() {
                     handleUpdateStage(leadId, stageKey);
                   }
                 }}
-                className={`bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border p-3 flex flex-col min-h-[450px] transition-all duration-200 ${
+                className={`glass-card rounded-[var(--radius-lg)] p-3.5 flex flex-col min-h-[450px] transition-all duration-200 shadow-[var(--shadow-sm)] ${
                   draggedOverStage === stageKey
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/20 shadow-inner"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/30 shadow-inner"
                     : "border-[var(--border-subtle)]"
                 }`}
               >
@@ -680,7 +688,7 @@ export default function LeadsDashboard() {
                 <div className="flex-1 space-y-2.5 overflow-y-auto pr-0.5 select-text">
                   {isLoading ? (
                     [...Array(2)].map((_, idx) => (
-                      <div key={idx} className="h-32 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] animate-shimmer" />
+                      <div key={idx} className="h-28 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] animate-shimmer" />
                     ))
                   ) : columnLeads.length === 0 ? (
                     <div className="border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-md)] py-8 text-center text-[10px] font-sans text-[var(--text-tertiary)] select-none">
@@ -708,7 +716,7 @@ export default function LeadsDashboard() {
                               dragEvent.currentTarget.classList.remove("opacity-50");
                             }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-3.5 relative group flex flex-col gap-2.5 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)] cursor-grab active:cursor-grabbing"
+                            className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-3.5 relative group flex flex-col gap-2.5 hover:shadow-[var(--shadow-sm)] hover:border-[var(--brand-primary)] cursor-grab active:cursor-grabbing hover:scale-[1.01]"
                           >
                             <div className="flex items-center justify-between shrink-0 select-none">
                               <div className="flex items-center gap-1.5">
