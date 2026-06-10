@@ -349,15 +349,12 @@ export default function SettingsPage() {
     };
 
     const metaConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
+    const currentUrl = window.location.origin + window.location.pathname;
 
     (window as any).FB.login(
       function (response: any) {
         if (response.authResponse && response.authResponse.code) {
           const authCode = response.authResponse.code;
-          
-          // Capture the exact URL where the user currently is
-          // We strip out search params/hashes to ensure it's clean
-          const currentUrl = window.location.origin + window.location.pathname;
           
           console.log("[Meta OAuth] Auth Code captured. Sending to backend with exact redirect URI:", currentUrl);
           
@@ -376,6 +373,7 @@ export default function SettingsPage() {
         config_id: metaConfigId,
         response_type: 'code', // CRITICAL: Must be code
         override_default_response_type: true,
+        fallback_redirect_uri: currentUrl,
         extras: {
           sessionInfoVersion: 2,
         },
