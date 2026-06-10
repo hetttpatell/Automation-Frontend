@@ -26,7 +26,8 @@ import {
   FileText,
   Eye,
   EyeOff,
-  MessageSquare
+  MessageSquare,
+  ExternalLink
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -235,6 +236,8 @@ export default function SettingsPage() {
   const [whatsappBusinessAccountId, setWhatsappBusinessAccountId] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [isMetaConnecting, setIsMetaConnecting] = useState(false);
+  const [showAdvancedOAuth, setShowAdvancedOAuth] = useState(false);
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   // Google Calendar States
   const [tenantId, setTenantId] = useState("");
@@ -296,106 +299,6 @@ export default function SettingsPage() {
       document.body.appendChild(script);
     }
   }, []);
-
-  const handleMetaLogin = () => {
-    if (typeof window === "undefined" || !(window as any).FB) {
-      toastError("Facebook SDK is not loaded yet. Please try again in a few seconds.");
-      return;
-    }
-
-    if (!process.env.NEXT_PUBLIC_META_CONFIG_ID) {
-      toastError("Meta Configuration ID is missing. Set NEXT_PUBLIC_META_CONFIG_ID in your .env.local file.");
-      console.error("[Meta OAuth] NEXT_PUBLIC_META_CONFIG_ID is not set. Cannot proceed with FB.login.");
-      return;
-    }
-
-    setIsMetaConnecting(true);
-
-    const triggerTokenExchange = async (payload: { token: string; redirectUri: string }) => {
-      try {
-        // Get current Supabase session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session?.access_token) {
-          throw new Error("Could not resolve current Supabase authorization session.");
-        }
-
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        const res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ 
-            token: payload.token, 
-            redirectUri: payload.redirectUri 
-          }),
-        });
-
-        const responseData = await res.json();
-        if (!res.ok) {
-          throw new Error(responseData.error || "Token exchange endpoint returned an error.");
-        }
-
-        toastSuccess("Meta WhatsApp integration connected successfully!");
-        // Refresh config to sync credentials state (tokens, IDs)
-        await fetchConfig(false);
-      } catch (err: any) {
-        console.error("[Meta OAuth Exchange Error]:", err);
-        toastError(err.message || "Failed to exchange authorization code.");
-      } finally {
-        setIsMetaConnecting(false);
-      }
-    };
-
-    const metaConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
-    const currentUrl = window.location.origin + window.location.pathname;
-
-    (window as any).FB.login(
-      function (response: any) {
-        if (response.authResponse && response.authResponse.code) {
-          const authCode = response.authResponse.code;
-          
-          console.log("[Meta OAuth] Auth Code captured. Sending to backend with exact redirect URI:", currentUrl);
-          
-          // Pass BOTH the code and the current URL to your backend API call
-          triggerTokenExchange({ 
-            token: authCode, 
-            redirectUri: currentUrl 
-          }); 
-        } else {
-          console.error("[Meta OAuth] User cancelled login or code was not returned.");
-          toastError("Facebook authorization was cancelled or failed.");
-          setIsMetaConnecting(false);
-        }
-      },
-      {
-        config_id: metaConfigId,
-        response_type: 'code', // CRITICAL: Must be code
-        override_default_response_type: true,
-        fallback_redirect_uri: currentUrl,
-        extras: {
-          sessionInfoVersion: 2,
-        },
-      }
-    );
-  };
-
-  // Listen to search params for Google Calendar connection notifications
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("success") === "true") {
-        toastSuccess("Google Calendar connected successfully!");
-        window.history.replaceState({}, document.title, window.location.pathname);
-      } else if (params.get("error") === "oauth_failed") {
-        toastError("Failed to connect Google Calendar. Please try again.");
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  }, [toastSuccess, toastError]);
-
-  const t = TRANSLATIONS[formLanguage];
 
   // Fetch initial configs
   const fetchConfig = React.useCallback(async (showLoading = true) => {
@@ -515,6 +418,125 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
 
     setIsLoading(false);
   }, [supabase]);
+
+  const triggerTokenExchange = React.useCallback(async (payload: { token: string; redirectUri: string }) => {
+    setIsMetaConnecting(true);
+    try {
+      // Get current Supabase session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error("Could not resolve current Supabase authorization session.");
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          token: payload.token, 
+          redirectUri: payload.redirectUri 
+        }),
+      });
+
+      const responseData = await res.json();
+      if (!res.ok) {
+        throw new Error(responseData.error || "Token exchange endpoint returned an error.");
+      }
+
+      toastSuccess("Meta WhatsApp integration connected successfully!");
+      // Refresh config to sync credentials state (tokens, IDs)
+      await fetchConfig(false);
+    } catch (err: any) {
+      console.error("[Meta OAuth Exchange Error]:", err);
+      toastError(err.message || "Failed to exchange authorization code.");
+    } finally {
+      setIsMetaConnecting(false);
+    }
+  }, [supabase, fetchConfig, toastSuccess, toastError]);
+
+  // Handle receiving the code inside the popup window and posting it back to the opener
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code && window.opener) {
+        console.log("[Meta OAuth Popup] Code found in popup URL, sending back to parent window...");
+        window.opener.postMessage({ type: "META_OAUTH_CODE", code }, window.location.origin);
+        window.close();
+      }
+    }
+  }, []);
+
+  // Listen for Meta OAuth code messages from the popup window
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleMessage = (event: MessageEvent) => {
+      // Security: Only accept messages from the same origin
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data && event.data.type === "META_OAUTH_CODE") {
+        const authCode = event.data.code;
+        const currentUrl = window.location.origin + window.location.pathname;
+        console.log("[Meta OAuth Parent] Received auth code from popup, triggering backend exchange with redirectUri:", currentUrl);
+        triggerTokenExchange({ token: authCode, redirectUri: currentUrl });
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [triggerTokenExchange]);
+
+  const handleMetaLogin = () => {
+    if (!process.env.NEXT_PUBLIC_META_CONFIG_ID) {
+      toastError("Meta Configuration ID is missing. Set NEXT_PUBLIC_META_CONFIG_ID in your .env.local file.");
+      console.error("[Meta OAuth] NEXT_PUBLIC_META_CONFIG_ID is not set.");
+      return;
+    }
+
+    setIsMetaConnecting(true);
+
+    const metaConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
+    const currentUrl = window.location.origin + window.location.pathname;
+
+    const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth` +
+      `?app_id=${process.env.NEXT_PUBLIC_META_APP_ID || "1586663712852403"}` +
+      `&client_id=${process.env.NEXT_PUBLIC_META_APP_ID || "1586663712852403"}` +
+      `&redirect_uri=${encodeURIComponent(currentUrl)}` +
+      `&config_id=${metaConfigId}` +
+      `&response_type=code` +
+      `&override_default_response_type=true` +
+      `&extras=${encodeURIComponent(JSON.stringify({ feature: "whatsapp_embedded_signup", version: 2, sessionInfoVersion: 2 }))}`;
+
+    const width = 600;
+    const height = 600;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    console.log("[Meta OAuth] Launching manual OAuth popup with URL:", oauthUrl);
+    window.open(oauthUrl, 'Meta Login', `width=${width},height=${height},top=${top},left=${left}`);
+  };
+
+  // Listen to search params for Google Calendar connection notifications
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("success") === "true") {
+        toastSuccess("Google Calendar connected successfully!");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (params.get("error") === "oauth_failed") {
+        toastError("Failed to connect Google Calendar. Please try again.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [toastSuccess, toastError]);
+
+  const t = TRANSLATIONS[formLanguage];
 
   // Sync calendar connection status on tab focus without overwriting other unsaved form inputs
   const syncCalendarConnection = React.useCallback(async () => {
@@ -1218,6 +1240,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           </p>
                         </div>
 
+                        {/* Google Calendar Section */}
                         <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -1285,18 +1308,175 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           </div>
                         )}
 
-                        {/* Manual API Configuration */}
-                          <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-raised)] space-y-4 shadow-[var(--shadow-sm)] animate-fade-in">
-                            <div className="border-b border-[var(--border-subtle)] pb-2 flex items-center justify-between">
-                              <div>
-                                <h4 className="text-xs font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-                                  <Terminal className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
-                                  Manual API Configuration
-                                </h4>
-                                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                                  Use this to configure credentials manually if Facebook OAuth is blocked on HTTP/local setups.
-                                </p>
+                        {/* WhatsApp API Settings */}
+                        <div className="space-y-6 pt-6 mt-6 border-t border-[var(--border-subtle)]">
+                          <div>
+                            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                              <MessageSquare className="w-4 h-4 text-emerald-500" />
+                              WhatsApp API Settings
+                            </h3>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+                              Configure your Meta WhatsApp Business integration. We recommend using Manual API Configuration for local or customized environments.
+                            </p>
+                          </div>
+
+                          {/* Helper Link Guide */}
+                          <div className="p-6 rounded-[var(--radius-xl)] bg-[var(--bg-canvas)] border border-[var(--brand-border)] border-l-4 border-l-[var(--brand-primary)] shadow-[var(--shadow-sm)] flex flex-col gap-5 relative overflow-hidden transition-all duration-200">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-4 border-b border-[var(--border-subtle)]">
+                              <div className="flex items-start gap-4">
+                                <div className="p-3 rounded-xl bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[var(--brand-primary)] shrink-0 self-start md:self-center">
+                                  <Info className="w-5 h-5" />
+                                </div>
+                                <div className="space-y-1">
+                                  <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider font-mono">
+                                    Meta Developer Configuration
+                                  </h4>
+                                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                                    To configure your live chatbot, retrieve your access token, Phone Number ID, and WhatsApp Business Account ID from Meta's dashboard.
+                                  </p>
+                                </div>
                               </div>
+
+                              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSetupGuide(!showSetupGuide)}
+                                  className="h-9 px-3.5 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] outline-none"
+                                >
+                                  <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${showSetupGuide ? "rotate-180" : ""}`} />
+                                  <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
+                                </button>
+                                <a 
+                                  href="https://developers.facebook.com/apps/1586663712852403/use_cases/customize/wa-dev-console/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&selected_tab=wa-dev-console&product_route=whatsapp-business&business_id=1541013347588467" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm outline-none inline-flex items-center justify-center"
+                                >
+                                  <span>Open Meta Console</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-0">
+
+                              <AnimatePresence initial={false}>
+                                {showSetupGuide && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="space-y-6 pt-4">
+                                      {/* Step 1 */}
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold">1</span>
+                                          <span className="font-bold text-xs text-[var(--brand-text-strong)]">Generate Your Meta Access Token</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-secondary)] pl-7">
+                                          Click the blue <strong>Generate access token</strong> button to create a temporary token for your development environment.
+                                        </p>
+                                        <div className="pl-7">
+                                          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1.5 max-w-2xl shadow-inner">
+                                            <img 
+                                              src="/setup/step1.png" 
+                                              alt="Step 1: Generate Access Token" 
+                                              className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)]"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Step 2 */}
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold">2</span>
+                                          <span className="font-bold text-xs text-[var(--brand-text-strong)]">Copy the Phone Number ID</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-secondary)] pl-7">
+                                          Copy the <strong>Phone number ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">123456789012345</code>) by clicking the copy icon next to it. Paste this in the Phone Number ID input below.
+                                        </p>
+                                        <div className="pl-7">
+                                          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1.5 max-w-2xl shadow-inner">
+                                            <img 
+                                              src="/setup/step2.png" 
+                                              alt="Step 2: Copy Phone Number ID" 
+                                              className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)]"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Step 3 */}
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold">3</span>
+                                          <span className="font-bold text-xs text-[var(--brand-text-strong)]">Copy the WhatsApp Business Account ID</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-secondary)] pl-7">
+                                          Copy the <strong>WhatsApp Business Account ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">987654321098765</code>) using the copy icon. Paste this in the WABA ID input below.
+                                        </p>
+                                        <div className="pl-7">
+                                          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1.5 max-w-2xl shadow-inner">
+                                            <img 
+                                              src="/setup/step3.png" 
+                                              alt="Step 3: Copy WhatsApp Business Account ID" 
+                                              className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)]"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+
+                          {/* Connection Badge Status */}
+                          <div className="p-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex items-center justify-between gap-4">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider block">
+                                Integration Status
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-[var(--text-primary)]">WhatsApp Account Connection</span>
+                                {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
+                                    <Check className="w-3 h-3 text-emerald-500" />
+                                    Connected
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
+                                    Not Connected
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-[var(--text-secondary)] max-w-xl">
+                                {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                                  <>
+                                    Active Phone Number ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappPhoneNumberId}</code> and WABA ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappBusinessAccountId}</code>.
+                                  </>
+                                ) : (
+                                  "Credentials not configured. Please fill in the Manual API Configuration below."
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Manual API Configuration Card */}
+                          <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-4 shadow-[var(--shadow-sm)]">
+                            <div className="border-b border-[var(--border-subtle)] pb-2">
+                              <h4 className="text-xs font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+                                <Terminal className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                                Manual API Credentials
+                              </h4>
+                              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                                Enter your Meta Developer details manually. All fields are saved securely to your tenant configurations.
+                              </p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1312,7 +1492,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                                     setWhatsappPhoneNumberId(e.target.value);
                                     setHasChanges(true);
                                   }}
-                                  placeholder="e.g., 1186481551206471"
+                                  placeholder="e.g., 123456789012345"
                                   className={`${inputBaseClass} h-11`}
                                 />
                               </div>
@@ -1320,7 +1500,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                               {/* WABA ID */}
                               <div className="space-y-1.5">
                                 <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
-                                  WABA ID (Business ID)
+                                  WhatsApp Business Account ID (WABA ID)
                                 </label>
                                 <input
                                   type="text"
@@ -1329,7 +1509,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                                     setWhatsappBusinessAccountId(e.target.value);
                                     setHasChanges(true);
                                   }}
-                                  placeholder="e.g., 1084861251306450"
+                                  placeholder="e.g., 987654321098765"
                                   className={`${inputBaseClass} h-11`}
                                 />
                               </div>
@@ -1363,66 +1543,65 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                             </div>
                           </div>
 
-                         {/* WhatsApp Credentials Section */}
-                         <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
-                           <div>
-                             <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                               <MessageSquare className="w-4 h-4 text-emerald-500" />
-                               WhatsApp API Settings
-                             </h3>
-                             <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                               Connect your Meta WhatsApp Business Account via secure OAuth flow.
-                             </p>
-                           </div>
+                          {/* Collapsible Advanced Settings (Meta OAuth Setup) - Commented out (OAuth not fixed yet)
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowAdvancedOAuth(!showAdvancedOAuth)}
+                              className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer select-none focus:outline-none"
+                            >
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAdvancedOAuth ? "rotate-180" : ""}`} />
+                              <span>Advanced Settings (Automated Meta OAuth Flow)</span>
+                            </button>
 
-                           <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                             <div className="space-y-1 text-left">
-                               <div className="flex items-center gap-2">
-                                 <span className="font-semibold text-sm text-[var(--text-primary)]">WhatsApp Account Connection</span>
-                                 {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
-                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
-                                     <Check className="w-3 h-3 text-emerald-500" />
-                                     Connected
-                                   </span>
-                                 ) : (
-                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
-                                     Not Connected
-                                   </span>
-                                 )}
-                               </div>
-                               <p className="text-xs text-[var(--text-secondary)] max-w-xl">
-                                 {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
-                                   <>
-                                     Connected to Phone Number ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappPhoneNumberId}</code> and WABA ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappBusinessAccountId}</code>.
-                                   </>
-                                 ) : (
-                                   "Authorize our application to manage your business's WhatsApp messages and customer conversations."
-                                 )}
-                               </p>
-                             </div>
+                            <AnimatePresence initial={false}>
+                              {showAdvancedOAuth && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="pt-4">
+                                    <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                      <div className="space-y-1 text-left">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-semibold text-sm text-[var(--text-primary)]">Automated OAuth Flow</span>
+                                        </div>
+                                        <p className="text-xs text-[var(--text-secondary)] max-w-xl">
+                                          Connect your WhatsApp integration automatically using Meta's official login dialog. Ensure your app is configured in HTTP/production.
+                                        </p>
+                                      </div>
 
-                             <div className="shrink-0">
-                               <button
-                                 type="button"
-                                 onClick={handleMetaLogin}
-                                 disabled={isMetaConnecting}
-                                 className="h-10 px-4 bg-[#1877F2] hover:bg-[#166FE5] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#1877F2] disabled:cursor-not-allowed"
-                               >
-                                 {isMetaConnecting ? (
-                                   <>
-                                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                                     <span>Connecting...</span>
-                                   </>
-                                 ) : (
-                                   <>
-                                     <MessageSquare className="w-4 h-4" />
-                                     <span>{whatsappPhoneNumberId ? "Reconnect Meta Account" : "Connect Meta Account"}</span>
-                                   </>
-                                 )}
-                               </button>
-                             </div>
-                           </div>
-                         </div>
+                                      <div className="shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={handleMetaLogin}
+                                          disabled={isMetaConnecting}
+                                          className="h-10 px-4 bg-[#1877F2] hover:bg-[#166FE5] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#1877F2] disabled:cursor-not-allowed"
+                                        >
+                                          {isMetaConnecting ? (
+                                            <>
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                              <span>Connecting...</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <MessageSquare className="w-4 h-4" />
+                                              <span>{whatsappPhoneNumberId ? "Reconnect Meta Account" : "Connect Meta Account"}</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          */}
+                        </div>
 
                         {/* Reputation Engine Section */}
                         <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
