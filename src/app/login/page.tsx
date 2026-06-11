@@ -130,7 +130,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen w-full flex flex-col lg:flex-row bg-[#FAFAFA] text-slate-800 selection:bg-accent/20 selection:text-accent">
       
       {/* ─── LEFT PANEL (Full-bleed Marketing Sidebar) ─── */}
-      <div className="w-full lg:w-[50%] xl:w-[50%] min-h-screen bg-[#ebf3fc] px-8 pt-8 lg:px-12 lg:pt-12 xl:px-16 xl:pt-16 pb-0 lg:pb-0 flex flex-col justify-between relative overflow-hidden shrink-0">
+      <div className="hidden lg:flex lg:w-[50%] xl:w-[50%] min-h-screen bg-[#ebf3fc] px-8 pt-8 lg:px-12 lg:pt-12 xl:px-16 xl:pt-16 pb-0 lg:pb-0 flex flex-col justify-between relative overflow-hidden shrink-0">
         
         {/* Branding Logo Header (Navbar with Logo) */}
         <div className="relative z-10 flex items-center justify-center gap-2 select-none self-center">
@@ -313,6 +313,14 @@ export default function LoginPage() {
           {/* Form Container */}
           <div className="w-full max-w-[360px] flex flex-col justify-center py-10 lg:py-0">
             
+            {/* Mobile Branding Logo Header */}
+            <div className="flex items-center gap-2 select-none mb-8 lg:hidden justify-center">
+              <img src="/Logo.png" alt="LeadFlow Logo" className="h-8 w-8 object-contain" />
+              <span className="font-sans text-2xl font-extrabold tracking-tight text-[#0f172a]">
+                LeadFlow
+              </span>
+            </div>
+
             {/* Header */}
             <div className="text-left mb-8">
               <h1 className="text-[32px] font-bold tracking-tight text-slate-900 mb-2.5 font-sans leading-tight">

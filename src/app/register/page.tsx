@@ -178,7 +178,7 @@ export default function RegisterPage() {
     <div className="relative min-h-screen w-full flex flex-col lg:flex-row bg-[#FAFAFA] text-slate-800 selection:bg-accent/20 selection:text-accent">
       
       {/* ─── LEFT PANEL (Full-bleed Marketing Sidebar) ─── */}
-      <div className="w-full lg:w-[50%] xl:w-[55%] min-h-screen bg-[#F8FAFC] border-r border-slate-200/80 p-8 lg:p-12 xl:p-16 flex flex-col justify-between relative overflow-hidden shrink-0">
+      <div className="hidden lg:flex lg:w-[50%] xl:w-[55%] min-h-screen bg-[#F8FAFC] border-r border-slate-200/80 p-8 lg:p-12 xl:p-16 flex flex-col justify-between relative overflow-hidden shrink-0">
         
         {/* Subtle grid pattern for texture */}
         <div 
@@ -474,6 +474,14 @@ export default function RegisterPage() {
         {/* Form Container (borderless, modern layout) */}
         <div className="w-full max-w-[360px] flex flex-col justify-center py-10 lg:py-0">
           
+          {/* Mobile Branding Logo Header */}
+          <div className="flex items-center gap-2 select-none mb-8 lg:hidden justify-center">
+            <img src="/Logo.png" alt="LeadFlow Logo" className="h-8 w-8 object-contain" />
+            <span className="font-sans text-2xl font-bold tracking-tight text-slate-900">
+              Lead<span className="text-accent">Flow</span>
+            </span>
+          </div>
+
           {/* Header */}
           <div className="text-left mb-8">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2 font-sans">

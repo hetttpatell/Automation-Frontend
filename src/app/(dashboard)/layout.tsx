@@ -166,6 +166,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [businessName, setBusinessName] = useState("LeadFlow");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
@@ -546,6 +547,74 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             )}
             <div id="header-cta-portal" className="flex items-center gap-3 min-h-10" />
+
+            {/* Mobile Profile Dropdown (visible only on lg:hidden) */}
+            <div className="relative lg:hidden">
+              <button
+                onClick={() => setIsMobileDropdownOpen(!isMobileDropdownOpen)}
+                className="flex items-center justify-center p-1 rounded-full hover:bg-[var(--bg-subtle)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] cursor-pointer"
+                aria-label="User menu"
+              >
+                <Avatar name={businessName} size="sm" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isMobileDropdownOpen && (
+                <>
+                  {/* Invisible backdrop to detect click-outside */}
+                  <div 
+                    className="fixed inset-0 z-40 bg-transparent cursor-default"
+                    onClick={() => setIsMobileDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-2 z-50 min-w-[200px]">
+                    {/* Business Name and User Email */}
+                    <div className="px-3 py-2 border-b border-[var(--border-subtle)] pb-2 mb-2 select-text">
+                      <p className="text-xs font-bold text-[var(--text-primary)] truncate font-sans">{businessName}</p>
+                      <p className="text-[10px] text-[var(--text-secondary)] truncate mt-0.5">{userEmail || "operator"}</p>
+                    </div>
+
+                    {/* Theme Switcher inside mobile dropdown */}
+                    <div className="flex items-center justify-between px-3 py-2 hover:bg-[var(--bg-subtle)]/50 rounded-[var(--radius-md)] mb-1">
+                      <span className="text-xs font-medium text-[var(--text-primary)]">Theme</span>
+                      <button
+                        onClick={toggleTheme}
+                        className="w-[44px] h-[24px] rounded-full p-[2px] cursor-pointer bg-[var(--bg-muted)] relative flex items-center border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] focus:outline-none"
+                        role="switch"
+                        aria-checked={theme === "dark"}
+                      >
+                        <div className="absolute left-1 w-4 h-4 flex items-center justify-center pointer-events-none z-20">
+                          <Sun className="w-3 h-3" style={{ opacity: theme === "light" ? 1 : 0.4, color: theme === "light" ? "#F59E0B" : "var(--text-tertiary)" }} />
+                        </div>
+                        <div className="absolute right-1 w-4 h-4 flex items-center justify-center pointer-events-none z-20">
+                          <Moon className="w-3 h-3" style={{ opacity: theme === "dark" ? 1 : 0.4, color: theme === "dark" ? "#60A5FA" : "var(--text-tertiary)" }} />
+                        </div>
+                        <motion.div
+                          layout
+                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          className="w-[20px] h-[20px] rounded-full bg-white shadow-[var(--shadow-sm)] z-10"
+                          style={{
+                            marginLeft: theme === "dark" ? "auto" : "0",
+                            marginRight: theme === "light" ? "auto" : "0"
+                          }}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Logout Button */}
+                    <button
+                      onClick={() => {
+                        setIsMobileDropdownOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer text-left"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
