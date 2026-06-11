@@ -593,6 +593,13 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
     setHasChanges(hasProfileChanges || hasVectorChanges || hasIntegrationChanges || hasWhatsappChanges);
   }, [hasProfileChanges, hasVectorChanges, hasIntegrationChanges, hasWhatsappChanges]);
 
+  const navTabs = useMemo(() => [
+    { id: "profile", label: t.tabProfile, desc: t.tabProfileDesc, icon: User, hasChanges: hasProfileChanges, isAI: false },
+    { id: "vectors", label: t.tabVectors, desc: t.tabVectorsDesc, icon: BookOpen, hasChanges: hasVectorChanges, isAI: false },
+    { id: "compiler", label: t.tabCompiler, desc: t.tabCompilerDesc, icon: Terminal, hasChanges: false, isAI: true },
+    { id: "integrations", label: "Integrations & Booking", desc: "Connect Google Calendar", icon: Globe, hasChanges: hasIntegrationChanges || hasWhatsappChanges, isAI: false },
+  ], [t, hasProfileChanges, hasVectorChanges, hasIntegrationChanges, hasWhatsappChanges]);
+
   // Compile instructions preview — mirrors the backend's actual prompt structure
   const compiledPrompt = `You are the AI Assistant for ${businessName || "My Business"}, an elite, hyper-efficient representative. 
 You must communicate primarily in ${botLanguage}.
@@ -808,20 +815,28 @@ ${rulesText || "Customer satisfaction is paramount."}`;
           </div>
 
           {/* 3-Option segmented language control */}
-          <div className="flex bg-[var(--bg-surface)] p-[4px] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] self-start md:self-center shadow-[var(--shadow-sm)] gap-[2px] select-none">
+          <div className="flex bg-[var(--bg-surface-raised)] p-[4px] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] self-start md:self-center shadow-[var(--shadow-sm)] gap-[2px] select-none relative">
             {(["en", "hi", "gu"] as const).map((lang) => {
               const labels = { en: "EN", hi: "हिंदी", gu: "ગુ" };
+              const isSelected = formLanguage === lang;
               return (
                 <button
                   key={lang}
                   type="button"
                   onClick={() => setFormLanguage(lang)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-[var(--radius-md)] cursor-pointer outline-none transition-all duration-150 ${
-                    formLanguage === lang
-                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--shadow-sm)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-[var(--radius-md)] cursor-pointer outline-none transition-all duration-200 relative z-10 ${
+                    isSelected
+                      ? "text-white"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   }`}
                 >
+                  {isSelected && (
+                    <motion.div
+                      layoutId="active-lang-pill"
+                      className="absolute inset-0 bg-[var(--brand-primary)] rounded-[var(--radius-md)] z-[-1]"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
                   {labels[lang]}
                 </button>
               );
@@ -834,115 +849,78 @@ ${rulesText || "Customer satisfaction is paramount."}`;
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="md:col-span-1 space-y-3">
-                {[1, 2, 3].map((n) => (
+                {[1, 2, 3, 4].map((n) => (
                   <div key={n} className="h-14 bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] animate-shimmer" />
                 ))}
               </div>
-              <div className="md:col-span-3 bg-[var(--bg-surface)] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-6 h-96 animate-shimmer" />
+              <div className="md:col-span-3 bg-[var(--bg-surface)] rounded-[var(--radius-xl)] border border-[var(--border-subtle)] p-6 h-96 animate-shimmer" />
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
               
               {/* Sidebar Tabs (Vertical on Desktop, Horizontal Pill List on Mobile) */}
-              <nav className="md:col-span-1 flex flex-row md:flex-col overflow-x-auto md:overflow-visible pb-2 md:pb-0 gap-1.5 select-none scrollbar-none border-b md:border-b-0 border-[var(--border-subtle)]">
-                
-                {/* Profile Tab Link */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("profile")}
-                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
-                    activeTab === "profile"
-                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
-                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-md ${activeTab === "profile" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
-                    <User className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="text-xs font-bold leading-tight">{t.tabProfile}</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">{t.tabProfileDesc}</span>
-                  </div>
-                  <span className="md:hidden text-xs font-bold">{t.tabProfile}</span>
+              <nav className="md:col-span-1 flex flex-row md:flex-col overflow-x-auto md:overflow-visible pb-3 md:pb-0 gap-2 select-none scrollbar-none border-b md:border-b-0 border-[var(--border-subtle)] mb-4 md:mb-0">
+                {navTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex-1 md:flex-none text-left flex items-center gap-3 p-3 rounded-[var(--radius-xl)] border cursor-pointer select-none transition-all duration-200 relative whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] ${
+                        isActive
+                          ? "bg-[var(--bg-surface)] border-[var(--border-subtle)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
+                          : "bg-transparent border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]/50"
+                      }`}
+                    >
+                      {/* Sliding active border or background */}
+                      {isActive && (
+                        <>
+                          {/* Left glowing border on desktop */}
+                          <motion.div
+                            layoutId="active-settings-tab-border-desktop"
+                            className="hidden md:block absolute left-1 top-3 bottom-3 w-1 bg-[var(--brand-primary)] rounded-full z-10"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                          {/* Bottom glowing border on mobile */}
+                          <motion.div
+                            layoutId="active-settings-tab-border-mobile"
+                            className="md:hidden absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--brand-primary)] rounded-full z-10"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                          {/* Soft glow background */}
+                          <motion.div
+                            layoutId="active-settings-tab-bg"
+                            className="absolute inset-0 bg-[var(--brand-subtle)]/30 rounded-[var(--radius-xl)] z-0 pointer-events-none"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        </>
+                      )}
 
-                  {/* Unsaved Changes Indicator Dot */}
-                  {hasProfileChanges && (
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-sm animate-pulse" />
-                  )}
-                </button>
+                      <div className={`p-2 rounded-lg relative z-10 ${isActive ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"}`}>
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {tab.isAI && (
+                          <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-[var(--color-ai)] border-2 border-[var(--bg-surface)] pulse-dot-ai" />
+                        )}
+                      </div>
 
-                {/* Vectors Tab Link */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("vectors")}
-                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
-                    activeTab === "vectors"
-                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
-                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-md ${activeTab === "vectors" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
-                    <BookOpen className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="text-xs font-bold leading-tight">{t.tabVectors}</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">{t.tabVectorsDesc}</span>
-                  </div>
-                  <span className="md:hidden text-xs font-bold">{t.tabVectors}</span>
+                      <div className="flex flex-col text-left relative z-10 font-display">
+                        <span className={`text-xs font-bold leading-tight ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"}`}>
+                          {tab.label}
+                        </span>
+                        <span className="hidden md:inline text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[140px] mt-0.5">
+                          {tab.desc}
+                        </span>
+                      </div>
 
-                  {/* Unsaved Changes Indicator Dot */}
-                  {hasVectorChanges && (
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-sm animate-pulse" />
-                  )}
-                </button>
-
-                {/* Compiler Tab Link */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("compiler")}
-                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
-                    activeTab === "compiler"
-                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
-                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-md ${activeTab === "compiler" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
-                    <Terminal className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="text-xs font-bold leading-tight">{t.tabCompiler}</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">{t.tabCompilerDesc}</span>
-                  </div>
-                  <span className="md:hidden text-xs font-bold">{t.tabCompiler}</span>
-
-                  {/* Compiling live highlight indicator dot */}
-                  <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[var(--color-ai)] pulse-dot-ai" />
-                </button>
-
-                {/* Integrations Tab Link */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("integrations")}
-                  className={`flex-1 md:flex-none text-left flex items-center md:items-start gap-3 p-3 rounded-[var(--radius-lg)] border cursor-pointer select-none transition-all duration-150 relative whitespace-nowrap shrink-0 ${
-                    activeTab === "integrations"
-                      ? "bg-[var(--bg-surface)] border-[var(--brand-border)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
-                      : "bg-[var(--bg-canvas)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-md ${activeTab === "integrations" ? "bg-[var(--brand-subtle)]" : "bg-[var(--bg-subtle)]"}`}>
-                    <Globe className="w-4 h-4 shrink-0" />
-                  </div>
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="text-xs font-bold leading-tight">Integrations & Booking</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[130px]">Connect Google Calendar</span>
-                  </div>
-                  <span className="md:hidden text-xs font-bold">Integrations</span>
-
-                  {/* Unsaved Changes Indicator Dot */}
-                  {hasIntegrationChanges && (
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-sm animate-pulse" />
-                  )}
-                </button>
+                      {/* Unsaved changes indicator */}
+                      {tab.hasChanges && (
+                        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-[var(--shadow-sm)] animate-pulse z-20" />
+                      )}
+                    </button>
+                  );
+                })}
               </nav>
 
               {/* Active Tab Panel Content */}
@@ -970,14 +948,17 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* Business Name Field */}
                           <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
                               <Building2 className="w-3.5 h-3.5" />
                               {t.businessName}
                             </label>
                             <input
                               type="text"
                               value={businessName}
-                              onChange={(e) => setBusinessName(e.target.value)}
+                              onChange={(e) => {
+                                setBusinessName(e.target.value);
+                                setHasChanges(true);
+                              }}
                               placeholder={t.businessNamePlaceholder}
                               className={`${inputBaseClass} h-11`}
                             />
@@ -988,7 +969,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
 
                           {/* Primary Bot Language Field */}
                           <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
                               <Globe className="w-3.5 h-3.5" />
                               {t.botLanguage}
                             </label>
@@ -996,7 +977,10 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                               <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
                               <select
                                 value={botLanguage}
-                                onChange={(e) => setBotLanguage(e.target.value)}
+                                onChange={(e) => {
+                                  setBotLanguage(e.target.value);
+                                  setHasChanges(true);
+                                }}
                                 className={`${inputBaseClass} h-11 pl-10 pr-10 cursor-pointer appearance-none`}
                               >
                                 <option value="English">English</option>
@@ -1018,13 +1002,13 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                         </div>
 
                         {/* Tone Presets Selector */}
-                        <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+                        <div className="space-y-4 pt-5 border-t border-[var(--border-subtle)]">
                           <div>
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-[var(--brand-primary)] animate-pulse" />
                               {t.aiToneTitle}
                             </label>
-                            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{t.aiToneSubtitle}</p>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.aiToneSubtitle}</p>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 select-none">
@@ -1035,19 +1019,31 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                                 <button
                                   key={opt.value}
                                   type="button"
-                                  onClick={() => setAiTone(opt.value)}
-                                  className={`p-4 rounded-[var(--radius-lg)] border flex flex-col items-center justify-center text-center cursor-pointer select-none relative active:scale-[0.98] overflow-hidden min-h-[110px] ${
+                                  onClick={() => {
+                                    setAiTone(opt.value);
+                                    setHasChanges(true);
+                                  }}
+                                  className={`p-4 rounded-[var(--radius-xl)] border flex flex-col items-center justify-center text-center cursor-pointer select-none relative overflow-hidden transition-all duration-200 min-h-[120px] ${
                                     isSelected 
-                                      ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)] shadow-[var(--shadow-sm)]" 
-                                      : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)]"
+                                      ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/40 shadow-[var(--shadow-md)] ring-2 ring-[var(--brand-primary)]/20" 
+                                      : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]"
                                   }`}
-                                  style={{ transition: "border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 100ms ease" }}
+                                  style={{ transform: isSelected ? "scale(1.02)" : "scale(1)" }}
                                 >
+                                  {/* Animated background glow for selected state */}
+                                  {isSelected && (
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-[var(--brand-primary)]/5 to-transparent pointer-events-none" />
+                                  )}
+
                                   {/* Selection Checkmark Badge */}
                                   {isSelected && (
-                                    <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-md">
-                                      <Check className="w-2.5 h-2.5 text-white" />
-                                    </span>
+                                    <motion.span 
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-[var(--shadow-sm)]"
+                                    >
+                                      <Check className="w-3 h-3 text-white" />
+                                    </motion.span>
                                   )}
                                   
                                   <motion.div
@@ -1059,19 +1055,18 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                                       scale: { type: "spring", stiffness: 350, damping: 20 },
                                       rotate: { duration: 0.4, ease: "easeInOut" }
                                     }}
+                                    className={`p-2.5 rounded-xl mb-2.5 ${isSelected ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"}`}
                                   >
-                                    <Icon className={`w-5 h-5 mb-2 ${
-                                      isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"
-                                    }`} />
+                                    <Icon className="w-5 h-5" />
                                   </motion.div>
                                   
-                                  <span className={`text-[12px] font-display font-bold leading-none ${
-                                    isSelected ? "text-[var(--brand-text-strong)]" : "text-[var(--text-primary)]"
+                                  <span className={`text-xs font-bold tracking-tight ${
+                                    isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"
                                   }`}>
                                     {opt.label}
                                   </span>
                                   
-                                  <span className="text-[10px] text-[var(--text-secondary)] leading-tight mt-1 px-1 opacity-85 select-none pointer-events-none">
+                                  <span className="text-[10px] text-[var(--text-tertiary)] leading-tight mt-1.5 px-1 font-medium select-none pointer-events-none">
                                     {opt.desc}
                                   </span>
                                 </button>
@@ -1093,81 +1088,111 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.coreInfoSubtitle}</p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                           {/* Services & Pricing Field */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              <DollarSign className="w-3.5 h-3.5 text-indigo-500" />
+                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+                              <DollarSign className="w-4 h-4 text-indigo-500" />
                               {t.services}
                             </label>
                             <textarea
                               value={servicesText}
-                              onChange={(e) => setServicesText(e.target.value)}
+                              onChange={(e) => {
+                                setServicesText(e.target.value);
+                                setHasChanges(true);
+                              }}
                               placeholder={t.servicesPlaceholder}
-                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
                             />
-                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.servicesHelper}</p>
+                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+                              <span>{t.servicesHelper}</span>
+                              <span className="font-mono">{servicesText?.length || 0} chars</span>
+                            </div>
                           </div>
 
                           {/* Working Hours Field */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-amber-500" />
+                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+                              <Clock className="w-4 h-4 text-amber-500" />
                               {t.hours}
                             </label>
                             <textarea
                               value={hoursText}
-                              onChange={(e) => setHoursText(e.target.value)}
+                              onChange={(e) => {
+                                setHoursText(e.target.value);
+                                setHasChanges(true);
+                              }}
                               placeholder={t.hoursPlaceholder}
-                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
                             />
-                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.hoursHelper}</p>
+                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+                              <span>{t.hoursHelper}</span>
+                              <span className="font-mono">{hoursText?.length || 0} chars</span>
+                            </div>
                           </div>
 
                           {/* Payment Methods Field */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              <CreditCard className="w-3.5 h-3.5 text-purple-500" />
+                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+                              <CreditCard className="w-4 h-4 text-purple-500" />
                               {t.payments}
                             </label>
                             <textarea
                               value={paymentMethodsText}
-                              onChange={(e) => setPaymentMethodsText(e.target.value)}
+                              onChange={(e) => {
+                                setPaymentMethodsText(e.target.value);
+                                setHasChanges(true);
+                              }}
                               placeholder={t.paymentsPlaceholder}
-                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
                             />
-                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.paymentsHelper}</p>
+                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+                              <span>{t.paymentsHelper}</span>
+                              <span className="font-mono">{paymentMethodsText?.length || 0} chars</span>
+                            </div>
                           </div>
 
                           {/* Target Audience Field */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4 text-pink-500" />
                               {t.targetAudience}
                             </label>
                             <textarea
                               value={targetAudienceText}
-                              onChange={(e) => setTargetAudienceText(e.target.value)}
+                              onChange={(e) => {
+                                setTargetAudienceText(e.target.value);
+                                setHasChanges(true);
+                              }}
                               placeholder={t.targetAudiencePlaceholder}
-                              className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
                             />
-                            <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.targetAudienceHelper}</p>
+                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+                              <span>{t.targetAudienceHelper}</span>
+                              <span className="font-mono">{targetAudienceText?.length || 0} chars</span>
+                            </div>
                           </div>
                         </div>
 
                         {/* Special Rules & Policies Field */}
-                        <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
-                          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                            <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
+                        <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5 mt-5">
+                          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-rose-500 animate-pulse" />
                             {t.specialRules}
                           </label>
                           <textarea
                             value={rulesText}
-                            onChange={(e) => setRulesText(e.target.value)}
+                            onChange={(e) => {
+                              setRulesText(e.target.value);
+                              setHasChanges(true);
+                            }}
                             placeholder={t.specialRulesPlaceholder}
-                            className={`${inputBaseClass} py-3.5 leading-relaxed min-h-[90px] resize-y`}
+                            className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
                           />
-                          <p className="text-[10px] text-[var(--text-tertiary)] leading-tight">{t.specialRulesHelper}</p>
+                          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+                            <span>{t.specialRulesHelper}</span>
+                            <span className="font-mono">{rulesText?.length || 0} chars</span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1187,9 +1212,9 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           <button
                             type="button"
                             onClick={handleCopyToClipboard}
-                            className="h-9 px-3 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5 cursor-pointer outline-none transition-all duration-150 self-start sm:self-center"
+                            className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white border border-transparent rounded-[var(--radius-lg)] text-xs font-semibold flex items-center gap-2 cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] shadow-sm self-start sm:self-center"
                           >
-                            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-[var(--text-secondary)]" />}
+                            {isCopied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5 text-white" />}
                             <span>{isCopied ? t.copied : t.copyBtn}</span>
                           </button>
                         </div>
@@ -1204,23 +1229,32 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                               <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
                             </div>
                             <span className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-widest opacity-80 pointer-events-none flex items-center gap-1.5">
-                              <FileText className="w-3 h-3 text-[var(--color-ai)]" />
+                              <FileText className="w-3 h-3 text-[var(--color-ai)] animate-pulse" />
                               gemini-system-compiler.sh
                             </span>
                             <div className="w-14" /> {/* spacer balance */}
                           </div>
 
-                          {/* Terminal Workspace body */}
-                          <div className="p-5 text-xs leading-[1.8] font-mono text-slate-300 overflow-y-auto max-h-[360px] whitespace-pre-wrap select-text">
-                            {renderHighlightedPrompt(compiledPrompt)}
+                          {/* Terminal Workspace body with line numbers */}
+                          <div className="flex text-xs leading-[1.8] font-mono overflow-y-auto max-h-[380px] bg-[#070A13]">
+                            {/* Line numbers column */}
+                            <div className="p-5 pr-3 text-slate-600 border-r border-[#0B0F19] text-right select-none bg-[#05070e] shrink-0 font-mono">
+                              {compiledPrompt.split("\n").map((_, i) => (
+                                <div key={i}>{String(i + 1).padStart(2, "0")}</div>
+                              ))}
+                            </div>
+                            {/* Content column */}
+                            <div className="p-5 pl-4 text-slate-300 whitespace-pre-wrap select-text flex-1">
+                              {renderHighlightedPrompt(compiledPrompt)}
+                            </div>
                           </div>
                         </div>
 
                         {/* Variable vector stats helper */}
-                        <div className="flex items-start gap-2.5 p-3.5 rounded-[var(--radius-lg)] bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-xs text-[var(--brand-text)] font-sans leading-relaxed">
+                        <div className="flex items-start gap-3 p-4 rounded-[var(--radius-xl)] bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-xs text-[var(--brand-text)] font-sans leading-relaxed">
                           <Info className="w-4 h-4 shrink-0 text-[var(--brand-primary)] mt-0.5" />
                           <div>
-                            <span className="font-semibold block">How this compilation works:</span>
+                            <span className="font-bold text-[var(--brand-text-strong)] block mb-0.5">How this compilation works:</span>
                             The values you customize in the profile and knowledge tabs are dynamically injected as system prompt inputs inside Gemini. This ensures the live WhatsApp chatbot acts with high context and operates strictly within your rules.
                           </div>
                         </div>
@@ -1241,8 +1275,8 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                         </div>
 
                         {/* Google Calendar Section */}
-                        <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                          <div className="space-y-1">
+                        <div className="p-5 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-sm text-[var(--text-primary)]">Google Calendar</span>
                               {isCalendarConnected ? (
@@ -1256,7 +1290,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-[var(--text-secondary)] max-w-xl">
+                            <p className="text-xs text-[var(--text-secondary)] max-w-xl leading-relaxed">
                               Allows your Gemini AI representative to read your schedule, calculate free slots, and book new detailing appointments automatically.
                             </p>
                           </div>
@@ -1274,7 +1308,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                               <button
                                 type="button"
                                 onClick={handleConnectCalendar}
-                                className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+                                className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] shadow-[var(--shadow-sm)]"
                               >
                                 <Globe className="w-4 h-4" />
                                 Connect Google Calendar
@@ -1287,7 +1321,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                         {isCalendarConnected && (
                           <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
                             <div className="space-y-2">
-                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
                                 <FileText className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
                                 Google Calendar ID
                               </label>
@@ -1321,7 +1355,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           </div>
 
                           {/* Helper Link Guide */}
-                          <div className="p-6 rounded-[var(--radius-xl)] bg-[var(--bg-canvas)] border border-[var(--brand-border)] border-l-4 border-l-[var(--brand-primary)] shadow-[var(--shadow-sm)] flex flex-col gap-5 relative overflow-hidden transition-all duration-200">
+                          <div className="p-5 sm:p-6 rounded-[var(--radius-xl)] bg-[var(--bg-canvas)] border border-[var(--brand-border)] border-l-4 border-l-[var(--brand-primary)] shadow-[var(--shadow-sm)] flex flex-col gap-5 relative overflow-hidden transition-all duration-200">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-4 border-b border-[var(--border-subtle)]">
                               <div className="flex items-start gap-4">
                                 <div className="p-3 rounded-xl bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[var(--brand-primary)] shrink-0 self-start md:self-center">
@@ -1359,76 +1393,86 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                             </div>
                             
                             <div className="pt-0">
-
                               <AnimatePresence initial={false}>
                                 {showSetupGuide && (
                                   <motion.div
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: "auto", opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                                    transition={{ duration: 0.3, ease: "easeInOut" }}
                                     className="overflow-hidden"
                                   >
-                                    <div className="space-y-6 pt-4">
+                                    <div className="relative pl-6 sm:pl-8 border-l border-dashed border-[var(--border-subtle)] ml-3 sm:ml-4 space-y-8 pt-6 pb-2">
+                                      
                                       {/* Step 1 */}
-                                      <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold">1</span>
-                                          <span className="font-bold text-xs text-[var(--brand-text-strong)]">Generate Your Meta Access Token</span>
+                                      <div className="relative space-y-3">
+                                        {/* Timeline Node Bullet */}
+                                        <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
+                                          1
                                         </div>
-                                        <p className="text-[11px] text-[var(--text-secondary)] pl-7">
-                                          Click the blue <strong>Generate access token</strong> button to create a temporary token for your development environment.
-                                        </p>
-                                        <div className="pl-7">
-                                          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1.5 max-w-2xl shadow-inner">
-                                            <img 
-                                              src="/setup/step1.png" 
-                                              alt="Step 1: Generate Access Token" 
-                                              className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)]"
-                                            />
-                                          </div>
+                                        <div className="space-y-1">
+                                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                                            Generate Your Meta Access Token
+                                          </h5>
+                                          <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                                            Click the blue <strong>Generate access token</strong> button to create a temporary token for your development environment.
+                                          </p>
+                                        </div>
+                                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
+                                          <img 
+                                            src="/setup/step1.png" 
+                                            alt="Step 1: Generate Access Token" 
+                                            className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
+                                          />
                                         </div>
                                       </div>
 
                                       {/* Step 2 */}
-                                      <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold">2</span>
-                                          <span className="font-bold text-xs text-[var(--brand-text-strong)]">Copy the Phone Number ID</span>
+                                      <div className="relative space-y-3">
+                                        {/* Timeline Node Bullet */}
+                                        <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
+                                          2
                                         </div>
-                                        <p className="text-[11px] text-[var(--text-secondary)] pl-7">
-                                          Copy the <strong>Phone number ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">123456789012345</code>) by clicking the copy icon next to it. Paste this in the Phone Number ID input below.
-                                        </p>
-                                        <div className="pl-7">
-                                          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1.5 max-w-2xl shadow-inner">
-                                            <img 
-                                              src="/setup/step2.png" 
-                                              alt="Step 2: Copy Phone Number ID" 
-                                              className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)]"
-                                            />
-                                          </div>
+                                        <div className="space-y-1">
+                                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                                            Copy the Phone Number ID
+                                          </h5>
+                                          <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                                            Copy the <strong>Phone number ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-subtle)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">123456789012345</code>) by clicking the copy icon next to it. Paste this in the Phone Number ID input below.
+                                          </p>
+                                        </div>
+                                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
+                                          <img 
+                                            src="/setup/step2.png" 
+                                            alt="Step 2: Copy Phone Number ID" 
+                                            className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
+                                          />
                                         </div>
                                       </div>
 
                                       {/* Step 3 */}
-                                      <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold">3</span>
-                                          <span className="font-bold text-xs text-[var(--brand-text-strong)]">Copy the WhatsApp Business Account ID</span>
+                                      <div className="relative space-y-3">
+                                        {/* Timeline Node Bullet */}
+                                        <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
+                                          3
                                         </div>
-                                        <p className="text-[11px] text-[var(--text-secondary)] pl-7">
-                                          Copy the <strong>WhatsApp Business Account ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">987654321098765</code>) using the copy icon. Paste this in the WABA ID input below.
-                                        </p>
-                                        <div className="pl-7">
-                                          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1.5 max-w-2xl shadow-inner">
-                                            <img 
-                                              src="/setup/step3.png" 
-                                              alt="Step 3: Copy WhatsApp Business Account ID" 
-                                              className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)]"
-                                            />
-                                          </div>
+                                        <div className="space-y-1">
+                                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                                            Copy the WhatsApp Business Account ID
+                                          </h5>
+                                          <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                                            Copy the <strong>WhatsApp Business Account ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-subtle)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">987654321098765</code>) using the copy icon. Paste this in the WABA ID input below.
+                                          </p>
+                                        </div>
+                                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
+                                          <img 
+                                            src="/setup/step3.png" 
+                                            alt="Step 3: Copy WhatsApp Business Account ID" 
+                                            className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
+                                          />
                                         </div>
                                       </div>
+
                                     </div>
                                   </motion.div>
                                 )}
@@ -1437,9 +1481,9 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           </div>
 
                           {/* Connection Badge Status */}
-                          <div className="p-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex items-center justify-between gap-4">
+                          <div className="p-5 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="space-y-1">
-                              <span className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider block">
+                              <span className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] block">
                                 Integration Status
                               </span>
                               <div className="flex items-center gap-2">
@@ -1455,7 +1499,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-[var(--text-secondary)] max-w-xl">
+                              <p className="text-xs text-[var(--text-secondary)] max-w-xl leading-relaxed">
                                 {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
                                   <>
                                     Active Phone Number ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappPhoneNumberId}</code> and WABA ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappBusinessAccountId}</code>.
@@ -1468,10 +1512,10 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                           </div>
 
                           {/* Manual API Configuration Card */}
-                          <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-4 shadow-[var(--shadow-sm)]">
-                            <div className="border-b border-[var(--border-subtle)] pb-2">
+                          <div className="p-5 sm:p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-4 shadow-[var(--shadow-sm)]">
+                            <div className="border-b border-[var(--border-subtle)] pb-2.5">
                               <h4 className="text-xs font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-                                <Terminal className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                                <Terminal className="w-4 h-4 text-[var(--brand-primary)]" />
                                 Manual API Credentials
                               </h4>
                               <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">

@@ -356,19 +356,19 @@ export default function LeadsDashboard() {
   }) => (
     <motion.div
       whileHover={{ y: -4, scale: 1.01 }}
-      className="glass-card rounded-[var(--radius-lg)] p-5 relative overflow-hidden shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]"
+      className="glass-card rounded-[var(--radius-lg)] p-4 sm:p-5 relative overflow-hidden shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]"
       style={{ transition: "box-shadow 200ms ease, border-color 200ms ease" }}
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--brand-primary)]/5 rounded-full blur-2xl pointer-events-none" />
-      <div className="flex items-center justify-between mb-3.5 select-none relative z-10">
-        <span className="text-[11px] font-sans font-bold text-[var(--text-secondary)] uppercase tracking-[1px]">
+      <div className="flex items-center justify-between mb-3.5 select-none relative z-10 gap-2">
+        <span className="text-[10px] sm:text-[11px] font-sans font-bold text-[var(--text-secondary)] uppercase tracking-[1px]">
           {label}
         </span>
-        <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center border border-[var(--border-subtle)]">
-          <Icon className="w-4 h-4 shrink-0" style={{ color: iconColor }} />
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center border border-[var(--border-subtle)] shrink-0">
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" style={{ color: iconColor }} />
         </div>
       </div>
-      <h2 className="font-display text-[32px] font-extrabold text-[var(--text-primary)] leading-none select-text relative z-10 font-sans tracking-tight">
+      <h2 className="font-display text-[26px] sm:text-[32px] font-extrabold text-[var(--text-primary)] leading-none select-text relative z-10 font-sans tracking-tight">
         {isLoading ? "..." : value}
       </h2>
     </motion.div>
@@ -378,7 +378,7 @@ export default function LeadsDashboard() {
     <div className="h-full overflow-y-auto px-6 py-6 bg-[var(--bg-canvas)] select-none space-y-6 premium-bg-radial">
 
       {/* ─── Stats Header Row ────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard icon={Users} label="Total Captured" value={totalLeads} iconColor="var(--brand-primary)" />
         <StatCard icon={TrendingUp} label="New This Week" value={newThisWeek} iconColor="var(--brand-primary)" />
         <StatCard icon={AlertTriangle} label="High Urgency" value={highUrgencyCount} iconColor="var(--danger-icon)" />
