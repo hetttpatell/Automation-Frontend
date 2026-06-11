@@ -529,7 +529,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Right: Portal target for module-specific CTAs */}
           <div className="flex items-center gap-4">
             {creditsBalance !== null && creditsLimit !== null && (
-              <Link href="/pricing" className="outline-none">
+              <Link href="/pricing" className="outline-none hidden sm:inline-flex">
                 <div
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] hover:border-[var(--brand-primary)] cursor-pointer select-none transition-all duration-200 ${
                     creditsBalance < 0.1 * creditsLimit
@@ -572,6 +572,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       <p className="text-xs font-bold text-[var(--text-primary)] truncate font-sans">{businessName}</p>
                       <p className="text-[10px] text-[var(--text-secondary)] truncate mt-0.5">{userEmail || "operator"}</p>
                     </div>
+
+                    {/* Credits Balance Display (Mobile) */}
+                    {creditsBalance !== null && creditsLimit !== null && (
+                      <Link href="/pricing" onClick={() => setIsMobileDropdownOpen(false)}>
+                        <div className="px-3 py-2 border-b border-[var(--border-subtle)] pb-2 mb-2 hover:bg-[var(--bg-subtle)]/50 rounded-[var(--radius-md)] flex items-center justify-between transition-all duration-150">
+                          <div className="space-y-0.5 text-left">
+                            <p className="text-[10px] uppercase font-mono font-bold text-[var(--text-tertiary)]">Credits Balance</p>
+                            <p className="text-xs font-mono font-bold text-[var(--text-primary)]">
+                              ⚡ {creditsBalance} <span className="text-[var(--text-tertiary)] font-normal">/ {creditsLimit}</span>
+                            </p>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" />
+                        </div>
+                      </Link>
+                    )}
 
                     {/* Theme Switcher inside mobile dropdown */}
                     <div className="flex items-center justify-between px-3 py-2 hover:bg-[var(--bg-subtle)]/50 rounded-[var(--radius-md)] mb-1">

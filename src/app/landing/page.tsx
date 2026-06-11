@@ -155,8 +155,8 @@ export default function Home() {
       <Navbar />
 
       {/* Main Hero Section */}
-      <main className="relative z-10 flex-1 flex items-center max-w-7xl w-full mx-auto px-6 py-12 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-16 lg:gap-12 items-center w-full">
+      <main className="relative z-10 flex-1 flex items-center max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 sm:gap-16 lg:gap-12 items-center w-full">
           
           {/* Left Column (The Pitch) */}
           <div className="flex flex-col items-start gap-8">
@@ -166,7 +166,7 @@ export default function Home() {
             </div>
 
             {/* Headline */}
-            <h1 className="font-calistoga text-5xl sm:text-6xl lg:text-7xl text-slate-900 tracking-tight leading-[1.08] text-left">
+            <h1 className="font-calistoga text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl text-slate-900 tracking-tight leading-[1.08] text-left">
               Turn WhatsApp into your best{" "}
               <span className="bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-transparent font-calistoga select-none">
                 salesperson.
@@ -174,7 +174,7 @@ export default function Home() {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg text-slate-600 font-sans leading-relaxed max-w-xl text-left">
+            <p className="text-base sm:text-lg text-slate-600 font-sans leading-relaxed max-w-xl text-left">
               Deploy intelligent AI agents that converse instantly with prospects, answer inquiries, schedule bookings, and extract highly structured leads into your CRM in real time.
             </p>
 
@@ -195,38 +195,38 @@ export default function Home() {
             </div>
 
             {/* Key Value Props / Social Proof */}
-            <div className="w-full pt-6 border-t border-slate-200/60 grid grid-cols-3 gap-6">
-              <div className="flex flex-col items-start gap-2">
-                <div className="p-2 rounded-lg bg-accent/5 text-accent">
+            <div className="w-full pt-6 border-t border-slate-200/60 grid grid-cols-3 gap-3 sm:gap-6">
+              <div className="flex flex-col items-start gap-1.5 sm:gap-2">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-accent/5 text-accent">
                   <Zap className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-slate-800">Instant Setup</span>
-                <span className="text-xs text-slate-500">Go live in minutes.</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-800">Instant Setup</span>
+                <span className="text-[10px] sm:text-xs text-slate-500 leading-snug">Go live in minutes.</span>
               </div>
-              <div className="flex flex-col items-start gap-2">
-                <div className="p-2 rounded-lg bg-accent/5 text-accent">
+              <div className="flex flex-col items-start gap-1.5 sm:gap-2">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-accent/5 text-accent">
                   <Layers className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-slate-800">99% Extraction</span>
-                <span className="text-xs text-slate-500">Highly accurate AI data.</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-800">99% Extraction</span>
+                <span className="text-[10px] sm:text-xs text-slate-500 leading-snug">Highly accurate AI data.</span>
               </div>
-              <div className="flex flex-col items-start gap-2">
-                <div className="p-2 rounded-lg bg-accent/5 text-accent">
+              <div className="flex flex-col items-start gap-1.5 sm:gap-2">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-accent/5 text-accent">
                   <Shield className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-semibold text-slate-800">Secure Vault</span>
-                <span className="text-xs text-slate-500">GDPR & SOC-2 ready.</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-800">Secure Vault</span>
+                <span className="text-[10px] sm:text-xs text-slate-500 leading-snug">GDPR & SOC-2 ready.</span>
               </div>
             </div>
           </div>
 
           {/* Right Column (Interactive Demo with Slim iPhone Frame) */}
-          <div className="flex items-center justify-center relative w-full lg:h-[680px]">
+          <div className="flex flex-col items-center justify-center relative w-full lg:h-[680px]">
             {/* Ambient decorative glowing backdrops */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] bg-gradient-to-tr from-accent/15 to-accent-secondary/15 rounded-full blur-[80px] -z-10 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[380px] h-[280px] sm:h-[380px] bg-gradient-to-tr from-accent/15 to-accent-secondary/15 rounded-full blur-[80px] -z-10 pointer-events-none" />
 
             {/* iPhone 15 Pro Container */}
-            <div className="relative w-[320px] h-[620px] border-[6px] border-slate-950 rounded-[2.8rem] bg-slate-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-visible ring-1 ring-slate-900/10">
+            <div className="relative w-[260px] sm:w-[300px] md:w-[320px] h-[510px] sm:h-[580px] md:h-[620px] border-[5px] sm:border-[6px] border-slate-950 rounded-[2.4rem] sm:rounded-[2.8rem] bg-slate-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-visible ring-1 ring-slate-900/10">
               
               {/* iPhone Inner Screen */}
               <div className="absolute inset-[1px] rounded-[2.5rem] overflow-hidden bg-[#e5ddd5] flex flex-col">
@@ -435,11 +435,11 @@ export default function Home() {
                 {step >= 10 && (
                   <motion.div
                     key="wow-lead-card"
-                    initial={{ opacity: 0, x: 100, scale: 0.9, y: 0 }}
-                    animate={{ opacity: 1, x: 0, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, x: 60, scale: 0.9, transition: { duration: 0.25 } }}
+                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.9, transition: { duration: 0.25 } }}
                     transition={{ type: "spring", stiffness: 120, damping: 14 }}
-                    className="absolute right-[-65px] top-[26%] w-[275px] bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-200/80 rounded-2xl p-4.5 z-30"
+                    className="absolute -bottom-4 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:bottom-auto sm:right-[-65px] sm:top-[26%] w-[240px] sm:w-[275px] bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-200/80 rounded-2xl p-3.5 sm:p-4.5 z-30"
                   >
                     <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-slate-100">
                       <div className="flex items-center gap-1.5 text-accent">
@@ -495,28 +495,31 @@ export default function Home() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Mobile spacer for lead card overflow */}
+            <div className="h-[260px] sm:h-0 w-full shrink-0" />
           </div>
 
         </div>
       </main>
 
       {/* Features Section */}
-      <section id="features" className="relative z-10 w-full max-w-7xl mx-auto px-6 py-28 border-t border-slate-200/50">
-        <div className="flex flex-col items-start max-w-3xl mb-16">
+      <section id="features" className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-28 border-t border-slate-200/50">
+        <div className="flex flex-col items-start max-w-3xl mb-10 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-xs font-mono font-bold tracking-wider text-accent uppercase mb-4">
             <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
             CORE CAPABILITIES
           </div>
-          <h2 className="font-calistoga text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight mb-4">
+          <h2 className="font-calistoga text-3xl sm:text-4xl md:text-5xl text-slate-900 tracking-tight leading-tight mb-4">
             Everything you need to automate your inbound pipeline.
           </h2>
-          <p className="text-lg text-slate-600 font-sans leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-600 font-sans leading-relaxed">
             Stop letting hot leads turn cold. LeadFlow works 24/7 to nurture, qualify, and convert every incoming WhatsApp conversation automatically.
           </p>
         </div>
 
         {/* Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8">
           
           {/* Card 1 */}
           <motion.div
@@ -524,7 +527,7 @@ export default function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="lg:col-span-6 group relative bg-white border border-slate-100/80 rounded-3xl p-8 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer min-h-[480px]"
+            className="lg:col-span-6 group relative bg-white border border-slate-100/80 rounded-3xl p-5 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer min-h-0 sm:min-h-[480px]"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent-secondary flex items-center justify-center text-white mb-6 shadow-md shadow-accent/15 group-hover:scale-110 transition-transform duration-300">
@@ -589,7 +592,7 @@ export default function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
-            className="lg:col-span-6 group relative bg-white border border-slate-100/80 rounded-3xl p-8 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer min-h-[480px]"
+            className="lg:col-span-6 group relative bg-white border border-slate-100/80 rounded-3xl p-5 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer min-h-0 sm:min-h-[480px]"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent-secondary flex items-center justify-center text-white mb-6 shadow-md shadow-accent/15 group-hover:scale-110 transition-transform duration-300">
@@ -650,7 +653,7 @@ export default function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.5, delay: 0.35, ease: "easeOut" }}
-            className="lg:col-span-12 group relative bg-white border border-slate-100/80 rounded-3xl p-8 lg:p-10 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col lg:flex-row gap-8 lg:gap-12 justify-between items-stretch overflow-hidden cursor-pointer"
+            className="lg:col-span-12 group relative bg-white border border-slate-100/80 rounded-3xl p-5 sm:p-8 lg:p-10 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col lg:flex-row gap-6 sm:gap-8 lg:gap-12 justify-between items-stretch overflow-hidden cursor-pointer"
           >
             <div className="flex flex-col justify-center flex-1 max-w-xl">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent-secondary flex items-center justify-center text-white mb-6 shadow-md shadow-accent/15 group-hover:scale-110 transition-transform duration-300">
@@ -714,29 +717,29 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section id="solutions" className="relative bg-[#0b0f19] py-32 overflow-hidden w-full">
+      <section id="solutions" className="relative bg-[#0b0f19] py-16 sm:py-24 lg:py-32 overflow-hidden w-full">
         <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px] opacity-30 pointer-events-none" />
         
         <div className="absolute -top-40 -left-40 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute -bottom-40 -right-40 w-[400px] h-[400px] bg-accent-secondary/10 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6">
-          <div className="flex flex-col items-start max-w-3xl mb-24">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col items-start max-w-3xl mb-12 sm:mb-24">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-xs font-mono font-bold tracking-wider text-accent uppercase mb-4">
               <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
               IMPLEMENTATION ROADMAP
             </div>
-            <h2 className="font-calistoga text-4xl md:text-5xl text-white tracking-tight leading-tight mb-4">
+            <h2 className="font-calistoga text-3xl sm:text-4xl md:text-5xl text-white tracking-tight leading-tight mb-4">
               Deploying LeadFlow in three simple steps.
             </h2>
-            <p className="text-lg text-slate-400 font-sans leading-relaxed">
+            <p className="text-base sm:text-lg text-slate-400 font-sans leading-relaxed">
               No complex development cycles. Integrate your custom WhatsApp flows with your CRM instantly.
             </p>
           </div>
 
-          <div className="space-y-24">
+          <div className="space-y-14 sm:space-y-24">
             {/* Step 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center">
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -802,7 +805,7 @@ export default function Home() {
             </div>
 
             {/* Step 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center">
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -873,7 +876,7 @@ export default function Home() {
             </div>
 
             {/* Step 3 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center">
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -962,7 +965,7 @@ export default function Home() {
       </section>
 
       {/* Global Footer */}
-      <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/50 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 mt-auto">
+      <footer className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 border-t border-slate-200/50 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 mt-auto">
         <span>&copy; {new Date().getFullYear()} LeadFlow. All rights reserved.</span>
         <div className="flex items-center gap-6">
           <a href="#terms" className="hover:text-slate-600 transition-colors">Terms of Service</a>

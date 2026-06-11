@@ -587,8 +587,8 @@ export default function CampaignsPage() {
               </span>
             </div>
 
-            {/* WhatsApp Premium Glass Mockup */}
-            <div className="relative mx-auto max-w-[365px] rounded-[36px] border-[8px] border-slate-900 bg-slate-950 p-1.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden">
+            {/* WhatsApp Premium Glass Mockup (Desktop) */}
+            <div className="hidden md:block relative mx-auto max-w-[365px] rounded-[36px] border-[8px] border-slate-900 bg-slate-950 p-1.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden">
               {/* Phone Speaker & Camera Bezel Notch */}
               <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-28 h-4 bg-slate-900 rounded-full z-40 flex items-center justify-center gap-1.5 px-3">
                 <div className="w-8 h-1 bg-slate-800 rounded-full" />
@@ -702,6 +702,64 @@ export default function CampaignsPage() {
                       <path d="M12 19V5M5 12l7-7 7 7" />
                     </svg>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile WhatsApp Chat Preview (No dummy phone frame) */}
+            <div className="block md:hidden rounded-[var(--radius-lg)] overflow-hidden border border-slate-800/20 bg-[#0B141A] shadow-md">
+              {/* WA Chat Area */}
+              <div
+                className="relative min-h-[160px] p-4 flex flex-col justify-center"
+                style={{
+                  backgroundColor: "#0B141A",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23131d25' fill-opacity='0.6'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}
+              >
+                {/* Outgoing message bubble (green) */}
+                <div className="flex justify-end">
+                  <motion.div
+                    key={customMessage}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative max-w-[90%] rounded-lg px-3 pt-2 pb-1.5 shadow-sm"
+                    style={{
+                      backgroundColor: "#005C4B",
+                      borderTopRightRadius: "2px",
+                    }}
+                  >
+                    {/* Tail */}
+                    <div
+                      className="absolute -right-1.5 top-0 w-0 h-0"
+                      style={{
+                        borderLeft: "6px solid #005C4B",
+                        borderTop: "0px solid transparent",
+                        borderBottom: "6px solid transparent",
+                      }}
+                    />
+                    <p className="text-[13px] font-sans text-[#E9EDEF] leading-[1.45] whitespace-pre-wrap break-words pr-12">
+                      {getPreviewText(customMessage)}
+                    </p>
+                    {/* Timestamp + Read receipt */}
+                    <div className="flex items-center justify-end gap-0.5 -mt-0.5">
+                      <span className="text-[9.5px] font-sans text-[#8696A0]/80 tabular-nums">
+                        {currentTime}
+                      </span>
+                      {/* Double-check read receipt */}
+                      <svg
+                        className="w-3.5 h-3.5 text-[#53BDEB]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 6L7 17l-5-5" />
+                        <path d="M22 6L11 17" />
+                      </svg>
+                    </div>
+                  </motion.div>
                 </div>
               </div>
             </div>

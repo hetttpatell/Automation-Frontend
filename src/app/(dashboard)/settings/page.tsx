@@ -1668,7 +1668,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               <button
                 type="button"
                 onClick={handleDiscard}
-                className="h-9 px-3.5 rounded-[var(--radius-lg)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-all duration-150"
+                className="h-9 px-3.5 rounded-[var(--radius-lg)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer outline-none transition-all duration-150 whitespace-nowrap"
               >
                 {t.discard}
               </button>
@@ -1677,17 +1677,27 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               type="button"
               onClick={handleSave}
               disabled={isSaving || !hasChanges}
-              className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none flex items-center gap-1.5 active:scale-[0.97] disabled:cursor-not-allowed transition-all duration-150 shadow-[var(--shadow-sm)]"
+              className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none flex items-center gap-1.5 active:scale-[0.97] disabled:cursor-not-allowed transition-all duration-150 shadow-[var(--shadow-sm)] whitespace-nowrap"
             >
               {isSaving ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                  <span>{t.saving}</span>
+                  <span>
+                    <span className="hidden sm:inline">{t.saving}</span>
+                    <span className="inline sm:hidden">
+                      {formLanguage === "en" ? "Saving..." : formLanguage === "hi" ? "सहेजा जा रहा है..." : "સાચવી રહ્યું છે..."}
+                    </span>
+                  </span>
                 </>
               ) : (
                 <>
                   <Save className="w-3.5 h-3.5 shrink-0" />
-                  <span>{t.save}</span>
+                  <span>
+                    <span className="hidden sm:inline">{t.save}</span>
+                    <span className="inline sm:hidden">
+                      {formLanguage === "en" ? "Save" : formLanguage === "hi" ? "सहेजें" : "સાચવો"}
+                    </span>
+                  </span>
                 </>
               )}
             </button>
