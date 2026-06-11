@@ -155,7 +155,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
 
 // Active highlight sliding animations are defined in navigation render loops
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
