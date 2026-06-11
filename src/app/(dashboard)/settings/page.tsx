@@ -220,6 +220,9 @@ export default function SettingsPage() {
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<"profile" | "vectors" | "compiler" | "integrations">("profile");
 
+  // Active accordion section for mobile collapsible view
+  const [activeAccordion, setActiveAccordion] = useState<"profile" | "vectors" | "compiler" | "integrations" | null>("profile");
+
   // Form states
   const [businessName, setBusinessName] = useState("");
   const [servicesText, setServicesText] = useState("");
@@ -791,6 +794,707 @@ ${rulesText || "Customer satisfaction is paramount."}`;
 
   const inputBaseClass = "w-full px-3.5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)] transition-all duration-150";
 
+  // ─── Render Sub-panels ──────────────────────────────────────────────
+
+  const renderProfileTab = () => (
+    <div className="space-y-6">
+      <div className="border-b border-[var(--border-subtle)] pb-4">
+        <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-[var(--brand-primary)]" />
+          {t.identityTitle}
+        </h2>
+        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.identitySubtitle}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Business Name Field */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />
+            {t.businessName}
+          </label>
+          <input
+            type="text"
+            value={businessName}
+            onChange={(e) => {
+              setBusinessName(e.target.value);
+              setHasChanges(true);
+            }}
+            placeholder={t.businessNamePlaceholder}
+            className={`${inputBaseClass} h-11`}
+          />
+          <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+            {t.businessNameHelper}
+          </p>
+        </div>
+
+        {/* Primary Bot Language Field */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5" />
+            {t.botLanguage}
+          </label>
+          <div className="relative">
+            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
+            <select
+              value={botLanguage}
+              onChange={(e) => {
+                setBotLanguage(e.target.value);
+                setHasChanges(true);
+              }}
+              className={`${inputBaseClass} h-11 pl-10 pr-10 cursor-pointer appearance-none`}
+            >
+              <option value="English">English</option>
+              <option value="Hindi">Hindi (हिंदी)</option>
+              <option value="Hinglish">Hinglish</option>
+              <option value="Spanish">Spanish (Español)</option>
+              <option value="Arabic">Arabic (العربية)</option>
+              <option value="French">French (Français)</option>
+              <option value="Portuguese">Portuguese (Português)</option>
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none select-none">
+              <ChevronDown className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+            {t.botLanguageHelper}
+          </p>
+        </div>
+      </div>
+
+      {/* Tone Presets Selector */}
+      <div className="space-y-4 pt-5 border-t border-[var(--border-subtle)]">
+        <div>
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[var(--brand-primary)] animate-pulse" />
+            {t.aiToneTitle}
+          </label>
+          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.aiToneSubtitle}</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 select-none">
+          {TONE_OPTIONS.map((opt) => {
+            const isSelected = aiTone === opt.value;
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setAiTone(opt.value);
+                  setHasChanges(true);
+                }}
+                className={`p-4 rounded-[var(--radius-xl)] border flex flex-col items-center justify-center text-center cursor-pointer select-none relative overflow-hidden transition-all duration-200 min-h-[120px] ${
+                  isSelected 
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/40 shadow-[var(--shadow-md)] ring-2 ring-[var(--brand-primary)]/20" 
+                    : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]"
+                }`}
+                style={{ transform: isSelected ? "scale(1.02)" : "scale(1)" }}
+              >
+                {/* Animated background glow for selected state */}
+                {isSelected && (
+                  <div className="absolute inset-0 bg-gradient-to-tr from-[var(--brand-primary)]/5 to-transparent pointer-events-none" />
+                )}
+
+                {/* Selection Checkmark Badge */}
+                {isSelected && (
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-[var(--shadow-sm)]"
+                  >
+                    <Check className="w-3 h-3 text-white" />
+                  </motion.span>
+                )}
+                
+                <motion.div
+                  animate={{ 
+                    scale: isSelected ? 1.15 : 1,
+                    rotate: isSelected ? [0, 6, -6, 0] : 0
+                  }}
+                  transition={{ 
+                    scale: { type: "spring", stiffness: 350, damping: 20 },
+                    rotate: { duration: 0.4, ease: "easeInOut" }
+                  }}
+                  className={`p-2.5 rounded-xl mb-2.5 ${isSelected ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"}`}
+                >
+                  <Icon className="w-5 h-5" />
+                </motion.div>
+                
+                <span className={`text-xs font-bold tracking-tight ${
+                  isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"
+                }`}>
+                  {opt.label}
+                </span>
+                
+                <span className="text-[10px] text-[var(--text-tertiary)] leading-tight mt-1.5 px-1 font-medium select-none pointer-events-none">
+                  {opt.desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderVectorsTab = () => (
+    <div className="space-y-6">
+      <div className="border-b border-[var(--border-subtle)] pb-4">
+        <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-[var(--brand-primary)]" />
+          {t.coreInfoTitle}
+        </h2>
+        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.coreInfoSubtitle}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Services & Pricing Field */}
+        <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+            <DollarSign className="w-4 h-4 text-indigo-500" />
+            {t.services}
+          </label>
+          <textarea
+            value={servicesText}
+            onChange={(e) => {
+              setServicesText(e.target.value);
+              setHasChanges(true);
+            }}
+            placeholder={t.servicesPlaceholder}
+            className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
+          />
+          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+            <span>{t.servicesHelper}</span>
+            <span className="font-mono">{servicesText?.length || 0} chars</span>
+          </div>
+        </div>
+
+        {/* Working Hours Field */}
+        <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-amber-500" />
+            {t.hours}
+          </label>
+          <textarea
+            value={hoursText}
+            onChange={(e) => {
+              setHoursText(e.target.value);
+              setHasChanges(true);
+            }}
+            placeholder={t.hoursPlaceholder}
+            className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
+          />
+          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+            <span>{t.hoursHelper}</span>
+            <span className="font-mono">{hoursText?.length || 0} chars</span>
+          </div>
+        </div>
+
+        {/* Payment Methods Field */}
+        <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+            <CreditCard className="w-4 h-4 text-purple-500" />
+            {t.payments}
+          </label>
+          <textarea
+            value={paymentMethodsText}
+            onChange={(e) => {
+              setPaymentMethodsText(e.target.value);
+              setHasChanges(true);
+            }}
+            placeholder={t.paymentsPlaceholder}
+            className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
+          />
+          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+            <span>{t.paymentsHelper}</span>
+            <span className="font-mono">{paymentMethodsText?.length || 0} chars</span>
+          </div>
+        </div>
+
+        {/* Target Audience Field */}
+        <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-pink-500" />
+            {t.targetAudience}
+          </label>
+          <textarea
+            value={targetAudienceText}
+            onChange={(e) => {
+              setTargetAudienceText(e.target.value);
+              setHasChanges(true);
+            }}
+            placeholder={t.targetAudiencePlaceholder}
+            className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
+          />
+          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+            <span>{t.targetAudienceHelper}</span>
+            <span className="font-mono">{targetAudienceText?.length || 0} chars</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Special Rules & Policies Field */}
+      <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5 mt-5">
+        <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-rose-500 animate-pulse" />
+          {t.specialRules}
+        </label>
+        <textarea
+          value={rulesText}
+          onChange={(e) => {
+            setRulesText(e.target.value);
+            setHasChanges(true);
+          }}
+          placeholder={t.specialRulesPlaceholder}
+          className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
+        />
+        <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+          <span>{t.specialRulesHelper}</span>
+          <span className="font-mono">{rulesText?.length || 0} chars</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCompilerTab = () => (
+    <div className="space-y-6">
+      <div className="border-b border-[var(--border-subtle)] pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-[var(--brand-primary)]" />
+            {t.promptPreview}
+          </h2>
+          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.promptPreviewSubtitle}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopyToClipboard}
+          className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white border border-transparent rounded-[var(--radius-lg)] text-xs font-semibold flex items-center gap-2 cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] shadow-sm self-start sm:self-center"
+        >
+          {isCopied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5 text-white" />}
+          <span>{isCopied ? t.copied : t.copyBtn}</span>
+        </button>
+      </div>
+
+      {/* Compiler Terminal Mockup */}
+      <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[#070A13] p-0 relative select-text flex flex-col shadow-[var(--shadow-lg)]">
+        {/* Terminal Header */}
+        <div className="h-10 bg-[#0B0F19] border-b border-[var(--border-subtle)] flex items-center justify-between px-4 select-none shrink-0">
+          <div className="flex items-center gap-1.5 select-none pointer-events-none">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+          </div>
+          <span className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-widest opacity-80 pointer-events-none flex items-center gap-1.5">
+            <FileText className="w-3 h-3 text-[var(--color-ai)] animate-pulse" />
+            gemini-system-compiler.sh
+          </span>
+          <div className="w-14" /> {/* spacer balance */}
+        </div>
+
+        {/* Terminal Workspace body with line numbers */}
+        <div className="flex text-xs leading-[1.8] font-mono overflow-y-auto max-h-[380px] bg-[#070A13]">
+          {/* Line numbers column */}
+          <div className="p-5 pr-3 text-slate-600 border-r border-[#0B0F19] text-right select-none bg-[#05070e] shrink-0 font-mono">
+            {compiledPrompt.split("\n").map((_, i) => (
+              <div key={i}>{String(i + 1).padStart(2, "0")}</div>
+            ))}
+          </div>
+          {/* Content column */}
+          <div className="p-5 pl-4 text-slate-300 whitespace-pre-wrap select-text flex-1">
+            {renderHighlightedPrompt(compiledPrompt)}
+          </div>
+        </div>
+      </div>
+
+      {/* Variable vector stats helper */}
+      <div className="flex items-start gap-3 p-4 rounded-[var(--radius-xl)] bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-xs text-[var(--brand-text)] font-sans leading-relaxed">
+        <Info className="w-4 h-4 shrink-0 text-[var(--brand-primary)] mt-0.5" />
+        <div>
+          <span className="font-bold text-[var(--brand-text-strong)] block mb-0.5">How this compilation works:</span>
+          The values you customize in the profile and knowledge tabs are dynamically injected as system prompt inputs inside Gemini. This ensures the live WhatsApp chatbot acts with high context and operates strictly within your rules.
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderIntegrationsTab = () => (
+    <div className="space-y-6">
+      <div className="border-b border-[var(--border-subtle)] pb-4">
+        <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+          <Globe className="w-4 h-4 text-[var(--brand-primary)]" />
+          Integrations & Booking
+        </h2>
+        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+          Connect your external calendar services to empower AI bookings.
+        </p>
+      </div>
+
+      {/* Google Calendar Section */}
+      <div className="p-5 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-[var(--text-primary)]">Google Calendar</span>
+            {isCalendarConnected ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
+                <Check className="w-3 h-3 text-emerald-500" />
+                Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
+                Not Connected
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-[var(--text-secondary)] max-w-xl leading-relaxed">
+            Allows your Gemini AI representative to read your schedule, calculate free slots, and book new detailing appointments automatically.
+          </p>
+        </div>
+
+        <div className="shrink-0">
+          {isCalendarConnected ? (
+            <button
+              type="button"
+              onClick={handleDisconnectCalendar}
+              className="h-10 px-4 bg-[var(--color-danger-bg)] hover:bg-[var(--color-danger-bg-hover)] border border-[var(--danger-border)] text-[var(--color-danger-text)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-red-500"
+            >
+              Disconnect Calendar
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectCalendar}
+              className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] shadow-[var(--shadow-sm)]"
+            >
+              <Globe className="w-4 h-4" />
+              Connect Google Calendar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Calendar Settings */}
+      {isCalendarConnected && (
+        <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
+          <div className="space-y-2">
+            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+              Google Calendar ID
+            </label>
+            <input
+              type="text"
+              value={gcalCalendarId}
+              onChange={(e) => {
+                setGcalCalendarId(e.target.value);
+                setHasChanges(true);
+              }}
+              placeholder="primary (default)"
+              className={`${inputBaseClass} h-11`}
+            />
+            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+              By default, LeadFlow books appointments on your "primary" calendar. Enter a secondary calendar ID here if you want to use a specific schedule sub-calendar.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp API Settings */}
+      <div className="space-y-6 pt-6 mt-6 border-t border-[var(--border-subtle)]">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+            <MessageSquare className="w-4 h-4 text-emerald-500" />
+            WhatsApp API Settings
+          </h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+            Configure your Meta WhatsApp Business integration. We recommend using Manual API Configuration for local or customized environments.
+          </p>
+        </div>
+
+        {/* Helper Link Guide */}
+        <div className="p-5 sm:p-6 rounded-[var(--radius-xl)] bg-[var(--bg-canvas)] border border-[var(--brand-border)] border-l-4 border-l-[var(--brand-primary)] shadow-[var(--shadow-sm)] flex flex-col gap-5 relative overflow-hidden transition-all duration-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-4 border-b border-[var(--border-subtle)]">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[var(--brand-primary)] shrink-0 self-start md:self-center">
+                <Info className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider font-mono">
+                  Meta Developer Configuration
+                </h4>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                  To configure your live chatbot, retrieve your access token, Phone Number ID, and WhatsApp Business Account ID from Meta's dashboard.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowSetupGuide(!showSetupGuide)}
+                className="h-9 px-3.5 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] outline-none"
+              >
+                <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${showSetupGuide ? "rotate-180" : ""}`} />
+                <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
+              </button>
+              <a 
+                href="https://developers.facebook.com/apps/1586663712852403/use_cases/customize/wa-dev-console/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&selected_tab=wa-dev-console&product_route=whatsapp-business&business_id=1541013347588467" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm outline-none inline-flex items-center justify-center"
+              >
+                <span>Open Meta Console</span>
+                <ExternalLink className="w-3.5 h-3.5 animate-pulse" />
+              </a>
+            </div>
+          </div>
+          
+          <div className="pt-0">
+            <AnimatePresence initial={false}>
+              {showSetupGuide && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="relative pl-6 sm:pl-8 border-l border-dashed border-[var(--border-subtle)] ml-3 sm:ml-4 space-y-8 pt-6 pb-2">
+                    
+                    {/* Step 1 */}
+                    <div className="relative space-y-3">
+                      {/* Timeline Node Bullet */}
+                      <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
+                        1
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                          Generate Your Meta Access Token
+                        </h5>
+                        <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                          Click the blue <strong>Generate access token</strong> button to create a temporary token for your development environment.
+                        </p>
+                      </div>
+                      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
+                        <img 
+                          src="/setup/step1.png" 
+                          alt="Step 1: Generate Access Token" 
+                          className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="relative space-y-3">
+                      {/* Timeline Node Bullet */}
+                      <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
+                        2
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                          Copy the Phone Number ID
+                        </h5>
+                        <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                          Copy the <strong>Phone number ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-subtle)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">123456789012345</code>) by clicking the copy icon next to it. Paste this in the Phone Number ID input below.
+                        </p>
+                      </div>
+                      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
+                        <img 
+                          src="/setup/step2.png" 
+                          alt="Step 2: Copy Phone Number ID" 
+                          className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="relative space-y-3">
+                      {/* Timeline Node Bullet */}
+                      <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
+                        3
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                          Copy the WhatsApp Business Account ID
+                        </h5>
+                        <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
+                          Copy the <strong>WhatsApp Business Account ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-subtle)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">987654321098765</code>) using the copy icon. Paste this in the WABA ID input below.
+                        </p>
+                      </div>
+                      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
+                        <img 
+                          src="/setup/step3.png" 
+                          alt="Step 3: Copy WhatsApp Business Account ID" 
+                          className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Connection Badge Status */}
+        <div className="p-5 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] block">
+              Integration Status
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm text-[var(--text-primary)]">WhatsApp Account Connection</span>
+              {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
+                  <Check className="w-3 h-3 text-emerald-500" />
+                  Connected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
+                  Not Connected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] max-w-xl leading-relaxed">
+              {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                <>
+                  Active Phone Number ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappPhoneNumberId}</code> and WABA ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappBusinessAccountId}</code>.
+                </>
+              ) : (
+                "Credentials not configured. Please fill in the Manual API Configuration below."
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Manual API Configuration Card */}
+        <div className="p-5 sm:p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-4 shadow-[var(--shadow-sm)]">
+          <div className="border-b border-[var(--border-subtle)] pb-2.5">
+            <h4 className="text-xs font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+              <Terminal className="w-4 h-4 text-[var(--brand-primary)]" />
+              Manual API Credentials
+            </h4>
+            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+              Enter your Meta Developer details manually. All fields are saved securely to your tenant configurations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Phone Number ID */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                Phone Number ID
+              </label>
+              <input
+                type="text"
+                value={whatsappPhoneNumberId}
+                onChange={(e) => {
+                  setWhatsappPhoneNumberId(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="e.g., 123456789012345"
+                className={`${inputBaseClass} h-11`}
+              />
+            </div>
+
+            {/* WABA ID */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                WhatsApp Business Account ID (WABA ID)
+              </label>
+              <input
+                type="text"
+                value={whatsappBusinessAccountId}
+                onChange={(e) => {
+                  setWhatsappBusinessAccountId(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="e.g., 987654321098765"
+                className={`${inputBaseClass} h-11`}
+              />
+            </div>
+          </div>
+
+          {/* Access Token */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+              Meta Permanent Access Token
+            </label>
+            <div className="relative">
+              <input
+                type={showToken ? "text" : "password"}
+                value={whatsappAccessToken}
+                onChange={(e) => {
+                  setWhatsappAccessToken(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="EA..."
+                className={`${inputBaseClass} h-11 pr-10`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowToken(!showToken)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none cursor-pointer"
+                aria-label={showToken ? "Hide token" : "Show token"}
+              >
+                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Reputation Engine Section */}
+      <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            Reputation Engine (Pro Feature)
+          </h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
+            Automatically request Google reviews from completed leads. The engine will dispatch a review request 24 hours after a lead is moved to "Completed".
+          </p>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+            Google Maps Review Link
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={googleReviewLink}
+              disabled={subscriptionTier !== "domination"}
+              onChange={(e) => {
+                setGoogleReviewLink(e.target.value);
+                setHasChanges(true);
+              }}
+              placeholder="e.g., https://g.page/r/your-review-id/review"
+              className={`${inputBaseClass} h-11 ${
+                subscriptionTier !== "domination"
+                  ? "opacity-60 cursor-not-allowed bg-[var(--bg-muted)] pr-36"
+                  : ""
+              }`}
+            />
+            {subscriptionTier !== "domination" && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 select-none">
+                <span className="inline-flex items-center px-2.5 py-1 rounded bg-violet-600/90 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm font-sans">
+                  Advance Feature Required
+                </span>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
+            Ensure this is a direct, pre-approved Google Review link (e.g. g.page/r/...) so that customers can open the review portal in one click. Leave blank to disable automated review messages.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full overflow-hidden bg-[var(--bg-canvas)] select-none flex flex-col">
       
@@ -856,850 +1560,226 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               <div className="md:col-span-3 bg-[var(--bg-surface)] rounded-[var(--radius-xl)] border border-[var(--border-subtle)] p-6 h-96 animate-shimmer" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-              
-              {/* Sidebar Tabs (Vertical on Desktop, Horizontal Pill List on Mobile) */}
-              <nav className="md:col-span-1 flex flex-row md:flex-col overflow-x-auto md:overflow-visible pb-3 md:pb-0 gap-2 select-none scrollbar-none border-b md:border-b-0 border-[var(--border-subtle)] mb-4 md:mb-0">
-                {navTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex-1 md:flex-none text-left flex items-center gap-3 p-3 rounded-[var(--radius-xl)] border cursor-pointer select-none transition-all duration-200 relative whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] ${
-                        isActive
-                          ? "bg-[var(--bg-surface)] border-[var(--border-subtle)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)]"
-                          : "bg-transparent border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]/50"
-                      }`}
-                    >
-                      {/* Sliding active border or background */}
-                      {isActive && (
-                        <>
-                          {/* Left glowing border on desktop */}
-                          <motion.div
-                            layoutId="active-settings-tab-border-desktop"
-                            className="hidden md:block absolute left-1 top-3 bottom-3 w-1 bg-[var(--brand-primary)] rounded-full z-10"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          />
-                          {/* Bottom glowing border on mobile */}
-                          <motion.div
-                            layoutId="active-settings-tab-border-mobile"
-                            className="md:hidden absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--brand-primary)] rounded-full z-10"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          />
-                          {/* Soft glow background */}
-                          <motion.div
-                            layoutId="active-settings-tab-bg"
-                            className="absolute inset-0 bg-[var(--brand-subtle)]/30 rounded-[var(--radius-xl)] z-0 pointer-events-none"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          />
-                        </>
-                      )}
-
-                      <div className={`p-2 rounded-lg relative z-10 ${isActive ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"}`}>
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {tab.isAI && (
-                          <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-[var(--color-ai)] border-2 border-[var(--bg-surface)] pulse-dot-ai" />
-                        )}
-                      </div>
-
-                      <div className="flex flex-col text-left relative z-10 font-display">
-                        <span className={`text-xs font-bold leading-tight ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"}`}>
-                          {tab.label}
-                        </span>
-                        <span className="hidden md:inline text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[140px] mt-0.5">
-                          {tab.desc}
-                        </span>
-                      </div>
-
-                      {/* Unsaved changes indicator */}
-                      {tab.hasChanges && (
-                        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-[var(--shadow-sm)] animate-pulse z-20" />
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-
-              {/* Active Tab Panel Content */}
-              <div className="md:col-span-3 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] p-5 sm:p-6 shadow-[var(--shadow-sm)] min-h-[380px] relative overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.15, ease: "easeInOut" }}
-                    className="h-full"
-                  >
-                    {/* ─── TAB: Profile & Identity ──────────────────────────────── */}
-                    {activeTab === "profile" && (
-                      <div className="space-y-6">
-                        <div className="border-b border-[var(--border-subtle)] pb-4">
-                          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-[var(--brand-primary)]" />
-                            {t.identityTitle}
-                          </h2>
-                          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.identitySubtitle}</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {/* Business Name Field */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                              <Building2 className="w-3.5 h-3.5" />
-                              {t.businessName}
-                            </label>
-                            <input
-                              type="text"
-                              value={businessName}
-                              onChange={(e) => {
-                                setBusinessName(e.target.value);
-                                setHasChanges(true);
-                              }}
-                              placeholder={t.businessNamePlaceholder}
-                              className={`${inputBaseClass} h-11`}
-                            />
-                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                              {t.businessNameHelper}
-                            </p>
-                          </div>
-
-                          {/* Primary Bot Language Field */}
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                              <Globe className="w-3.5 h-3.5" />
-                              {t.botLanguage}
-                            </label>
-                            <div className="relative">
-                              <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
-                              <select
-                                value={botLanguage}
-                                onChange={(e) => {
-                                  setBotLanguage(e.target.value);
-                                  setHasChanges(true);
-                                }}
-                                className={`${inputBaseClass} h-11 pl-10 pr-10 cursor-pointer appearance-none`}
-                              >
-                                <option value="English">English</option>
-                                <option value="Hindi">Hindi (हिंदी)</option>
-                                <option value="Hinglish">Hinglish</option>
-                                <option value="Spanish">Spanish (Español)</option>
-                                <option value="Arabic">Arabic (العربية)</option>
-                                <option value="French">French (Français)</option>
-                                <option value="Portuguese">Portuguese (Português)</option>
-                              </select>
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none select-none">
-                                <ChevronDown className="w-4 h-4" />
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                              {t.botLanguageHelper}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Tone Presets Selector */}
-                        <div className="space-y-4 pt-5 border-t border-[var(--border-subtle)]">
-                          <div>
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-[var(--brand-primary)] animate-pulse" />
-                              {t.aiToneTitle}
-                            </label>
-                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.aiToneSubtitle}</p>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 select-none">
-                            {TONE_OPTIONS.map((opt) => {
-                              const isSelected = aiTone === opt.value;
-                              const Icon = opt.icon;
-                              return (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => {
-                                    setAiTone(opt.value);
-                                    setHasChanges(true);
-                                  }}
-                                  className={`p-4 rounded-[var(--radius-xl)] border flex flex-col items-center justify-center text-center cursor-pointer select-none relative overflow-hidden transition-all duration-200 min-h-[120px] ${
-                                    isSelected 
-                                      ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/40 shadow-[var(--shadow-md)] ring-2 ring-[var(--brand-primary)]/20" 
-                                      : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-sm)]"
-                                  }`}
-                                  style={{ transform: isSelected ? "scale(1.02)" : "scale(1)" }}
-                                >
-                                  {/* Animated background glow for selected state */}
-                                  {isSelected && (
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-[var(--brand-primary)]/5 to-transparent pointer-events-none" />
-                                  )}
-
-                                  {/* Selection Checkmark Badge */}
-                                  {isSelected && (
-                                    <motion.span 
-                                      initial={{ scale: 0 }}
-                                      animate={{ scale: 1 }}
-                                      className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-[var(--shadow-sm)]"
-                                    >
-                                      <Check className="w-3 h-3 text-white" />
-                                    </motion.span>
-                                  )}
-                                  
-                                  <motion.div
-                                    animate={{ 
-                                      scale: isSelected ? 1.15 : 1,
-                                      rotate: isSelected ? [0, 6, -6, 0] : 0
-                                    }}
-                                    transition={{ 
-                                      scale: { type: "spring", stiffness: 350, damping: 20 },
-                                      rotate: { duration: 0.4, ease: "easeInOut" }
-                                    }}
-                                    className={`p-2.5 rounded-xl mb-2.5 ${isSelected ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"}`}
-                                  >
-                                    <Icon className="w-5 h-5" />
-                                  </motion.div>
-                                  
-                                  <span className={`text-xs font-bold tracking-tight ${
-                                    isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"
-                                  }`}>
-                                    {opt.label}
-                                  </span>
-                                  
-                                  <span className="text-[10px] text-[var(--text-tertiary)] leading-tight mt-1.5 px-1 font-medium select-none pointer-events-none">
-                                    {opt.desc}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ─── TAB: Knowledge Vectors ────────────────────────────────── */}
-                    {activeTab === "vectors" && (
-                      <div className="space-y-6">
-                        <div className="border-b border-[var(--border-subtle)] pb-4">
-                          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                            <BookOpen className="w-4 h-4 text-[var(--brand-primary)]" />
-                            {t.coreInfoTitle}
-                          </h2>
-                          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.coreInfoSubtitle}</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                          {/* Services & Pricing Field */}
-                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                              <DollarSign className="w-4 h-4 text-indigo-500" />
-                              {t.services}
-                            </label>
-                            <textarea
-                              value={servicesText}
-                              onChange={(e) => {
-                                setServicesText(e.target.value);
-                                setHasChanges(true);
-                              }}
-                              placeholder={t.servicesPlaceholder}
-                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
-                            />
-                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-                              <span>{t.servicesHelper}</span>
-                              <span className="font-mono">{servicesText?.length || 0} chars</span>
-                            </div>
-                          </div>
-
-                          {/* Working Hours Field */}
-                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                              <Clock className="w-4 h-4 text-amber-500" />
-                              {t.hours}
-                            </label>
-                            <textarea
-                              value={hoursText}
-                              onChange={(e) => {
-                                setHoursText(e.target.value);
-                                setHasChanges(true);
-                              }}
-                              placeholder={t.hoursPlaceholder}
-                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
-                            />
-                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-                              <span>{t.hoursHelper}</span>
-                              <span className="font-mono">{hoursText?.length || 0} chars</span>
-                            </div>
-                          </div>
-
-                          {/* Payment Methods Field */}
-                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                              <CreditCard className="w-4 h-4 text-purple-500" />
-                              {t.payments}
-                            </label>
-                            <textarea
-                              value={paymentMethodsText}
-                              onChange={(e) => {
-                                setPaymentMethodsText(e.target.value);
-                                setHasChanges(true);
-                              }}
-                              placeholder={t.paymentsPlaceholder}
-                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
-                            />
-                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-                              <span>{t.paymentsHelper}</span>
-                              <span className="font-mono">{paymentMethodsText?.length || 0} chars</span>
-                            </div>
-                          </div>
-
-                          {/* Target Audience Field */}
-                          <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                              <Sparkles className="w-4 h-4 text-pink-500" />
-                              {t.targetAudience}
-                            </label>
-                            <textarea
-                              value={targetAudienceText}
-                              onChange={(e) => {
-                                setTargetAudienceText(e.target.value);
-                                setHasChanges(true);
-                              }}
-                              placeholder={t.targetAudiencePlaceholder}
-                              className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
-                            />
-                            <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-                              <span>{t.targetAudienceHelper}</span>
-                              <span className="font-mono">{targetAudienceText?.length || 0} chars</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Special Rules & Policies Field */}
-                        <div className="glass-card rounded-[var(--radius-xl)] p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all duration-200 flex flex-col gap-2.5 mt-5">
-                          <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                            <ShieldCheck className="w-4 h-4 text-rose-500 animate-pulse" />
-                            {t.specialRules}
-                          </label>
-                          <textarea
-                            value={rulesText}
-                            onChange={(e) => {
-                              setRulesText(e.target.value);
-                              setHasChanges(true);
-                            }}
-                            placeholder={t.specialRulesPlaceholder}
-                            className={`${inputBaseClass} py-3 leading-relaxed min-h-[120px] resize-y`}
-                          />
-                          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-                            <span>{t.specialRulesHelper}</span>
-                            <span className="font-mono">{rulesText?.length || 0} chars</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ─── TAB: Prompt Compiler ──────────────────────────────────── */}
-                    {activeTab === "compiler" && (
-                      <div className="space-y-6">
-                        <div className="border-b border-[var(--border-subtle)] pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <div>
-                            <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                              <Terminal className="w-4 h-4 text-[var(--brand-primary)]" />
-                              {t.promptPreview}
-                            </h2>
-                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{t.promptPreviewSubtitle}</p>
-                          </div>
-
+            <>
+              {/* DESKTOP VIEW: Sidebar Layout */}
+              <div className="hidden md:grid grid-cols-4 gap-6 items-start">
+                
+                {/* Categorized Desktop Sidebar */}
+                <nav className="col-span-1 flex flex-col gap-5 select-none bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-sm)]">
+                  
+                  {/* Category 1: AI Agent Setup */}
+                  <div className="space-y-2.5">
+                    <span className="px-2.5 text-[10px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-[1.5px] block">
+                      AI Agent Setup
+                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      {navTabs.filter(t => t.id !== "integrations").map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
                           <button
+                            key={tab.id}
                             type="button"
-                            onClick={handleCopyToClipboard}
-                            className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white border border-transparent rounded-[var(--radius-lg)] text-xs font-semibold flex items-center gap-2 cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] shadow-sm self-start sm:self-center"
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`text-left flex items-center gap-3 p-3 rounded-[var(--radius-xl)] border cursor-pointer select-none transition-all duration-200 relative whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] ${
+                              isActive
+                                ? "bg-[var(--bg-surface)] border-[var(--border-subtle)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)] font-bold"
+                                : "bg-transparent border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]/50"
+                            }`}
                           >
-                            {isCopied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5 text-white" />}
-                            <span>{isCopied ? t.copied : t.copyBtn}</span>
-                          </button>
-                        </div>
-
-                        {/* Compiler Terminal Mockup */}
-                        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[#070A13] p-0 relative select-text flex flex-col shadow-[var(--shadow-lg)]">
-                          {/* Terminal Header */}
-                          <div className="h-10 bg-[#0B0F19] border-b border-[var(--border-subtle)] flex items-center justify-between px-4 select-none shrink-0">
-                            <div className="flex items-center gap-1.5 select-none pointer-events-none">
-                              <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
-                              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
-                              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                            </div>
-                            <span className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-widest opacity-80 pointer-events-none flex items-center gap-1.5">
-                              <FileText className="w-3 h-3 text-[var(--color-ai)] animate-pulse" />
-                              gemini-system-compiler.sh
-                            </span>
-                            <div className="w-14" /> {/* spacer balance */}
-                          </div>
-
-                          {/* Terminal Workspace body with line numbers */}
-                          <div className="flex text-xs leading-[1.8] font-mono overflow-y-auto max-h-[380px] bg-[#070A13]">
-                            {/* Line numbers column */}
-                            <div className="p-5 pr-3 text-slate-600 border-r border-[#0B0F19] text-right select-none bg-[#05070e] shrink-0 font-mono">
-                              {compiledPrompt.split("\n").map((_, i) => (
-                                <div key={i}>{String(i + 1).padStart(2, "0")}</div>
-                              ))}
-                            </div>
-                            {/* Content column */}
-                            <div className="p-5 pl-4 text-slate-300 whitespace-pre-wrap select-text flex-1">
-                              {renderHighlightedPrompt(compiledPrompt)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Variable vector stats helper */}
-                        <div className="flex items-start gap-3 p-4 rounded-[var(--radius-xl)] bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-xs text-[var(--brand-text)] font-sans leading-relaxed">
-                          <Info className="w-4 h-4 shrink-0 text-[var(--brand-primary)] mt-0.5" />
-                          <div>
-                            <span className="font-bold text-[var(--brand-text-strong)] block mb-0.5">How this compilation works:</span>
-                            The values you customize in the profile and knowledge tabs are dynamically injected as system prompt inputs inside Gemini. This ensures the live WhatsApp chatbot acts with high context and operates strictly within your rules.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ─── TAB: Integrations & Booking ─────────────────────────────── */}
-                    {activeTab === "integrations" && (
-                      <div className="space-y-6">
-                        <div className="border-b border-[var(--border-subtle)] pb-4">
-                          <h2 className="text-sm font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-[var(--brand-primary)]" />
-                            Integrations & Booking
-                          </h2>
-                          <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                            Connect your external calendar services to empower AI bookings.
-                          </p>
-                        </div>
-
-                        {/* Google Calendar Section */}
-                        <div className="p-5 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-sm text-[var(--text-primary)]">Google Calendar</span>
-                              {isCalendarConnected ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
-                                  <Check className="w-3 h-3 text-emerald-500" />
-                                  Connected
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
-                                  Not Connected
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)] max-w-xl leading-relaxed">
-                              Allows your Gemini AI representative to read your schedule, calculate free slots, and book new detailing appointments automatically.
-                            </p>
-                          </div>
-
-                          <div className="shrink-0">
-                            {isCalendarConnected ? (
-                              <button
-                                type="button"
-                                onClick={handleDisconnectCalendar}
-                                className="h-10 px-4 bg-[var(--color-danger-bg)] hover:bg-[var(--color-danger-bg-hover)] border border-[var(--danger-border)] text-[var(--color-danger-text)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-red-500"
-                              >
-                                Disconnect Calendar
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={handleConnectCalendar}
-                                className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] shadow-[var(--shadow-sm)]"
-                              >
-                                <Globe className="w-4 h-4" />
-                                Connect Google Calendar
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Calendar Settings */}
-                        {isCalendarConnected && (
-                          <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] flex items-center gap-1.5">
-                                <FileText className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
-                                Google Calendar ID
-                              </label>
-                              <input
-                                type="text"
-                                value={gcalCalendarId}
-                                onChange={(e) => {
-                                  setGcalCalendarId(e.target.value);
-                                  setHasChanges(true);
-                                }}
-                                placeholder="primary (default)"
-                                className={`${inputBaseClass} h-11`}
-                              />
-                              <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                                By default, LeadFlow books appointments on your "primary" calendar. Enter a secondary calendar ID here if you want to use a specific schedule sub-calendar.
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* WhatsApp API Settings */}
-                        <div className="space-y-6 pt-6 mt-6 border-t border-[var(--border-subtle)]">
-                          <div>
-                            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                              <MessageSquare className="w-4 h-4 text-emerald-500" />
-                              WhatsApp API Settings
-                            </h3>
-                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                              Configure your Meta WhatsApp Business integration. We recommend using Manual API Configuration for local or customized environments.
-                            </p>
-                          </div>
-
-                          {/* Helper Link Guide */}
-                          <div className="p-5 sm:p-6 rounded-[var(--radius-xl)] bg-[var(--bg-canvas)] border border-[var(--brand-border)] border-l-4 border-l-[var(--brand-primary)] shadow-[var(--shadow-sm)] flex flex-col gap-5 relative overflow-hidden transition-all duration-200">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-4 border-b border-[var(--border-subtle)]">
-                              <div className="flex items-start gap-4">
-                                <div className="p-3 rounded-xl bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[var(--brand-primary)] shrink-0 self-start md:self-center">
-                                  <Info className="w-5 h-5" />
-                                </div>
-                                <div className="space-y-1">
-                                  <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider font-mono">
-                                    Meta Developer Configuration
-                                  </h4>
-                                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
-                                    To configure your live chatbot, retrieve your access token, Phone Number ID, and WhatsApp Business Account ID from Meta's dashboard.
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-3 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowSetupGuide(!showSetupGuide)}
-                                  className="h-9 px-3.5 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] outline-none"
-                                >
-                                  <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${showSetupGuide ? "rotate-180" : ""}`} />
-                                  <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
-                                </button>
-                                <a 
-                                  href="https://developers.facebook.com/apps/1586663712852403/use_cases/customize/wa-dev-console/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&selected_tab=wa-dev-console&product_route=whatsapp-business&business_id=1541013347588467" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm outline-none inline-flex items-center justify-center"
-                                >
-                                  <span>Open Meta Console</span>
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                </a>
-                              </div>
-                            </div>
-                            
-                            <div className="pt-0">
-                              <AnimatePresence initial={false}>
-                                {showSetupGuide && (
-                                  <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="relative pl-6 sm:pl-8 border-l border-dashed border-[var(--border-subtle)] ml-3 sm:ml-4 space-y-8 pt-6 pb-2">
-                                      
-                                      {/* Step 1 */}
-                                      <div className="relative space-y-3">
-                                        {/* Timeline Node Bullet */}
-                                        <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
-                                          1
-                                        </div>
-                                        <div className="space-y-1">
-                                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
-                                            Generate Your Meta Access Token
-                                          </h5>
-                                          <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
-                                            Click the blue <strong>Generate access token</strong> button to create a temporary token for your development environment.
-                                          </p>
-                                        </div>
-                                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
-                                          <img 
-                                            src="/setup/step1.png" 
-                                            alt="Step 1: Generate Access Token" 
-                                            className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
-                                          />
-                                        </div>
-                                      </div>
-
-                                      {/* Step 2 */}
-                                      <div className="relative space-y-3">
-                                        {/* Timeline Node Bullet */}
-                                        <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
-                                          2
-                                        </div>
-                                        <div className="space-y-1">
-                                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
-                                            Copy the Phone Number ID
-                                          </h5>
-                                          <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
-                                            Copy the <strong>Phone number ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-subtle)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">123456789012345</code>) by clicking the copy icon next to it. Paste this in the Phone Number ID input below.
-                                          </p>
-                                        </div>
-                                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
-                                          <img 
-                                            src="/setup/step2.png" 
-                                            alt="Step 2: Copy Phone Number ID" 
-                                            className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
-                                          />
-                                        </div>
-                                      </div>
-
-                                      {/* Step 3 */}
-                                      <div className="relative space-y-3">
-                                        {/* Timeline Node Bullet */}
-                                        <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface-raised)] shadow-sm">
-                                          3
-                                        </div>
-                                        <div className="space-y-1">
-                                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
-                                            Copy the WhatsApp Business Account ID
-                                          </h5>
-                                          <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed max-w-xl">
-                                            Copy the <strong>WhatsApp Business Account ID</strong> (Example ID: <code className="font-mono bg-[var(--bg-subtle)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">987654321098765</code>) using the copy icon. Paste this in the WABA ID input below.
-                                          </p>
-                                        </div>
-                                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 max-w-2xl shadow-[var(--shadow-md)] hover:scale-[1.01] transition-transform duration-200">
-                                          <img 
-                                            src="/setup/step3.png" 
-                                            alt="Step 3: Copy WhatsApp Business Account ID" 
-                                            className="w-full h-auto object-contain max-h-[300px] rounded-[var(--radius-md)] pointer-events-none select-none"
-                                          />
-                                        </div>
-                                      </div>
-
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </div>
-
-                          {/* Connection Badge Status */}
-                          <div className="p-5 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-[1.5px] block">
-                                Integration Status
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-sm text-[var(--text-primary)]">WhatsApp Account Connection</span>
-                                {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
-                                    <Check className="w-3 h-3 text-emerald-500" />
-                                    Connected
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] uppercase font-mono">
-                                    Not Connected
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-[var(--text-secondary)] max-w-xl leading-relaxed">
-                                {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
-                                  <>
-                                    Active Phone Number ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappPhoneNumberId}</code> and WABA ID: <code className="font-mono text-xs bg-[var(--bg-surface)] px-1 py-0.5 rounded border border-[var(--border-subtle)]">{whatsappBusinessAccountId}</code>.
-                                  </>
-                                ) : (
-                                  "Credentials not configured. Please fill in the Manual API Configuration below."
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Manual API Configuration Card */}
-                          <div className="p-5 sm:p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-4 shadow-[var(--shadow-sm)]">
-                            <div className="border-b border-[var(--border-subtle)] pb-2.5">
-                              <h4 className="text-xs font-bold font-display text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
-                                <Terminal className="w-4 h-4 text-[var(--brand-primary)]" />
-                                Manual API Credentials
-                              </h4>
-                              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                                Enter your Meta Developer details manually. All fields are saved securely to your tenant configurations.
-                              </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {/* Phone Number ID */}
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
-                                  Phone Number ID
-                                </label>
-                                <input
-                                  type="text"
-                                  value={whatsappPhoneNumberId}
-                                  onChange={(e) => {
-                                    setWhatsappPhoneNumberId(e.target.value);
-                                    setHasChanges(true);
-                                  }}
-                                  placeholder="e.g., 123456789012345"
-                                  className={`${inputBaseClass} h-11`}
-                                />
-                              </div>
-
-                              {/* WABA ID */}
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
-                                  WhatsApp Business Account ID (WABA ID)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={whatsappBusinessAccountId}
-                                  onChange={(e) => {
-                                    setWhatsappBusinessAccountId(e.target.value);
-                                    setHasChanges(true);
-                                  }}
-                                  placeholder="e.g., 987654321098765"
-                                  className={`${inputBaseClass} h-11`}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Access Token */}
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
-                                Meta Permanent Access Token
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type={showToken ? "text" : "password"}
-                                  value={whatsappAccessToken}
-                                  onChange={(e) => {
-                                    setWhatsappAccessToken(e.target.value);
-                                    setHasChanges(true);
-                                  }}
-                                  placeholder="EA..."
-                                  className={`${inputBaseClass} h-11 pr-10`}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowToken(!showToken)}
-                                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none cursor-pointer"
-                                  aria-label={showToken ? "Hide token" : "Show token"}
-                                >
-                                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Collapsible Advanced Settings (Meta OAuth Setup) - Commented out (OAuth not fixed yet)
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowAdvancedOAuth(!showAdvancedOAuth)}
-                              className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer select-none focus:outline-none"
-                            >
-                              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAdvancedOAuth ? "rotate-180" : ""}`} />
-                              <span>Advanced Settings (Automated Meta OAuth Flow)</span>
-                            </button>
-
-                            <AnimatePresence initial={false}>
-                              {showAdvancedOAuth && (
+                            {/* Sliding active border or background */}
+                            {isActive && (
+                              <>
                                 <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.2, ease: "easeInOut" }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="pt-4">
-                                    <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                      <div className="space-y-1 text-left">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-semibold text-sm text-[var(--text-primary)]">Automated OAuth Flow</span>
-                                        </div>
-                                        <p className="text-xs text-[var(--text-secondary)] max-w-xl">
-                                          Connect your WhatsApp integration automatically using Meta's official login dialog. Ensure your app is configured in HTTP/production.
-                                        </p>
-                                      </div>
+                                  layoutId="active-settings-tab-border-desktop"
+                                  className="absolute left-1 top-3 bottom-3 w-1 bg-[var(--brand-primary)] rounded-full z-10"
+                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                />
+                                <motion.div
+                                  layoutId="active-settings-tab-bg"
+                                  className="absolute inset-0 bg-[var(--brand-subtle)]/30 rounded-[var(--radius-xl)] z-0 pointer-events-none"
+                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                />
+                              </>
+                            )}
 
-                                      <div className="shrink-0">
-                                        <button
-                                          type="button"
-                                          onClick={handleMetaLogin}
-                                          disabled={isMetaConnecting}
-                                          className="h-10 px-4 bg-[#1877F2] hover:bg-[#166FE5] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#1877F2] disabled:cursor-not-allowed"
-                                        >
-                                          {isMetaConnecting ? (
-                                            <>
-                                              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                                              <span>Connecting...</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <MessageSquare className="w-4 h-4" />
-                                              <span>{whatsappPhoneNumberId ? "Reconnect Meta Account" : "Connect Meta Account"}</span>
-                                            </>
-                                          )}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                          */}
-                        </div>
-
-                        {/* Reputation Engine Section */}
-                        <div className="space-y-4 pt-6 mt-6 border-t border-[var(--border-subtle)]">
-                          <div>
-                            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                              <Sparkles className="w-4 h-4 text-amber-500" />
-                              Reputation Engine (Pro Feature)
-                            </h3>
-                            <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                              Automatically request Google reviews from completed leads. The engine will dispatch a review request 24 hours after a lead is moved to "Completed".
-                            </p>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-                              <Globe className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
-                              Google Maps Review Link
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                value={googleReviewLink}
-                                disabled={subscriptionTier !== "domination"}
-                                onChange={(e) => {
-                                  setGoogleReviewLink(e.target.value);
-                                  setHasChanges(true);
-                                }}
-                                placeholder="e.g., https://g.page/r/your-review-id/review"
-                                className={`${inputBaseClass} h-11 ${
-                                  subscriptionTier !== "domination"
-                                    ? "opacity-60 cursor-not-allowed bg-[var(--bg-muted)] pr-36"
-                                    : ""
-                                }`}
-                              />
-                              {subscriptionTier !== "domination" && (
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2 select-none">
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded bg-violet-600/90 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm font-sans">
-                                    Advance Feature Required
-                                  </span>
-                                </div>
+                            <div className={`p-2 rounded-lg relative z-10 ${isActive ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"}`}>
+                              <Icon className="w-4 h-4 shrink-0" />
+                              {tab.isAI && (
+                                <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-[var(--color-ai)] border-2 border-[var(--bg-surface)] pulse-dot-ai" />
                               )}
                             </div>
-                            <p className="text-[10px] text-[var(--text-tertiary)] font-sans leading-tight">
-                              Ensure this is a direct, pre-approved Google Review link (e.g. g.page/r/...) so that customers can open the review portal in one click. Leave blank to disable automated review messages.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
+
+                            <div className="flex flex-col text-left relative z-10 font-display">
+                              <span className={`text-xs font-bold leading-tight ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"}`}>
+                                {tab.label}
+                              </span>
+                              <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[140px] mt-0.5">
+                                {tab.desc}
+                              </span>
+                            </div>
+
+                            {/* Unsaved changes indicator */}
+                            {tab.hasChanges && (
+                              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-[var(--shadow-sm)] animate-pulse z-20" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Category 2: Connections */}
+                  <div className="space-y-2.5 pt-4 border-t border-[var(--border-subtle)]">
+                    <span className="px-2.5 text-[10px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-[1.5px] block">
+                      System Channels
+                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      {navTabs.filter(t => t.id === "integrations").map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`text-left flex items-center gap-3 p-3 rounded-[var(--radius-xl)] border cursor-pointer select-none transition-all duration-200 relative whitespace-nowrap shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] ${
+                              isActive
+                                ? "bg-[var(--bg-surface)] border-[var(--border-subtle)] shadow-[var(--shadow-sm)] text-[var(--brand-primary)] font-bold"
+                                : "bg-transparent border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]/50"
+                            }`}
+                          >
+                            {/* Sliding active border or background */}
+                            {isActive && (
+                              <>
+                                <motion.div
+                                  layoutId="active-settings-tab-border-desktop"
+                                  className="absolute left-1 top-3 bottom-3 w-1 bg-[var(--brand-primary)] rounded-full z-10"
+                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                />
+                                <motion.div
+                                  layoutId="active-settings-tab-bg"
+                                  className="absolute inset-0 bg-[var(--brand-subtle)]/30 rounded-[var(--radius-xl)] z-0 pointer-events-none"
+                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                />
+                              </>
+                            )}
+
+                            <div className={`p-2 rounded-lg relative z-10 ${isActive ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"}`}>
+                              <Icon className="w-4 h-4 shrink-0" />
+                            </div>
+
+                            <div className="flex flex-col text-left relative z-10 font-display">
+                              <span className={`text-xs font-bold leading-tight ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"}`}>
+                                {tab.label}
+                              </span>
+                              <span className="text-[10px] text-[var(--text-tertiary)] font-normal truncate max-w-[140px] mt-0.5">
+                                {tab.desc}
+                              </span>
+                            </div>
+
+                            {/* Unsaved changes indicator */}
+                            {tab.hasChanges && (
+                              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-warning)] shadow-[var(--shadow-sm)] animate-pulse z-20" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </nav>
+
+                {/* Desktop Content Panel */}
+                <div className="col-span-3 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] p-5 sm:p-6 shadow-[var(--shadow-sm)] min-h-[420px] relative overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.15, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      {activeTab === "profile" && renderProfileTab()}
+                      {activeTab === "vectors" && renderVectorsTab()}
+                      {activeTab === "compiler" && renderCompilerTab()}
+                      {activeTab === "integrations" && renderIntegrationsTab()}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
 
-            </div>
+              {/* MOBILE VIEW: Collapsible Accordion Stack */}
+              <div className="flex flex-col gap-4 md:hidden">
+                {navTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isExpanded = activeAccordion === tab.id;
+                  return (
+                    <div 
+                      key={tab.id}
+                      className={`rounded-[var(--radius-xl)] border transition-all duration-200 overflow-hidden ${
+                        isExpanded 
+                          ? "border-[var(--brand-primary)] bg-[var(--bg-surface)] shadow-[var(--shadow-md)]" 
+                          : "border-[var(--border-subtle)] bg-[var(--bg-surface)]/50 hover:bg-[var(--bg-surface)]"
+                      }`}
+                    >
+                      {/* Accordion Header */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveAccordion(isExpanded ? null : tab.id as any)}
+                        className="w-full flex items-center justify-between p-4 cursor-pointer text-left focus:outline-none select-none relative"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2.5 rounded-lg ${isExpanded ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-subtle)] text-[var(--text-secondary)]"}`}>
+                            <Icon className="w-4 h-4 shrink-0" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-[var(--text-primary)] font-display leading-snug">
+                              {tab.label}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-secondary)] leading-tight mt-0.5 max-w-[200px] truncate">
+                              {tab.desc}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Unsaved changes indicator */}
+                          {tab.hasChanges && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-warning)] shadow-[var(--shadow-sm)] animate-pulse" />
+                          )}
+                          {tab.isAI && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-ai)] border-2 border-[var(--bg-surface)] pulse-dot-ai" />
+                          )}
+                          <ChevronDown className={`w-4 h-4 text-[var(--text-tertiary)] transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                        </div>
+                      </button>
+
+                      {/* Accordion Content Panel */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            className="border-t border-[var(--border-subtle)] overflow-hidden"
+                          >
+                            <div className="p-4 sm:p-5 bg-[var(--bg-surface)] select-none">
+                              {tab.id === "profile" && renderProfileTab()}
+                              {tab.id === "vectors" && renderVectorsTab()}
+                              {tab.id === "compiler" && renderCompilerTab()}
+                              {tab.id === "integrations" && renderIntegrationsTab()}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>

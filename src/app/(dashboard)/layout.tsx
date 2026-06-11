@@ -58,16 +58,19 @@ const IconComponents: Record<string, React.ComponentType<{ isActive: boolean; is
       />
       <motion.circle 
         cx="8" cy="10" r="1.2" fill="currentColor"
+        initial={{ opacity: 1 }}
         animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3] } : { opacity: 1 }}
         transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1.2 }}
       />
       <motion.circle 
         cx="12" cy="10" r="1.2" fill="currentColor"
+        initial={{ opacity: 1 }}
         animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3] } : { opacity: 1 }}
         transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1.2, delay: 0.25 }}
       />
       <motion.circle 
         cx="16" cy="10" r="1.2" fill="currentColor"
+        initial={{ opacity: 1 }}
         animate={isActive || isHovered ? { opacity: [0.3, 1, 0.3] } : { opacity: 1 }}
         transition={{ repeat: isActive || isHovered ? Infinity : 0, duration: 1.2, delay: 0.5 }}
       />

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import fs from "fs";
 import path from "path";
+import dns from "node:dns";
+
+dns.setDefaultResultOrder("ipv4first");
 
 // Auto-copy helper images on startup
 try {

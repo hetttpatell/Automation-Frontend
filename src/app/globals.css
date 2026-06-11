@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
-@config "../../tailwind.config.ts";
-
 /* ════════════════════════════════════════
    LEADFLOW — PREMIUM DESIGN SYSTEM (MINT & CARBON SLATE)
    globals.css — Single Source of Truth
@@ -420,7 +418,14 @@ h1, h2, h3, h4, h5, h6 {
   --color-brand-secondary: var(--brand-secondary);
   --color-brand-accent: var(--brand-accent);
 
+  --color-accent: #6366F1;
+  --color-accent-secondary: #4F46E5;
+  --color-whatsapp: #10B981;
+  --color-muted-fallback: #71717A;
+  --color-border-fallback: #27272A;
+
   --font-sans: var(--font-sans), sans-serif;
   --font-display: var(--font-display), sans-serif;
   --font-mono: var(--font-mono), monospace;
+  --font-calistoga: var(--font-calistoga), serif;
 }
