@@ -7,6 +7,16 @@
    ════════════════════════════════════════ */
 
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 :root {
   /* ─── Premium Brand (Cobalt/Electric Unique Blue Vibe) ────────── */
   --brand-primary:        #2563eb;   /* Blue 600 */

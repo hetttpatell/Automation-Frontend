@@ -1260,9 +1260,9 @@ export default function Home() {
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/50 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 mt-auto">
         <span>&copy; {new Date().getFullYear()} LeadFlow. All rights reserved.</span>
         <div className="flex items-center gap-6">
-          <a href="#terms" className="hover:text-slate-600 transition-colors">Terms of Service</a>
-          <a href="#privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</a>
-          <a href="#security" className="hover:text-slate-600 transition-colors">Security</a>
+          <span className="hover:text-slate-600 transition-colors cursor-pointer">Terms of Service</span>
+          <span className="hover:text-slate-600 transition-colors cursor-pointer">Privacy Policy</span>
+          <span className="hover:text-slate-600 transition-colors cursor-pointer">Security</span>
         </div>
       </footer>
     </div>

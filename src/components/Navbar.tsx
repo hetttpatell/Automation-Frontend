@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,11 +25,52 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: "Features", href: "/#features" },
-    { name: "Solutions", href: "/#solutions" },
-    { name: "Pricing", href: "/#pricing" },
-    { name: "API", href: "/#developers" },
+    { name: "Features", href: "/#features", anchor: "features" },
+    { name: "Solutions", href: "/#solutions", anchor: "solutions" },
+    { name: "Pricing", href: "/#pricing", anchor: "pricing" },
+    { name: "API", href: "/#developers", anchor: "developers" },
   ];
+
+  const handleAnchorClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, anchor: string) => {
+      e.preventDefault();
+      setMobileMenuOpen(false);
+
+      // If we're on the landing page, smooth-scroll immediately
+      if (pathname === "/") {
+        const el = document.getElementById(anchor);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      } else {
+        // Navigate to the landing page, then scroll after it loads
+        router.push(`/#${anchor}`);
+        // Use a short timeout for the new page to render, then scroll
+        setTimeout(() => {
+          const el = document.getElementById(anchor);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 300);
+      }
+    },
+    [pathname, router]
+  );
+
+  // Handle hash scrolling on initial page load (e.g. navigating from /login to /#pricing)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      const anchor = window.location.hash.replace("#", "");
+      // Small delay to let content render
+      const timer = setTimeout(() => {
+        const el = document.getElementById(anchor);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname]);
 
   return (
     <>
@@ -54,13 +98,14 @@ export default function Navbar() {
           {/* Navigation Links - Desktop */}
           <nav className="hidden md:flex items-center gap-2">
             {navLinks.map((link) => (
-              <Link
+              <a
                 key={link.name}
                 href={link.href}
+                onClick={(e) => handleAnchorClick(e, link.anchor)}
                 className="relative text-sm font-medium text-slate-600 hover:text-slate-900 transition-all duration-200 px-3.5 py-2 rounded-lg hover:bg-slate-500/5 cursor-pointer"
               >
                 {link.name}
-              </Link>
+              </a>
             ))}
           </nav>
 
@@ -104,14 +149,14 @@ export default function Navbar() {
             >
               <div className="flex flex-col px-6 py-6 space-y-3.5 text-base font-semibold text-slate-700">
                 {navLinks.map((link) => (
-                  <Link
+                  <a
                     key={link.name}
                     href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={(e) => handleAnchorClick(e, link.anchor)}
                     className="hover:text-[#6366F1] transition-colors duration-150 cursor-pointer py-2 border-b border-slate-100/60 last:border-b-0"
                   >
                     {link.name}
-                  </Link>
+                  </a>
                 ))}
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
                   <Link
