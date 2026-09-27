@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
+import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 
 // ─── Animated SVG Icon Components ──────────────────────────────
 const IconComponents: Record<string, React.ComponentType<{ isActive: boolean; isHovered: boolean }>> = {
@@ -159,73 +160,25 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
 // Active highlight sliding animations are defined in navigation render loops
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <DashboardProvider>
+      <DashboardContent>{children}</DashboardContent>
+    </DashboardProvider>
+  );
+}
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
   const { theme, toggleTheme } = useTheme();
   const { success, error: toastError, info } = useToast();
+  const { user, tenant, userEmail, businessName, creditsBalance, creditsLimit } = useDashboard();
 
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [businessName, setBusinessName] = useState("LeadFlow");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
-  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
-  const [creditsLimit, setCreditsLimit] = useState<number | null>(null);
-
-  // Realtime credits synchronization
-  useEffect(() => {
-    let isCancelled = false;
-    let channel: any = null;
-
-    async function setupRealtimeCredits() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (isCancelled || !user || !user.email) return;
-
-      // Initial query for credits
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("id, ai_credits_balance, ai_credits_limit")
-        .eq("owner_email", user.email)
-        .single();
-
-      if (isCancelled || !tenant) return;
-
-      setCreditsBalance(tenant.ai_credits_balance ?? 50);
-      setCreditsLimit(tenant.ai_credits_limit ?? 50);
-
-      // Realtime Subscription with a unique channel name to prevent cache collision
-      const channelName = `realtime-credits-${tenant.id}-${Math.random().toString(36).substring(2, 11)}`;
-      channel = supabase
-        .channel(channelName)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "tenants",
-            filter: `id=eq.${tenant.id}`,
-          },
-          (payload) => {
-            const updated = payload.new as any;
-            setCreditsBalance(updated.ai_credits_balance ?? 50);
-            setCreditsLimit(updated.ai_credits_limit ?? 50);
-          }
-        )
-        .subscribe();
-    }
-
-    setupRealtimeCredits();
-
-    return () => {
-      isCancelled = true;
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [supabase]);
 
   // Auto-collapse on laptop sizes (width < 1280px)
   useEffect(() => {
@@ -241,48 +194,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // One-time onboarding check once user and tenant are loaded
+  const checkedOnboardingRef = React.useRef(false);
   useEffect(() => {
-    async function checkOnboardingAndFetchUser() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && user.email) {
-          setUserEmail(user.email);
+    if (!tenant || !user || checkedOnboardingRef.current) return;
+    checkedOnboardingRef.current = true;
 
-          const { data: tenant } = await supabase
-            .from("tenants")
-            .select("business_name, services_text")
-            .eq("owner_email", user.email)
-            .single();
+    const isIncomplete =
+      !tenant.services_text ||
+      tenant.services_text.trim() === "" ||
+      tenant.business_name === "My Business";
 
-          if (tenant && tenant.business_name) {
-            setBusinessName(tenant.business_name);
-          }
+    const redirectKey = `leadflow_redirected_${user.id}`;
+    const hasRedirected =
+      typeof window !== "undefined"
+        ? localStorage.getItem(redirectKey) === "true"
+        : true;
 
-          const isIncomplete = !tenant || 
-                               !tenant.services_text || 
-                               tenant.services_text.trim() === "" || 
-                               tenant.business_name === "My Business";
-
-          const redirectKey = `leadflow_redirected_${user.id}`;
-          const hasRedirected = typeof window !== "undefined" ? localStorage.getItem(redirectKey) === "true" : true;
-
-          if (isIncomplete && !hasRedirected && pathname !== "/settings") {
-            if (typeof window !== "undefined") {
-              localStorage.setItem(redirectKey, "true");
-            }
-            router.push("/settings");
-            info("Welcome to LeadFlow! Please complete your Business Profile to activate your AI engine.");
-          }
-        }
-      } catch (err) {
-        console.error("[Auth/Onboarding Fetch Error]:", err);
+    if (isIncomplete && !hasRedirected && pathname !== "/settings") {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(redirectKey, "true");
       }
+      router.push("/settings");
+      info(
+        "Welcome to LeadFlow! Please complete your Business Profile to activate your AI engine."
+      );
     }
-    checkOnboardingAndFetchUser();
-  }, [pathname, router, info, supabase]);
+  }, [tenant, user, pathname, router, info]);
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("leadflow_user_session");
+        localStorage.removeItem("leadflow_saved_password");
+      }
       await supabase.auth.signOut();
       success("Logged out successfully");
       router.refresh();
@@ -377,9 +322,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.name}
                 href={item.href}
+                prefetch={true}
                 className="block outline-none relative"
                 title={isCollapsed ? item.name : undefined}
-                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseEnter={() => {
+                  setHoveredIndex(index);
+                  router.prefetch(item.href);
+                }}
                 onMouseLeave={() => setHoveredIndex(null)}
               >
                 {/* Sliding Background Pill */}
@@ -637,13 +586,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Module Content */}
-        <main className="flex-1 overflow-hidden relative pb-14 lg:pb-0">
-          {children}
+        <main className="flex-1 overflow-hidden relative pb-[68px] lg:pb-0">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0.94, y: 2 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full w-full"
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
 
       {/* ─── BOTTOM MOBILE NAVIGATION (< 1024px) ─────────────────── */}
-      <nav className="flex lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] z-40 items-center justify-around select-none shadow-lg">
+      <nav 
+        className="flex lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[var(--bg-surface)]/95 backdrop-blur-md border-t border-[var(--border-subtle)] z-50 items-center justify-around select-none shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 pt-1 pb-[max(env(safe-area-inset-bottom,0px),4px)]"
+        role="navigation"
+        aria-label="Mobile navigation"
+      >
         {navItems.map((item, index) => {
           const IconComp = IconComponents[item.name];
           const isHovered = hoveredIndex === index;
@@ -651,22 +612,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               key={item.name}
               href={item.href}
-              onMouseEnter={() => setHoveredIndex(index)}
+              prefetch={true}
+              onMouseEnter={() => {
+                setHoveredIndex(index);
+                router.prefetch(item.href);
+              }}
               onMouseLeave={() => setHoveredIndex(null)}
-              className="flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-all duration-200 relative"
+              className="flex-1 flex flex-col items-center justify-center py-1 outline-none focus:outline-none focus-visible:outline-none transition-transform duration-150 active:scale-95 cursor-pointer"
             >
-              {/* Mobile Sliding Underline */}
-              {item.isActive && (
-                <motion.div
-                  layoutId="active-mobile-underline"
-                  className="absolute bottom-1 left-2 right-2 h-0.5 bg-[var(--brand-primary)] rounded-full z-0"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <div className={`relative z-10 flex flex-col items-center transition-transform duration-200 ${item.isActive ? "text-[var(--brand-primary)] scale-105 font-semibold" : "text-[var(--text-secondary)]"}`}>
+              <div
+                className={`relative flex items-center justify-center w-10 h-7 rounded-full transition-all duration-200 ${
+                  item.isActive
+                    ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
                 {IconComp && <IconComp isActive={item.isActive} isHovered={isHovered} />}
-                <span className="text-[10px] font-sans font-medium mt-0.5">{item.name}</span>
               </div>
+              <span
+                className={`text-[10px] font-sans font-medium tracking-tight mt-0.5 leading-none transition-colors duration-200 ${
+                  item.isActive
+                    ? "text-[var(--brand-primary)] font-semibold"
+                    : "text-[var(--text-tertiary)]"
+                }`}
+              >
+                {item.name}
+              </span>
             </Link>
           );
         })}

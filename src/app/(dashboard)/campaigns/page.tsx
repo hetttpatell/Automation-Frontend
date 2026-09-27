@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
+import { useDashboard } from "@/context/DashboardContext";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Lead {
@@ -44,12 +45,13 @@ export default function CampaignsPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ─── State ────────────────────────────────────────────────────────
+  const { user: dashboardUser, tenant: dashboardTenant } = useDashboard();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [businessName, setBusinessName] = useState("My Business");
+  const [user, setUser] = useState<any>(dashboardUser);
+  const [businessName, setBusinessName] = useState(dashboardTenant?.business_name || "LeadFlow");
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [subscriptionTier, setSubscriptionTier] = useState<string>("free");
+  const [isLoading, setIsLoading] = useState(!dashboardUser);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>(dashboardTenant?.subscription_tier || "free");
 
   // Composer state
   const [campaignName, setCampaignName] = useState("");
@@ -66,42 +68,37 @@ export default function CampaignsPage() {
   // ─── Fetch user + leads ───────────────────────────────────────────
   useEffect(() => {
     async function init() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user && user.email) {
-        setUser(user);
+      let activeUser = dashboardUser || user;
+      if (!activeUser) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        activeUser = authUser;
+        if (activeUser) setUser(activeUser);
+      }
 
-        // Fetch business name AND subscription tier
-        const { data: tenant } = await supabase
-          .from("tenants")
-          .select("business_name, subscription_tier")
-          .eq("owner_email", user.email)
-          .single();
+      if (!activeUser) {
+        setIsLoading(false);
+        return;
+      }
 
-        if (tenant) {
-          if (tenant.business_name) {
-            setBusinessName(tenant.business_name);
-          }
-          if (tenant.subscription_tier) {
-            setSubscriptionTier(tenant.subscription_tier);
-          }
-        }
+      if (dashboardTenant) {
+        if (dashboardTenant.business_name) setBusinessName(dashboardTenant.business_name);
+        if (dashboardTenant.subscription_tier) setSubscriptionTier(dashboardTenant.subscription_tier);
+      }
 
-        // Fetch leads
-        const { data: leadsData, error } = await supabase
-          .from("leads")
-          .select("id, customer_name, customer_phone, kanban_stage")
-          .eq("tenant_id", user.id);
+      // Fetch leads
+      const { data: leadsData, error } = await supabase
+        .from("leads")
+        .select("id, customer_name, customer_phone, kanban_stage")
+        .eq("tenant_id", activeUser.id);
 
-        if (!error && leadsData) {
-          setLeads(leadsData as Lead[]);
-        }
+      if (!error && leadsData) {
+        setLeads(leadsData as Lead[]);
       }
       setIsLoading(false);
     }
+
     init();
-  }, []);
+  }, [dashboardUser, dashboardTenant, supabase]);
 
   // ─── Computed values ──────────────────────────────────────────────
   const targetLeads = leads.filter((l) => l.kanban_stage === targetStage);

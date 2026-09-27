@@ -14,6 +14,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
+import { useDashboard } from "@/context/DashboardContext";
 
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -153,13 +154,14 @@ function SkeletonRow({ index }: { index: number }) {
 
 // ─── Main Component ──────────────────────────────────────────────────
 export default function LeadsDashboard() {
+  const { user: dashboardUser } = useDashboard();
   const supabase = createClient();
   const router = useRouter();
   const { info } = useToast();
 
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(dashboardUser);
+  const [isLoading, setIsLoading] = useState(!dashboardUser);
   const [syncTime, setSyncTime] = useState<string>("0s");
   const [lastSyncSeconds, setLastSyncSeconds] = useState(0);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
@@ -264,16 +266,18 @@ export default function LeadsDashboard() {
   }, []);
 
   useEffect(() => {
-    async function initUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-      } else {
-        setIsLoading(false);
-      }
+    if (dashboardUser) {
+      setUser(dashboardUser);
+    } else {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) {
+          setUser(data.session.user);
+        } else {
+          setIsLoading(false);
+        }
+      });
     }
-    initUser();
-  }, []);
+  }, [dashboardUser, supabase]);
 
   useEffect(() => {
     if (!user) return;

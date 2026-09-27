@@ -48,7 +48,12 @@ export async function updateSession(request: NextRequest) {
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              maxAge: 60 * 60 * 24 * 365, // 1 Year cookie persistence
+              sameSite: "lax",
+              path: "/",
+            })
           );
         },
       },
@@ -57,12 +62,8 @@ export async function updateSession(request: NextRequest) {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
-          const headers = new Headers(options?.headers);
-          headers.set("Connection", "close");
-
           return fetch(url, {
             ...options,
-            headers,
             signal: controller.signal,
           }).finally(() => clearTimeout(timeoutId));
         },
@@ -70,10 +71,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do NOT use getSession() here.
-  // getUser() sends a request to the Supabase Auth server every time
-  // to revalidate the Auth token, while getSession() does not.
-  // This is critical for security in middleware.
+  // Revalidate auth token
   try {
     const {
       data: { user },
@@ -93,25 +91,14 @@ export async function updateSession(request: NextRequest) {
     if (!user && isDashboardRoute) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((c) => {
+        redirectResponse.cookies.set(c);
+      });
+      return redirectResponse;
     }
   } catch (error) {
-    // If Supabase auth times out or fails, redirect to login for protected routes
-    console.error("[Middleware] Auth check failed:", error);
-    const isDashboardRoute =
-      pathname === "/dashboard" || pathname.startsWith("/dashboard/") ||
-      pathname === "/inbox" || pathname.startsWith("/inbox/") ||
-      pathname === "/knowledge" || pathname.startsWith("/knowledge/") ||
-      pathname === "/knowledge-base" || pathname.startsWith("/knowledge-base/") ||
-      pathname === "/campaigns" || pathname.startsWith("/campaigns/") ||
-      pathname === "/settings" || pathname.startsWith("/settings/") ||
-      pathname === "/pricing" || pathname.startsWith("/pricing/");
-
-    if (isDashboardRoute) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
+    console.error("[Middleware] Auth check warning:", error);
   }
 
   return supabaseResponse;

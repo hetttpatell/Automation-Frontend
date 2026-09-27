@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 import Avatar from "@/components/ui/Avatar";
+import { useDashboard } from "@/context/DashboardContext";
 
 // ─── Interfaces ───────────────────────────────────────────────────
 interface Conversation {
@@ -88,14 +89,15 @@ function ThreadSkeleton() {
 
 // ─── Main Component ───────────────────────────────────────────────
 export default function InboxPage() {
+  const { user: dashboardUser } = useDashboard();
   const supabase = createClient();
   const { success, warning, info, error: toastError } = useToast();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(dashboardUser);
+  const [isLoading, setIsLoading] = useState(!dashboardUser);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"all" | "ai" | "human">("all");
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -151,18 +153,20 @@ export default function InboxPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch threads on mount
+  // Sync user from dashboard context or cached session
   useEffect(() => {
-    async function initUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-      } else {
-        setIsLoading(false);
-      }
+    if (dashboardUser) {
+      setUser(dashboardUser);
+    } else {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) {
+          setUser(data.session.user);
+        } else {
+          setIsLoading(false);
+        }
+      });
     }
-    initUser();
-  }, []);
+  }, [dashboardUser, supabase]);
 
   // Fetch threads when user is loaded & setup realtime subscription
   useEffect(() => {

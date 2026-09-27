@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Calistoga, JetBrains_Mono, DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import NavigationProgressBar from "@/components/ui/NavigationProgressBar";
 import "./globals.css";
 
 const inter = Inter({
@@ -41,10 +42,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${calistoga.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans min-h-full flex flex-col`}
       >
+        <NavigationProgressBar />
         <ThemeProvider>
           <ToastProvider>
             {children}

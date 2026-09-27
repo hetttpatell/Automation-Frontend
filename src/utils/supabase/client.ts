@@ -1,22 +1,40 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+let clientInstance: ReturnType<typeof createBrowserClient> | null = null;
+
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        fetch: (url, options) => {
-          const headers = new Headers(options?.headers);
-          if (typeof window === "undefined") {
-            headers.set("Connection", "close");
-          }
-          return fetch(url, {
-            ...options,
-            headers,
-          });
+  if (typeof window === "undefined") {
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookieOptions: {
+          maxAge: 60 * 60 * 24 * 365, // 1 Year session persistence
+          sameSite: "lax",
+          path: "/",
         },
-      },
-    }
-  );
+      }
+    );
+  }
+
+  if (!clientInstance) {
+    clientInstance = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookieOptions: {
+          maxAge: 60 * 60 * 24 * 365, // 1 Year session persistence
+          sameSite: "lax",
+          path: "/",
+        },
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      }
+    );
+  }
+
+  return clientInstance;
 }

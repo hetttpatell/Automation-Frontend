@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { motion } from "framer-motion";
+import { useDashboard } from "@/context/DashboardContext";
 
 
 // Backend API URL — routes to our dedicated Node.js server
@@ -23,17 +24,25 @@ const loadRazorpayScript = () => {
 };
 
 export default function PricingPage() {
+  const { user: dashboardUser, tenant: dashboardTenant } = useDashboard();
   const supabase = createClient();
   const { theme } = useTheme();
   const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
 
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
-  const [currentTier, setCurrentTier] = useState<string>("free");
-  const [creditsBalance, setCreditsBalance] = useState<number>(50);
-  const [userEmail, setUserEmail] = useState<string>("");
+  const [currentTier, setCurrentTier] = useState<string>(dashboardTenant?.subscription_tier || "free");
+  const [creditsBalance, setCreditsBalance] = useState<number>(dashboardTenant?.ai_credits_balance ?? 50);
+  const [userEmail, setUserEmail] = useState<string>(dashboardUser?.email || "");
 
-  // Fetch current user and subscription context
+  // Sync current user and subscription context
   useEffect(() => {
+    if (dashboardTenant) {
+      setCurrentTier(dashboardTenant.subscription_tier || "free");
+      setCreditsBalance(dashboardTenant.ai_credits_balance ?? 50);
+      if (dashboardUser?.email) setUserEmail(dashboardUser.email);
+      return;
+    }
+
     async function loadUserContext() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user && user.email) {
@@ -51,7 +60,7 @@ export default function PricingPage() {
       }
     }
     loadUserContext();
-  }, [supabase]);
+  }, [dashboardTenant, dashboardUser, supabase]);
 
   // Handle Subscription Purchase (Razorpay Checkout)
   const handleSubscribe = async (tier: string) => {

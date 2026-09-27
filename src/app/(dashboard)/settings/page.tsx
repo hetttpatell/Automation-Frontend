@@ -27,7 +27,9 @@ import {
   Eye,
   EyeOff,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  LogOut
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -373,6 +375,7 @@ export default function SettingsPage() {
   const [isMetaConnecting, setIsMetaConnecting] = useState(false);
   const [showAdvancedOAuth, setShowAdvancedOAuth] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [isDisconnectingWhatsApp, setIsDisconnectingWhatsApp] = useState(false);
 
   // Google Calendar States
   const [tenantId, setTenantId] = useState("");
@@ -562,18 +565,33 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
         throw new Error("Could not resolve current Supabase authorization session.");
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      const res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ 
-          token: payload.token, 
-          redirectUri: payload.redirectUri 
-        }),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/meta/exchange-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ 
+            token: payload.token, 
+            redirectUri: payload.redirectUri 
+          }),
+        });
+      } catch (internalErr) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        res = await fetch(`${apiUrl}/api/meta/exchange-token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ 
+            token: payload.token, 
+            redirectUri: payload.redirectUri 
+          }),
+        });
+      }
 
       const responseData = await res.json();
       if (!res.ok) {
@@ -625,33 +643,38 @@ Follow these rules strictly: Customer satisfaction is paramount.`;
   }, [triggerTokenExchange]);
 
   const handleMetaLogin = () => {
-    if (!process.env.NEXT_PUBLIC_META_CONFIG_ID) {
-      toastError("Meta Configuration ID is missing. Set NEXT_PUBLIC_META_CONFIG_ID in your .env.local file.");
-      console.error("[Meta OAuth] NEXT_PUBLIC_META_CONFIG_ID is not set.");
-      return;
-    }
+    const metaAppId = process.env.NEXT_PUBLIC_META_APP_ID || "1586663712852403";
 
     setIsMetaConnecting(true);
 
-    const metaConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
     const currentUrl = window.location.origin + window.location.pathname;
 
+    // Valid Meta WhatsApp Cloud API Scopes
+    const scopes = "whatsapp_business_management,whatsapp_business_messaging";
+
     const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth` +
-      `?app_id=${process.env.NEXT_PUBLIC_META_APP_ID || "1586663712852403"}` +
-      `&client_id=${process.env.NEXT_PUBLIC_META_APP_ID || "1586663712852403"}` +
+      `?client_id=${metaAppId}` +
       `&redirect_uri=${encodeURIComponent(currentUrl)}` +
-      `&config_id=${metaConfigId}` +
+      `&scope=${encodeURIComponent(scopes)}` +
       `&response_type=code` +
-      `&override_default_response_type=true` +
-      `&extras=${encodeURIComponent(JSON.stringify({ feature: "whatsapp_embedded_signup", version: 2, sessionInfoVersion: 2 }))}`;
+      `&auth_type=rerequest` +
+      `&display=popup`;
 
     const width = 600;
-    const height = 600;
+    const height = 650;
     const left = window.screen.width / 2 - width / 2;
     const top = window.screen.height / 2 - height / 2;
 
-    console.log("[Meta OAuth] Launching manual OAuth popup with URL:", oauthUrl);
-    window.open(oauthUrl, 'Meta Login', `width=${width},height=${height},top=${top},left=${left}`);
+    console.log("[Meta OAuth] Launching Standard Meta Login popup for redirectUri:", currentUrl);
+    const popup = window.open(oauthUrl, 'Meta Login', `width=${width},height=${height},top=${top},left=${left}`);
+
+    // Track popup close to reset loading state if user cancels
+    const checkClosed = setInterval(() => {
+      if (popup && popup.closed) {
+        clearInterval(checkClosed);
+        setIsMetaConnecting(false);
+      }
+    }, 1000);
   };
 
   // Listen to search params for Google Calendar connection notifications
@@ -917,6 +940,48 @@ ${rulesText || "Customer satisfaction is paramount."}`;
     } catch (err: any) {
       console.error("[Disconnect Error]:", err.message);
       toastError("Failed to disconnect calendar");
+    }
+  }
+
+  async function handleDisconnectWhatsApp() {
+    if (!confirm("Are you sure you want to disconnect your Meta WhatsApp account? Your AI bot will stop auto-replying until reconnected.")) {
+      return;
+    }
+
+    setIsDisconnectingWhatsApp(true);
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user || !user.email) throw new Error("No user or email found");
+
+      const { error } = await supabase
+        .from("tenants")
+        .update({
+          whatsapp_access_token: null,
+          whatsapp_phone_number_id: null,
+          whatsapp_business_account_id: null,
+          waba_id: null
+        })
+        .eq("owner_email", user.email);
+
+      if (error) throw error;
+
+      setWhatsappAccessToken("");
+      setWhatsappPhoneNumberId("");
+      setWhatsappBusinessAccountId("");
+      setOriginalData(prev => ({
+        ...prev,
+        whatsappAccessToken: "",
+        whatsappPhoneNumberId: "",
+        whatsappBusinessAccountId: ""
+      }));
+
+      toastSuccess("Meta WhatsApp integration disconnected successfully.");
+      await fetchConfig(false);
+    } catch (err: any) {
+      console.error("[Disconnect WhatsApp Error]:", err.message);
+      toastError(err.message || "Failed to disconnect WhatsApp account.");
+    } finally {
+      setIsDisconnectingWhatsApp(false);
     }
   }
 
@@ -1300,7 +1365,72 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectWhatsApp}
+                    disabled={isDisconnectingWhatsApp}
+                    className="h-9 px-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-60 select-none"
+                    title="Disconnect WhatsApp Business account"
+                  >
+                    {isDisconnectingWhatsApp ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Disconnecting…</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Disconnect</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleMetaLogin}
+                    disabled={isMetaConnecting}
+                    className="h-9 px-3.5 bg-[var(--bg-muted)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-60 select-none"
+                    title="Reconnect or change Meta WhatsApp account"
+                  >
+                    {isMetaConnecting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1877F2]" />
+                        <span>Reconnecting…</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 text-[#1877F2]" />
+                        <span>Reconnect</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleMetaLogin}
+                  disabled={isMetaConnecting}
+                  className="h-9 px-4 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm shadow-blue-500/20 disabled:opacity-60 select-none"
+                >
+                  {isMetaConnecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Connecting Meta…</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.22-1.31c1.42.76 3.03 1.19 4.78 1.19 5.52 0 10-4.48 10-10S17.52 2 12 2zm.02 18.05c-1.57 0-3.08-.44-4.39-1.25l-.31-.19-3.26.82.87-3.18-.2-.33C3.86 14.61 3.4 13.06 3.4 11.45c0-4.73 3.86-8.58 8.62-8.58 4.75 0 8.6 3.85 8.6 8.58s-3.85 8.6-8.6 8.6zm4.72-6.42c-.26-.13-1.53-.76-1.77-.85-.24-.09-.41-.13-.58.13-.17.26-.67.85-.82 1.02-.15.17-.3.19-.56.06-.26-.13-1.09-.4-2.07-1.28-.77-.68-1.29-1.53-1.44-1.79-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.06-.13-.58-1.4-.8-1.91-.21-.51-.43-.44-.59-.45-.15-.01-.33-.01-.5-.01-.17 0-.45.06-.69.32-.24.26-.91.89-.91 2.17s.93 2.52 1.06 2.69c.13.17 1.84 2.8 4.45 3.93.62.27 1.11.43 1.49.55.63.2 1.2.17 1.65.1.5-.07 1.53-.62 1.74-1.23.21-.6.21-1.12.15-1.23-.06-.11-.23-.17-.49-.3z"/>
+                      </svg>
+                      <span>Connect with Meta</span>
+                    </>
+                  )}
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setShowSetupGuide(!showSetupGuide)}
@@ -1309,13 +1439,14 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                 <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${showSetupGuide ? "rotate-180" : ""}`} />
                 <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
               </button>
+
               <a 
                 href="https://developers.facebook.com/apps/1586663712852403/use_cases/customize/wa-dev-console/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&selected_tab=wa-dev-console&product_route=whatsapp-business&business_id=1541013347588467" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm inline-flex items-center justify-center"
+                className="h-9 px-4 bg-[var(--bg-muted)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-xs inline-flex items-center justify-center"
               >
-                <span>Open Meta Console</span>
+                <span>Meta Console</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -1331,28 +1462,155 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                 className="overflow-hidden"
               >
                 <div className="relative pl-6 sm:pl-8 border-l border-dashed border-[var(--border-subtle)] ml-3 sm:ml-4 space-y-6 py-4">
-                  {/* Step 1 */}
+                  {/* Option 1: 1-Click Meta Login */}
                   <div className="relative space-y-2">
-                    <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface)] shadow-sm">
+                    <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#1877F2] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface)] shadow-sm">
                       1
                     </div>
-                    <h5 className="font-bold text-xs text-[var(--text-primary)]">Generate Your Meta Access Token</h5>
-                    <p className="text-[11px] text-[var(--text-secondary)]">Click the Generate access token button on Meta's dashboard.</p>
+                    <div className="flex items-center gap-2">
+                      <h5 className="font-bold text-xs text-[var(--text-primary)]">Method 1: 1-Click Connect with Meta (Recommended)</h5>
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 font-mono">Instant</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                      Click the <strong>Connect with Meta</strong> button above. A secure Meta dialog will open allowing you to choose your WhatsApp Business Account. LeadFlow will automatically exchange tokens, fetch your Phone Number ID and WABA ID, and link your business in seconds.
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-[var(--bg-muted)] border border-[var(--border-subtle)] text-[10px] font-mono text-[var(--text-secondary)] space-y-1">
+                      <div className="font-bold text-[var(--text-primary)] font-sans">Meta Developer App OAuth Redirect URIs:</div>
+                      <div>• https://automation-frontend-tjv3.vercel.app/settings</div>
+                      <div>• http://localhost:3000/settings</div>
+                    </div>
                   </div>
-                  {/* Step 2 */}
+
+                  {/* Option 2: Manual Credentials */}
                   <div className="relative space-y-2">
                     <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface)] shadow-sm">
                       2
                     </div>
-                    <h5 className="font-bold text-xs text-[var(--text-primary)]">Copy the Phone Number ID</h5>
-                    <p className="text-[11px] text-[var(--text-secondary)]">Copy and paste Phone number ID into Waba configurations.</p>
+                    <h5 className="font-bold text-xs text-[var(--text-primary)]">Method 2: Manual Credentials Override</h5>
+                    <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                      Alternatively, generate a permanent access token in the Meta Developer Console under WhatsApp &gt; API Setup, and manually copy your Phone Number ID, WABA ID, and Permanent Token into the input fields below.
+                    </p>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
+          {/* Prominent 1-Click Meta Embedded Signup Hero Card */}
+          {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+            <div className="relative overflow-hidden rounded-[var(--radius-xl)] bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 text-left">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-bold text-sm tracking-wide">WhatsApp Business Connected</span>
+                    <span className="text-[10px] font-bold bg-emerald-400/30 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100 max-w-lg leading-relaxed">
+                    Your WhatsApp Business account is linked and ready. Incoming customer leads are automatically handled by your AI agent.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-mono text-emerald-100">
+                    <span className="bg-black/20 px-2 py-0.5 rounded">Phone ID: {whatsappPhoneNumberId}</span>
+                    <span className="bg-black/20 px-2 py-0.5 rounded">WABA ID: {whatsappBusinessAccountId}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap sm:flex-col items-stretch gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDisconnectWhatsApp}
+                    disabled={isDisconnectingWhatsApp}
+                    className="h-9 px-4 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
+                  >
+                    {isDisconnectingWhatsApp ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Disconnecting…</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Disconnect WhatsApp</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleMetaLogin}
+                    disabled={isMetaConnecting}
+                    className="h-9 px-4 bg-white/15 hover:bg-white/25 text-white font-bold text-xs rounded-xl transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
+                  >
+                    {isMetaConnecting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Reconnecting…</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Change Account</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="relative overflow-hidden rounded-[var(--radius-xl)] bg-gradient-to-r from-[#1877F2] to-[#0D65D9] p-5 text-white shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.22-1.31c1.42.76 3.03 1.19 4.78 1.19 5.52 0 10-4.48 10-10S17.52 2 12 2zm.02 18.05c-1.57 0-3.08-.44-4.39-1.25l-.31-.19-3.26.82.87-3.18-.2-.33C3.86 14.61 3.4 13.06 3.4 11.45c0-4.73 3.86-8.58 8.62-8.58 4.75 0 8.6 3.85 8.6 8.58s-3.85 8.6-8.6 8.6zm4.72-6.42c-.26-.13-1.53-.76-1.77-.85-.24-.09-.41-.13-.58.13-.17.26-.67.85-.82 1.02-.15.17-.3.19-.56.06-.26-.13-1.09-.4-2.07-1.28-.77-.68-1.29-1.53-1.44-1.79-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.06-.13-.58-1.4-.8-1.91-.21-.51-.43-.44-.59-.45-.15-.01-.33-.01-.5-.01-.17 0-.45.06-.69.32-.24.26-.91.89-.91 2.17s.93 2.52 1.06 2.69c.13.17 1.84 2.8 4.45 3.93.62.27 1.11.43 1.49.55.63.2 1.2.17 1.65.1.5-.07 1.53-.62 1.74-1.23.21-.6.21-1.12.15-1.23-.06-.11-.23-.17-.49-.3z"/>
+                      </svg>
+                    </div>
+                    <span className="font-bold text-sm tracking-wide">1-Click Meta WhatsApp Integration</span>
+                    <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                      Official
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-100 max-w-lg leading-relaxed">
+                    Connect your WhatsApp Business Account directly through Meta. We will automatically fetch your <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, and generate your <strong>Permanent Access Token</strong> in seconds.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleMetaLogin}
+                  disabled={isMetaConnecting}
+                  className="shrink-0 h-10 px-5 bg-white hover:bg-blue-50 text-[#1877F2] font-bold text-xs rounded-xl shadow-md transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
+                >
+                  {isMetaConnecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1877F2]" />
+                      <span>Connecting Meta…</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 fill-[#1877F2] shrink-0" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.22-1.31c1.42.76 3.03 1.19 4.78 1.19 5.52 0 10-4.48 10-10S17.52 2 12 2zm.02 18.05c-1.57 0-3.08-.44-4.39-1.25l-.31-.19-3.26.82.87-3.18-.2-.33C3.86 14.61 3.4 13.06 3.4 11.45c0-4.73 3.86-8.58 8.62-8.58 4.75 0 8.6 3.85 8.6 8.58s-3.85 8.6-8.6 8.6zm4.72-6.42c-.26-.13-1.53-.76-1.77-.85-.24-.09-.41-.13-.58.13-.17.26-.67.85-.82 1.02-.15.17-.3.19-.56.06-.26-.13-1.09-.4-2.07-1.28-.77-.68-1.29-1.53-1.44-1.79-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.06-.13-.58-1.4-.8-1.91-.21-.51-.43-.44-.59-.45-.15-.01-.33-.01-.5-.01-.17 0-.45.06-.69.32-.24.26-.91.89-.91 2.17s.93 2.52 1.06 2.69c.13.17 1.84 2.8 4.45 3.93.62.27 1.11.43 1.49.55.63.2 1.2.17 1.65.1.5-.07 1.53-.62 1.74-1.23.21-.6.21-1.12.15-1.23-.06-.11-.23-.17-.49-.3z"/>
+                      </svg>
+                      <span>Connect with Meta</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                Manual / Direct Credentials (Auto-filled by Meta Login)
+              </span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider">Phone Number ID</label>

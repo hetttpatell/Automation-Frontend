@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/ui/Toast";
+import { useDashboard } from "@/context/DashboardContext";
 
 // ─── Interfaces ────────────────────────────────────────────────────
 interface FAQ {
@@ -142,15 +143,16 @@ function FAQCard({
 
 // ─── Main Page Component ───────────────────────────────────────────
 export default function KnowledgeBasePage() {
+  const { tenant: dashboardTenant } = useDashboard();
   const supabase = createClient();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!dashboardTenant);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(dashboardTenant?.id || null);
   
   const [deploySuccess, setDeploySuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -179,21 +181,24 @@ export default function KnowledgeBasePage() {
     async function fetchFAQs() {
       setIsLoading(true);
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      let resolvedTenantId = dashboardTenant?.id || tenantId;
 
-      if (authError || !user || !user.email) {
-        console.error("[KB Auth Error]:", authError?.message || "No user or email found");
-        setIsLoading(false);
-        return;
-      }
+      if (!resolvedTenantId) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("owner_email", user.email)
-        .single();
+        if (authError || !user || !user.email) {
+          console.error("[KB Auth Error]:", authError?.message || "No user or email found");
+          setIsLoading(false);
+          return;
+        }
 
-      let resolvedTenantId = tenant?.id;
+        const { data: tenant, error: tenantError } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("owner_email", user.email)
+          .single();
+
+        resolvedTenantId = tenant?.id;
 
       if (tenantError && tenantError.code === "PGRST116") {
         const defaultBusinessName = user.email
@@ -238,8 +243,9 @@ export default function KnowledgeBasePage() {
         setIsLoading(false);
         return;
       }
+    }
 
-      if (resolvedTenantId) {
+    if (resolvedTenantId) {
         setTenantId(resolvedTenantId);
         const { data, error } = await supabase
           .from("knowledge_base")

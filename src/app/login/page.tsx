@@ -42,10 +42,78 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const [step, setStep] = useState(0);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-restore session or remembered credentials from localStorage on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkAuthAndRestore() {
+      if (typeof window === "undefined") return;
+
+      // 1. Instant check: If active user session exists in localStorage, redirect immediately
+      const stored = localStorage.getItem("leadflow_user_session");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.id && parsed?.email) {
+            router.replace("/dashboard");
+            return;
+          }
+        } catch {}
+      }
+
+      // 2. Check Supabase session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          localStorage.setItem("leadflow_user_session", JSON.stringify(session.user));
+          router.replace("/dashboard");
+          return;
+        }
+
+        // 3. Check for saved credentials in localStorage
+        const savedEmail = localStorage.getItem("leadflow_saved_email");
+        const savedPass = localStorage.getItem("leadflow_saved_password");
+        const rememberSetting = localStorage.getItem("leadflow_remember_me");
+
+        if (savedEmail) setEmail(savedEmail);
+        if (savedPass) setPassword(savedPass);
+        if (rememberSetting !== null) setRememberMe(rememberSetting === "true");
+
+        // If credentials were saved and rememberMe is active, auto-sign-in seamlessly
+        if (savedEmail && savedPass && rememberSetting !== "false") {
+          const { data: authData, error } = await supabase.auth.signInWithPassword({
+            email: savedEmail,
+            password: savedPass,
+          });
+
+          if (!error && authData?.user) {
+            localStorage.setItem("leadflow_user_session", JSON.stringify(authData.user));
+            router.replace("/dashboard");
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("[Login] Auth restoration note:", err);
+      } finally {
+        if (isMounted) {
+          setIsCheckingAuth(false);
+        }
+      }
+    }
+
+    checkAuthAndRestore();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, supabase]);
 
   // Multi-step loop with precise intervals
   useEffect(() => {
@@ -90,13 +158,27 @@ export default function LoginPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
         throw error;
+      }
+
+      // Store in localStorage so credentials and session never ask again until explicit logout
+      if (typeof window !== "undefined" && data?.user) {
+        localStorage.setItem("leadflow_user_session", JSON.stringify(data.user));
+        if (rememberMe) {
+          localStorage.setItem("leadflow_saved_email", email);
+          localStorage.setItem("leadflow_saved_password", password);
+          localStorage.setItem("leadflow_remember_me", "true");
+        } else {
+          localStorage.removeItem("leadflow_saved_email");
+          localStorage.removeItem("leadflow_saved_password");
+          localStorage.setItem("leadflow_remember_me", "false");
+        }
       }
 
       success("Welcome back! Signing you in...");
@@ -125,6 +207,22 @@ export default function LoginPage() {
       }
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#f8fafc]">
+        <div className="flex flex-col items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#3b82f6] to-[#8b5cf6] flex items-center justify-center shadow-lg shadow-blue-500/25 animate-pulse">
+            <span className="text-white font-extrabold text-xl">L</span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
+            <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+            <span>Restoring secure session…</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full flex flex-col lg:flex-row bg-[#FAFAFA] text-slate-800 selection:bg-accent/20 selection:text-accent">
@@ -401,6 +499,24 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="w-[17px] h-[17px]" strokeWidth={1.8} /> : <Eye className="w-[17px] h-[17px]" strokeWidth={1.8} />}
                   </button>
                 </div>
+              </div>
+
+              {/* Remember Credentials Option */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer accent-blue-600 transition-colors"
+                  />
+                  <span className="text-slate-600 font-medium group-hover:text-slate-900 transition-colors">
+                    Keep me signed in
+                  </span>
+                </label>
+                <span className="text-[11px] text-slate-400 font-medium select-none">
+                  Saved until logout
+                </span>
               </div>
 
               {/* Submit Button */}
