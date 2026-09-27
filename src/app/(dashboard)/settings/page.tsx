@@ -224,17 +224,19 @@ interface SettingsRowProps {
 
 function SettingsRow({ label, description, required, children }: SettingsRowProps) {
   return (
-    <div className="py-6 first:pt-2 last:pb-2 last:border-b-0 border-b border-[var(--border-subtle)] grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-      <div className="md:col-span-1 space-y-1">
-        <label className="text-sm font-semibold text-[var(--text-primary)] font-display flex items-center gap-1.5">
+    <div className="py-4 sm:py-6 first:pt-1 sm:first:pt-2 last:pb-1 sm:last:pb-2 last:border-b-0 border-b border-[var(--border-subtle)] flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-6 items-start">
+      <div className="w-full md:col-span-1 space-y-1">
+        <label className="text-xs sm:text-sm font-bold text-[var(--text-primary)] font-display flex items-center gap-1.5">
           {label}
-          {required && <span className="text-rose-500 ml-0.5">*</span>}
+          {required && <span className="text-rose-500 font-bold ml-0.5">*</span>}
         </label>
-        <p className="text-xs text-[var(--text-tertiary)] leading-relaxed max-w-sm">
-          {description}
-        </p>
+        {description && (
+          <p className="text-[11px] sm:text-xs text-[var(--text-tertiary)] leading-relaxed max-w-sm">
+            {description}
+          </p>
+        )}
       </div>
-      <div className="md:col-span-2 space-y-2">
+      <div className="w-full md:col-span-2 space-y-2">
         {children}
       </div>
     </div>
@@ -985,7 +987,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
     }
   }
 
-  const inputBaseClass = "w-full px-3.5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-lg)] text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)] transition-all duration-150";
+  const inputBaseClass = "w-full px-3.5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-xl text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] hover:border-[var(--border-strong)] transition-all duration-150 min-h-[44px]";
 
   // ─── Render Sub-panels ──────────────────────────────────────────────
 
@@ -1045,7 +1047,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
         description={t.aiToneSubtitle}
         required
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 select-none">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 select-none">
           {TONE_OPTIONS.map((opt) => {
             const isSelected = aiTone === opt.value;
             const Icon = opt.icon;
@@ -1057,34 +1059,30 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                   setAiTone(opt.value);
                   setHasChanges(true);
                 }}
-                className={`p-4 rounded-[var(--radius-xl)] border flex flex-col items-start text-left cursor-pointer select-none relative overflow-hidden transition-all duration-200 min-h-[100px] ${
+                className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border flex flex-col items-start text-left cursor-pointer select-none relative overflow-hidden transition-all duration-150 active:scale-[0.98] ${
                   isSelected 
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/40 shadow-[var(--shadow-sm)] ring-1 ring-[var(--brand-primary)]/20" 
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/40 shadow-xs ring-1 ring-[var(--brand-primary)]/20" 
                     : "border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)]"
                 }`}
               >
                 {/* Selection Checkmark Badge */}
                 {isSelected && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-[var(--shadow-sm)]"
-                  >
-                    <Check className="w-3 h-3 text-white" />
-                  </motion.span>
+                  <span className="absolute top-2.5 right-2.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[var(--brand-primary)] flex items-center justify-center shadow-xs">
+                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                  </span>
                 )}
                 
-                <div className={`p-2 rounded-lg mb-2.5 ${isSelected ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"}`}>
-                  <Icon className="w-4 h-4" />
+                <div className={`p-1.5 sm:p-2 rounded-lg mb-2 ${isSelected ? "bg-[var(--brand-subtle)] text-[var(--brand-primary)]" : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"}`}>
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 
-                <span className={`text-xs font-bold tracking-tight ${
+                <span className={`text-xs sm:text-sm font-bold tracking-tight block ${
                   isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"
                 }`}>
                   {opt.label}
                 </span>
                 
-                <span className="text-[10px] text-[var(--text-tertiary)] leading-tight mt-1 font-medium select-none pointer-events-none">
+                <span className="text-[10px] sm:text-xs text-[var(--text-tertiary)] leading-tight mt-0.5 sm:mt-1 font-medium select-none pointer-events-none line-clamp-2">
                   {opt.desc}
                 </span>
               </button>
@@ -1255,13 +1253,13 @@ ${rulesText || "Customer satisfaction is paramount."}`;
         {/* Terminal Workspace body with line numbers */}
         <div className="flex text-xs leading-[1.8] font-mono overflow-y-auto max-h-[380px] bg-[#070A13]">
           {/* Line numbers column */}
-          <div className="p-5 pr-3 text-slate-600 border-r border-[#0B0F19] text-right select-none bg-[#05070e] shrink-0 font-mono">
+          <div className="hidden sm:block p-4 sm:p-5 pr-3 text-slate-600 border-r border-[#0B0F19] text-right select-none bg-[#05070e] shrink-0 font-mono">
             {compiledPrompt.split("\n").map((_, i) => (
               <div key={i}>{String(i + 1).padStart(2, "0")}</div>
             ))}
           </div>
           {/* Content column */}
-          <div className="p-5 pl-4 text-slate-300 whitespace-pre-wrap select-text flex-1">
+          <div className="p-3.5 sm:p-5 pl-3 sm:pl-4 text-slate-300 whitespace-pre-wrap select-text flex-1 text-[11px] sm:text-xs">
             {renderHighlightedPrompt(compiledPrompt)}
           </div>
         </div>
@@ -1285,8 +1283,8 @@ ${rulesText || "Customer satisfaction is paramount."}`;
         label="Google Calendar"
         description="Allows your Gemini AI representative to read your schedule, calculate free slots, and book new appointments automatically."
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+          <div className="flex items-center justify-between sm:justify-start gap-2">
             <span className="font-semibold text-xs text-[var(--text-primary)]">Status:</span>
             {isCalendarConnected ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
@@ -1300,12 +1298,12 @@ ${rulesText || "Customer satisfaction is paramount."}`;
             )}
           </div>
 
-          <div>
+          <div className="w-full sm:w-auto">
             {isCalendarConnected ? (
               <button
                 type="button"
                 onClick={handleDisconnectCalendar}
-                className="h-9 px-4 bg-[var(--color-danger-bg)] hover:bg-[var(--color-danger-bg-hover)] border border-[var(--danger-border)] text-[var(--color-danger-text)] rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98]"
+                className="w-full sm:w-auto h-9 px-4 bg-[var(--color-danger-bg)] hover:bg-[var(--color-danger-bg-hover)] border border-[var(--danger-border)] text-[var(--color-danger-text)] rounded-xl text-xs font-bold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-1.5"
               >
                 Disconnect Calendar
               </button>
@@ -1313,10 +1311,10 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               <button
                 type="button"
                 onClick={handleConnectCalendar}
-                className="h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center gap-1.5 shadow-[var(--shadow-sm)]"
+                className="w-full sm:w-auto h-9 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-xl text-xs font-bold cursor-pointer outline-none transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <Globe className="w-4 h-4" />
-                Connect Google Calendar
+                <span>Connect Google Calendar</span>
               </button>
             )}
           </div>
@@ -1350,8 +1348,8 @@ ${rulesText || "Customer satisfaction is paramount."}`;
         description="Configure your Meta WhatsApp Business integration. Get access token, Phone Number ID, and WhatsApp Business Account ID from Meta's dashboard."
       >
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+            <div className="flex items-center justify-between sm:justify-start gap-2">
               <span className="font-semibold text-xs text-[var(--text-primary)]">Status:</span>
               {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--success-border)] uppercase font-mono">
@@ -1365,14 +1363,14 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
               {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
                 <>
                   <button
                     type="button"
                     onClick={handleDisconnectWhatsApp}
                     disabled={isDisconnectingWhatsApp}
-                    className="h-9 px-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-60 select-none"
+                    className="h-10 sm:h-9 px-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl sm:rounded-[var(--radius-lg)] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-60 select-none"
                     title="Disconnect WhatsApp Business account"
                   >
                     {isDisconnectingWhatsApp ? (
@@ -1392,7 +1390,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                     type="button"
                     onClick={handleMetaLogin}
                     disabled={isMetaConnecting}
-                    className="h-9 px-3.5 bg-[var(--bg-muted)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-60 select-none"
+                    className="h-10 sm:h-9 px-3.5 bg-[var(--bg-muted)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-xl sm:rounded-[var(--radius-lg)] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-60 select-none"
                     title="Reconnect or change Meta WhatsApp account"
                   >
                     {isMetaConnecting ? (
@@ -1413,7 +1411,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                   type="button"
                   onClick={handleMetaLogin}
                   disabled={isMetaConnecting}
-                  className="h-9 px-4 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm shadow-blue-500/20 disabled:opacity-60 select-none"
+                  className="col-span-2 sm:col-span-1 h-10 sm:h-9 px-4 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-xl sm:rounded-[var(--radius-lg)] text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-sm shadow-blue-500/20 disabled:opacity-60 select-none"
                 >
                   {isMetaConnecting ? (
                     <>
@@ -1434,20 +1432,20 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               <button
                 type="button"
                 onClick={() => setShowSetupGuide(!showSetupGuide)}
-                className="h-9 px-3.5 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98]"
+                className="h-10 sm:h-9 px-3 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-xl sm:rounded-[var(--radius-lg)] text-xs font-bold text-[var(--text-primary)] flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 active:scale-[0.98]"
               >
-                <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-200 ${showSetupGuide ? "rotate-180" : ""}`} />
-                <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-secondary)] transition-transform duration-200 ${showSetupGuide ? "rotate-180" : ""}`} />
+                <span>{showSetupGuide ? "Hide Guide" : "Guide"}</span>
               </button>
 
               <a 
                 href="https://developers.facebook.com/apps/1586663712852403/use_cases/customize/wa-dev-console/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&selected_tab=wa-dev-console&product_route=whatsapp-business&business_id=1541013347588467" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="h-9 px-4 bg-[var(--bg-muted)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-xs font-bold flex items-center gap-2 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-xs inline-flex items-center justify-center"
+                className="h-10 sm:h-9 px-3 bg-[var(--bg-muted)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-xl sm:rounded-[var(--radius-lg)] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 active:scale-[0.98] shadow-xs"
               >
-                <span>Meta Console</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Console</span>
+                <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           </div>
@@ -1461,10 +1459,10 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="relative pl-6 sm:pl-8 border-l border-dashed border-[var(--border-subtle)] ml-3 sm:ml-4 space-y-6 py-4">
+                <div className="relative pl-5 sm:pl-8 border-l border-dashed border-[var(--border-subtle)] ml-2 sm:ml-4 space-y-5 py-3 sm:py-4">
                   {/* Option 1: 1-Click Meta Login */}
-                  <div className="relative space-y-2">
-                    <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#1877F2] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface)] shadow-sm">
+                  <div className="relative space-y-1.5">
+                    <div className="absolute -left-[31px] sm:-left-[43px] top-0.5 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-[#1877F2] text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center border-2 sm:border-4 border-[var(--bg-surface)] shadow-xs">
                       1
                     </div>
                     <div className="flex items-center gap-2">
@@ -1482,8 +1480,8 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                   </div>
 
                   {/* Option 2: Manual Credentials */}
-                  <div className="relative space-y-2">
-                    <div className="absolute -left-[35px] sm:-left-[43px] top-0.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center border-4 border-[var(--bg-surface)] shadow-sm">
+                  <div className="relative space-y-1.5">
+                    <div className="absolute -left-[31px] sm:-left-[43px] top-0.5 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-[var(--brand-primary)] text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center border-2 sm:border-4 border-[var(--bg-surface)] shadow-xs">
                       2
                     </div>
                     <h5 className="font-bold text-xs text-[var(--text-primary)]">Method 2: Manual Credentials Override</h5>
@@ -1498,34 +1496,36 @@ ${rulesText || "Customer satisfaction is paramount."}`;
 
           {/* Prominent 1-Click Meta Embedded Signup Hero Card */}
           {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
-            <div className="relative overflow-hidden rounded-[var(--radius-xl)] bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-4 sm:p-5 text-white shadow-md">
+              <div className="flex flex-col gap-3.5 sm:gap-4">
                 <div className="space-y-1.5 text-left">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                      </div>
+                      <span className="font-bold text-xs sm:text-sm tracking-wide">WhatsApp Business Connected</span>
                     </div>
-                    <span className="font-bold text-sm tracking-wide">WhatsApp Business Connected</span>
-                    <span className="text-[10px] font-bold bg-emerald-400/30 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold bg-emerald-400/30 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-mono flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
                       Active
                     </span>
                   </div>
-                  <p className="text-xs text-emerald-100 max-w-lg leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-emerald-100 leading-relaxed">
                     Your WhatsApp Business account is linked and ready. Incoming customer leads are automatically handled by your AI agent.
                   </p>
-                  <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-mono text-emerald-100">
-                    <span className="bg-black/20 px-2 py-0.5 rounded">Phone ID: {whatsappPhoneNumberId}</span>
-                    <span className="bg-black/20 px-2 py-0.5 rounded">WABA ID: {whatsappBusinessAccountId}</span>
+                  <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-1.5 pt-1 text-[10px] sm:text-[11px] font-mono text-emerald-100">
+                    <span className="bg-black/25 px-2.5 py-1 rounded-md truncate">Phone ID: {whatsappPhoneNumberId}</span>
+                    <span className="bg-black/25 px-2.5 py-1 rounded-md truncate">WABA ID: {whatsappBusinessAccountId}</span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap sm:flex-col items-stretch gap-2 shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-white/10">
                   <button
                     type="button"
                     onClick={handleDisconnectWhatsApp}
                     disabled={isDisconnectingWhatsApp}
-                    className="h-9 px-4 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
+                    className="h-10 px-4 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
                   >
                     {isDisconnectingWhatsApp ? (
                       <>
@@ -1544,7 +1544,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                     type="button"
                     onClick={handleMetaLogin}
                     disabled={isMetaConnecting}
-                    className="h-9 px-4 bg-white/15 hover:bg-white/25 text-white font-bold text-xs rounded-xl transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
+                    className="h-10 px-4 bg-white/15 hover:bg-white/25 text-white font-bold text-xs rounded-xl transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
                   >
                     {isMetaConnecting ? (
                       <>
@@ -1562,22 +1562,22 @@ ${rulesText || "Customer satisfaction is paramount."}`;
               </div>
             </div>
           ) : (
-            <div className="relative overflow-hidden rounded-[var(--radius-xl)] bg-gradient-to-r from-[#1877F2] to-[#0D65D9] p-5 text-white shadow-md">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1877F2] to-[#0D65D9] p-4 sm:p-5 text-white shadow-md">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1 text-left">
+                <div className="space-y-1.5 text-left">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
                       <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.22-1.31c1.42.76 3.03 1.19 4.78 1.19 5.52 0 10-4.48 10-10S17.52 2 12 2zm.02 18.05c-1.57 0-3.08-.44-4.39-1.25l-.31-.19-3.26.82.87-3.18-.2-.33C3.86 14.61 3.4 13.06 3.4 11.45c0-4.73 3.86-8.58 8.62-8.58 4.75 0 8.6 3.85 8.6 8.58s-3.85 8.6-8.6 8.6zm4.72-6.42c-.26-.13-1.53-.76-1.77-.85-.24-.09-.41-.13-.58.13-.17.26-.67.85-.82 1.02-.15.17-.3.19-.56.06-.26-.13-1.09-.4-2.07-1.28-.77-.68-1.29-1.53-1.44-1.79-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.06-.13-.58-1.4-.8-1.91-.21-.51-.43-.44-.59-.45-.15-.01-.33-.01-.5-.01-.17 0-.45.06-.69.32-.24.26-.91.89-.91 2.17s.93 2.52 1.06 2.69c.13.17 1.84 2.8 4.45 3.93.62.27 1.11.43 1.49.55.63.2 1.2.17 1.65.1.5-.07 1.53-.62 1.74-1.23.21-.6.21-1.12.15-1.23-.06-.11-.23-.17-.49-.3z"/>
                       </svg>
                     </div>
-                    <span className="font-bold text-sm tracking-wide">1-Click Meta WhatsApp Integration</span>
-                    <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                    <span className="font-bold text-xs sm:text-sm tracking-wide">1-Click Meta WhatsApp Integration</span>
+                    <span className="text-[9px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
                       Official
                     </span>
                   </div>
-                  <p className="text-xs text-blue-100 max-w-lg leading-relaxed">
-                    Connect your WhatsApp Business Account directly through Meta. We will automatically fetch your <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, and generate your <strong>Permanent Access Token</strong> in seconds.
+                  <p className="text-[11px] sm:text-xs text-blue-100 max-w-lg leading-relaxed">
+                    Connect your WhatsApp Business Account directly through Meta. Automatically sync Phone Number ID and permanent tokens in seconds.
                   </p>
                 </div>
 
@@ -1585,7 +1585,7 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                   type="button"
                   onClick={handleMetaLogin}
                   disabled={isMetaConnecting}
-                  className="shrink-0 h-10 px-5 bg-white hover:bg-blue-50 text-[#1877F2] font-bold text-xs rounded-xl shadow-md transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none"
+                  className="w-full sm:w-auto h-11 px-5 bg-white hover:bg-blue-50 text-[#1877F2] font-bold text-xs rounded-xl shadow-md transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 select-none shrink-0"
                 >
                   {isMetaConnecting ? (
                     <>
@@ -1709,21 +1709,36 @@ ${rulesText || "Customer satisfaction is paramount."}`;
   );
 
   return (
-    <div className="h-full overflow-hidden bg-[var(--bg-canvas)] select-none flex flex-col">
+    <div className="h-full overflow-hidden bg-[var(--bg-canvas)] select-none flex flex-col relative">
       
       {/* ─── Scrollable Body Area ───────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-8 pb-24">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-3.5 sm:py-6 pb-28 sm:pb-24">
         
         <div className="max-w-[960px] mx-auto select-none font-sans">
           {/* Page Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--border-subtle)] pb-6 mb-6 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 sm:pb-6 mb-4 sm:mb-6 border-b border-[var(--border-subtle)] gap-3">
             <div className="space-y-1">
-              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight leading-tight">
-                {t.title || "Your preferences"}
-              </h1>
-              {/* Shareable profile URL */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight leading-tight">
+                  {t.title || "Your preferences"}
+                </h1>
+                {whatsappPhoneNumberId && whatsappBusinessAccountId ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Agent
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--bg-muted)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] font-mono">
+                    Setup
+                  </span>
+                )}
+              </div>
+
+              {/* Shareable profile URL badge */}
               <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] font-medium">
-                <span className="text-[var(--brand-primary)]">leadflow.ai/@{businessName ? businessName.toLowerCase().replace(/[^a-z0-9]/g, "") : "my-business"}</span>
+                <span className="text-[var(--brand-primary)] font-mono text-[11px] truncate max-w-[200px] sm:max-w-none">
+                  leadflow.ai/@{businessName ? businessName.toLowerCase().replace(/[^a-z0-9]/g, "") : "my-business"}
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -1739,9 +1754,9 @@ ${rulesText || "Customer satisfaction is paramount."}`;
             </div>
 
             {/* Header Right Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
               {/* Language switcher */}
-              <div className="flex bg-[var(--bg-surface-raised)] p-[3px] rounded-[var(--radius-md)] border border-[var(--border-subtle)] shadow-[var(--shadow-sm)] gap-[2px] select-none relative shrink-0">
+              <div className="flex bg-[var(--bg-surface-raised)] p-[2px] rounded-xl border border-[var(--border-subtle)] shadow-xs gap-0.5 select-none shrink-0">
                 {(["en", "hi", "gu"] as const).map((lang) => {
                   const labels = { en: "EN", hi: "हिंदी", gu: "ગુ" };
                   const isSelected = formLanguage === lang;
@@ -1750,40 +1765,16 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                       key={lang}
                       type="button"
                       onClick={() => setFormLanguage(lang)}
-                      className={`px-3 py-1 text-[11px] font-semibold rounded-[var(--radius-sm)] cursor-pointer outline-none transition-all duration-200 relative z-10 ${
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg cursor-pointer outline-none transition-all duration-150 relative z-10 ${
                         isSelected
-                          ? "text-white"
+                          ? "bg-[var(--brand-primary)] text-white shadow-xs"
                           : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       }`}
                     >
-                      {isSelected && (
-                        <motion.div
-                          layoutId="active-lang-pill"
-                          className="absolute inset-0 bg-[var(--brand-primary)] rounded-[var(--radius-sm)] z-[-1]"
-                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                        />
-                      )}
                       {labels[lang]}
                     </button>
                   );
                 })}
-              </div>
-
-              {/* ... Options button */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toastSuccess("LeadFlow Business Agent config active");
-                  }}
-                  className="p-2.5 rounded-[var(--radius-lg)] border border-[var(--border-default)] hover:border-[var(--border-strong)] bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer flex items-center justify-center"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="5" cy="12" r="2" />
-                    <circle cx="12" cy="12" r="2" />
-                    <circle cx="19" cy="12" r="2" />
-                  </svg>
-                </button>
               </div>
 
               {/* Primary action CTA button */}
@@ -1792,18 +1783,19 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                 onClick={() => {
                   window.open("/inbox", "_blank");
                 }}
-                className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-[var(--radius-lg)] text-xs font-semibold cursor-pointer outline-none flex items-center gap-1.5 shadow-[var(--shadow-sm)] whitespace-nowrap transition-all duration-150 active:scale-[0.98]"
+                className="h-8.5 sm:h-9 px-3 sm:px-4 bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-xl text-xs font-bold cursor-pointer outline-none flex items-center gap-1.5 shadow-xs whitespace-nowrap transition-all duration-150 active:scale-[0.98]"
               >
-                <span>View Live Chatbot</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Live Chatbot</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
               </button>
             </div>
           </div>
 
-          {/* Horizontal Navigation Tabs */}
-          <div className="flex border-b border-[var(--border-subtle)] gap-8 mb-8 overflow-x-auto select-none no-scrollbar">
+          {/* Adaptive Segmented Control Navigation Tabs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-xl sm:rounded-2xl mb-5 sm:mb-6 shadow-xs select-none">
             {navTabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
@@ -1812,15 +1804,16 @@ ${rulesText || "Customer satisfaction is paramount."}`;
                     setActiveTab(tab.id as any);
                     setActiveAccordion(tab.id as any);
                   }}
-                  className={`pb-3.5 text-sm font-medium transition-all relative border-b-2 cursor-pointer outline-none whitespace-nowrap ${
+                  className={`relative py-2 sm:py-2.5 px-2.5 rounded-lg sm:rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all duration-150 outline-none select-none ${
                     isActive 
-                      ? "border-[var(--brand-primary)] text-[var(--brand-primary)] font-semibold" 
-                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      ? "text-[var(--text-primary)] font-bold shadow-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)]" 
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]/50"
                   }`}
                 >
-                  {tab.label}
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-tertiary)]"}`} />
+                  <span className="truncate">{tab.label}</span>
                   {tab.hasChanges && (
-                    <span className="absolute top-0 -right-2 w-1.5 h-1.5 rounded-full bg-[var(--color-warning)]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-warning)] animate-pulse shrink-0" />
                   )}
                 </button>
               );
@@ -1828,14 +1821,14 @@ ${rulesText || "Customer satisfaction is paramount."}`;
           </div>
 
           {/* Settings Section Description */}
-          <div className="mb-6">
-            <h2 className="text-lg font-bold font-display text-[var(--text-primary)]">
-              {activeTab === "profile" && "Preferences"}
+          <div className="mb-4 sm:mb-6 px-1">
+            <h2 className="text-base sm:text-lg font-bold font-display text-[var(--text-primary)]">
+              {activeTab === "profile" && "General Profile"}
               {activeTab === "vectors" && "Knowledge Vectors"}
               {activeTab === "compiler" && "AI Prompt Compiler"}
-              {activeTab === "integrations" && "Integrations & Channels"}
+              {activeTab === "integrations" && "Integrations & Booking"}
             </h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-1 font-sans leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] mt-0.5 sm:mt-1 font-sans leading-relaxed">
               {activeTab === "profile" && "Share your business name, tone, and language expectations. These details help guide how the AI handles customer conversations."}
               {activeTab === "vectors" && "Define services, prices, working schedules, and special rules. The AI prompt compiler uses these inputs to keep chatbot responses accurate."}
               {activeTab === "compiler" && "Review the compiled system instruction prompt sent to Gemini. Make sure variables align with your business guidelines."}
@@ -1843,17 +1836,17 @@ ${rulesText || "Customer satisfaction is paramount."}`;
             </p>
           </div>
 
-          {/* Main Workspace */}
+          {/* Main Workspace Card */}
           {isLoading ? (
-            <div className="bg-[var(--bg-surface)] rounded-[var(--radius-xl)] border border-[var(--border-subtle)] p-6 h-96 animate-shimmer" />
+            <div className="bg-[var(--bg-surface)] rounded-2xl sm:rounded-[var(--radius-xl)] border border-[var(--border-subtle)] p-6 h-96 animate-shimmer" />
           ) : (
-            <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] p-6 md:p-8 shadow-[var(--shadow-sm)] relative font-sans">
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl sm:rounded-[var(--radius-xl)] p-4 sm:p-6 md:p-8 shadow-[var(--shadow-sm)] relative font-sans">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.15, ease: "easeInOut" }}
                 >
                   {activeTab === "profile" && renderProfileTab()}
@@ -1866,6 +1859,55 @@ ${rulesText || "Customer satisfaction is paramount."}`;
           )}
         </div>
       </div>
+
+      {/* Floating Save/Discard Bar on Mobile & Desktop */}
+      <AnimatePresence>
+        {hasChanges && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="fixed bottom-3 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-8 sm:w-auto z-40"
+          >
+            <div className="p-2 sm:px-4 sm:py-2.5 bg-[var(--bg-surface)]/95 backdrop-blur-xl border border-[var(--border-default)] shadow-2xl rounded-2xl flex items-center justify-between gap-3 ring-2 ring-[var(--brand-primary)]/10">
+              <div className="flex items-center gap-2 pl-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-xs font-bold text-[var(--text-primary)]">Unsaved Changes</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  className="h-8 px-3 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                >
+                  {t.discard}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="h-8.5 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-[0.97] transition-all cursor-pointer disabled:opacity-60"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>{t.saving}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3 h-3" />
+                      <span>{t.save}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Render Actions in Layout Header Portal */}
       {mounted && typeof document !== "undefined" && document.getElementById("header-cta-portal") ? (
