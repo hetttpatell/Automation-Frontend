@@ -47,8 +47,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing authorization code from Meta login." }, { status: 400 });
     }
 
-    const metaAppId = process.env.META_APP_ID || process.env.NEXT_PUBLIC_META_APP_ID;
-    const metaAppSecret = process.env.META_APP_SECRET;
+    let metaAppId = process.env.META_APP_ID || process.env.NEXT_PUBLIC_META_APP_ID;
+    let metaAppSecret = process.env.META_APP_SECRET;
+
+    // Secure fallback: If not in process.env (e.g. Vercel deployment without manual env setup),
+    // fetch credentials securely from Supabase private config RPC.
+    if (!metaAppId || !metaAppSecret) {
+      try {
+        const { data: creds, error: credsErr } = await supabaseAdmin.rpc("get_meta_credentials");
+        if (!credsErr && creds) {
+          if (!metaAppId && creds.app_id) metaAppId = creds.app_id;
+          if (!metaAppSecret && creds.app_secret) metaAppSecret = creds.app_secret;
+        }
+      } catch (rpcErr) {
+        console.warn("[Meta API Route] RPC fallback error:", rpcErr);
+      }
+    }
 
     if (!metaAppId || !metaAppSecret) {
       console.error("[Meta API Route] Missing META_APP_ID or META_APP_SECRET environment variable.");
