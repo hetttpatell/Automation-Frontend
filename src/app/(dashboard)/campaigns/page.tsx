@@ -3,7 +3,7 @@
 // Backend API URL — routes to our dedicated Node.js server
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Send,
   Megaphone,
@@ -25,6 +25,7 @@ import {
   Database,
   ChevronLeft,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
@@ -53,16 +54,20 @@ interface ParsedContact {
 
 // ─── Variable Pills Config ──────────────────────────────────────────
 const VARIABLE_PILLS = [
+  { label: "{name}", value: "{name}" },
   { label: "{customer_name}", value: "{customer_name}" },
   { label: "{business_name}", value: "{business_name}" },
 ];
 
 function sanitizePhoneForWhatsApp(input: any): string {
   if (!input) return "";
-  let digits = String(input).replace(/[^\d]/g, "");
+  let digits = String(input).replace(/^[pP]:/, "").replace(/[^\d]/g, "");
   // If 10 digits starting with 6,7,8,9 (common Indian mobile format), auto prefix 91
   if (/^[6-9]\d{9}$/.test(digits)) {
     digits = "91" + digits;
+  }
+  if (digits.length === 11 && digits.startsWith("0")) {
+    digits = "91" + digits.substring(1);
   }
   return digits;
 }
@@ -90,12 +95,16 @@ export default function CampaignsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
   const [fileSize, setFileSize] = useState("");
+  const [isParsingFile, setIsParsingFile] = useState(false);
   const [columns, setColumns] = useState<string[]>([]);
   const [nameColumn, setNameColumn] = useState<string>("");
   const [phoneColumn, setPhoneColumn] = useState<string>("");
   const [rawRows, setRawRows] = useState<Record<string, any>[]>([]);
   const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
   const [previewContactIndex, setPreviewContactIndex] = useState(0);
+  const [previewLimit, setPreviewLimit] = useState<number | "all">(100);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sendLimit, setSendLimit] = useState<number | "all">("all");
   const [isDragging, setIsDragging] = useState(false);
 
   // Composer state
@@ -152,9 +161,30 @@ export default function CampaignsPage() {
   const validImportedContacts = parsedContacts.filter((c) => c.isValid);
   const invalidImportedCount = parsedContacts.length - validImportedContacts.length;
 
+  const targetContacts = useMemo(() => {
+    if (sendLimit === "all") return validImportedContacts;
+    return validImportedContacts.slice(0, sendLimit);
+  }, [validImportedContacts, sendLimit]);
+
   const targetCount = audienceSource === "file" 
-    ? validImportedContacts.length 
+    ? targetContacts.length 
     : targetLeads.length;
+
+  const filteredContacts = useMemo(() => {
+    if (!searchQuery.trim()) return parsedContacts;
+    const q = searchQuery.toLowerCase().trim();
+    return parsedContacts.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone.includes(q) ||
+        Object.values(c.rawRow || {}).some((v) => String(v).toLowerCase().includes(q))
+    );
+  }, [parsedContacts, searchQuery]);
+
+  const displayContacts = useMemo(() => {
+    if (previewLimit === "all") return filteredContacts;
+    return filteredContacts.slice(0, previewLimit);
+  }, [filteredContacts, previewLimit]);
 
   const isFormValid =
     customMessage.trim().length > 0 &&
@@ -167,14 +197,91 @@ export default function CampaignsPage() {
 
     // Validate extension
     const extension = uploadedFile.name.split(".").pop()?.toLowerCase();
-    if (!["csv", "xlsx", "xls"].includes(extension || "")) {
-      toastError("Unsupported format. Please upload a CSV or Excel file (.csv, .xlsx, .xls)");
+    if (!["csv", "xlsx", "xls", "pdf"].includes(extension || "")) {
+      toastError("Unsupported format. Please upload a CSV, Excel (.xlsx, .xls), or PDF file (.pdf)");
       return;
     }
 
     setFile(uploadedFile);
     setFileName(uploadedFile.name);
     setFileSize((uploadedFile.size / 1024).toFixed(1) + " KB");
+
+    // Handle PDF documents via dedicated server extraction pipeline
+    if (extension === "pdf") {
+      setIsParsingFile(true);
+      try {
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = "";
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+        }
+        const base64 = btoa(binary);
+
+        const res = await fetch(`${API_URL}/api/parse-pdf`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            base64,
+            fileName: uploadedFile.name,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to extract contacts from PDF.");
+        }
+
+        const detectedColumns = data.columns || ["Name", "Mobile No."];
+        const json = data.rows || [];
+
+        if (json.length === 0) {
+          toastError("Uploaded PDF has no contact rows with phone numbers.");
+          setIsParsingFile(false);
+          return;
+        }
+
+        setColumns(detectedColumns);
+        setRawRows(json);
+
+        const detectedName = data.nameColumn || "Name";
+        const detectedPhone = data.phoneColumn || "Mobile No.";
+
+        setNameColumn(detectedName);
+        setPhoneColumn(detectedPhone);
+
+        const contacts: ParsedContact[] = json.map((row: any) => {
+          const rawName = String(row[detectedName] || "").trim();
+          const rawPhone = String(row[detectedPhone] || "").trim();
+          const cleanPhone = sanitizePhoneForWhatsApp(rawPhone);
+          const isValid = cleanPhone.length >= 7 && cleanPhone.length <= 16;
+          return {
+            name: rawName || "Valued Customer",
+            phone: cleanPhone,
+            isValid,
+            rawRow: row,
+          };
+        });
+
+        setParsedContacts(contacts);
+        setPreviewContactIndex(0);
+
+        if (!campaignName.trim()) {
+          const cleanBase = uploadedFile.name.replace(/\.[^/.]+$/, "");
+          setCampaignName(`${cleanBase.charAt(0).toUpperCase() + cleanBase.slice(1)} Campaign`);
+        }
+
+        const validCount = contacts.filter((c) => c.isValid).length;
+        success(`Loaded ${uploadedFile.name}: Extracted ${contacts.length} contacts (${validCount} valid WhatsApp numbers).`);
+      } catch (err: any) {
+        console.error("Failed to parse PDF:", err);
+        toastError(err.message || "Could not read PDF. Ensure it contains tabular text with customer names and mobile numbers.");
+      } finally {
+        setIsParsingFile(false);
+      }
+      return;
+    }
 
     try {
       const buffer = await uploadedFile.arrayBuffer();
@@ -331,6 +438,7 @@ export default function CampaignsPage() {
 
       return text
         .replace(/\{customer_name\}/g, nameToUse)
+        .replace(/\{name\}/g, nameToUse)
         .replace(/\{business_name\}/g, businessName);
     },
     [businessName, audienceSource, validImportedContacts, previewContactIndex, targetLeads]
@@ -379,7 +487,7 @@ export default function CampaignsPage() {
         template_name: sendMode === "template" ? templateName.trim() : "",
         template_lang: sendMode === "template" ? templateLang.trim() : "en",
         recipients: audienceSource === "file"
-          ? validImportedContacts.map((c) => ({
+          ? targetContacts.map((c) => ({
               customer_name: c.name,
               customer_phone: c.phone,
             }))
@@ -567,7 +675,7 @@ export default function CampaignsPage() {
                       }}
                       onDragLeave={() => setIsDragging(false)}
                       onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => !isParsingFile && fileInputRef.current?.click()}
                       className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 ${
                         isDragging
                           ? "border-[var(--brand-primary)] bg-[var(--brand-subtle)]/30 scale-[1.01]"
@@ -577,37 +685,67 @@ export default function CampaignsPage() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                        accept=".csv, .xlsx, .xls, .pdf, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
                         className="hidden"
                         onChange={handleFileChange}
                       />
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto mb-3">
-                        <Upload className="w-6 h-6" />
-                      </div>
-                      <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
-                        Drop your CSV or Excel file here
-                      </h4>
-                      <p className="text-xs text-[var(--text-secondary)] mb-3">
-                        Supports <span className="font-mono text-emerald-400 font-medium">.xlsx</span>,{" "}
-                        <span className="font-mono text-emerald-400 font-medium">.xls</span>, and{" "}
-                        <span className="font-mono text-emerald-400 font-medium">.csv</span> files
-                      </p>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs font-semibold text-[var(--text-primary)] shadow-2xs">
-                        Browse Files
-                      </span>
+                      {isParsingFile ? (
+                        <div className="py-2 flex flex-col items-center justify-center">
+                          <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-2.5" />
+                          <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                            Parsing Lead Document...
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] mt-1">
+                            Extracting customer names and WhatsApp contact numbers from {fileName || "PDF"}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto mb-3">
+                            <Upload className="w-6 h-6" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+                            Drop your CSV, Excel, or PDF file here
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] mb-3">
+                            Supports <span className="font-mono text-emerald-400 font-medium">.xlsx</span>,{" "}
+                            <span className="font-mono text-emerald-400 font-medium">.xls</span>,{" "}
+                            <span className="font-mono text-emerald-400 font-medium">.csv</span>, and{" "}
+                            <span className="font-mono text-rose-400 font-medium">.pdf</span> lead files
+                          </p>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs font-semibold text-[var(--text-primary)] shadow-2xs">
+                            Browse Files
+                          </span>
+                        </>
+                      )}
                     </div>
                   ) : (
                     /* Uploaded File Info Card */
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/10 p-4 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                            <FileSpreadsheet className="w-5 h-5" />
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                            fileName.toLowerCase().endsWith(".pdf")
+                              ? "bg-rose-500/20 text-rose-400"
+                              : "bg-emerald-500/20 text-emerald-400"
+                          }`}>
+                            {fileName.toLowerCase().endsWith(".pdf") ? (
+                              <FileText className="w-5 h-5" />
+                            ) : (
+                              <FileSpreadsheet className="w-5 h-5" />
+                            )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                              {fileName}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                                {fileName}
+                              </p>
+                              {fileName.toLowerCase().endsWith(".pdf") && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                  PDF Lead Table
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-[var(--text-secondary)]">
                               {fileSize} • {parsedContacts.length} rows detected
                             </p>
@@ -676,41 +814,117 @@ export default function CampaignsPage() {
                         </div>
                       </div>
 
-                      {/* Mini Contact Preview Table */}
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
-                          <span>Contacts Preview (First 5):</span>
-                          <span className="text-emerald-400 font-semibold tabular-nums">
-                            {validImportedContacts.length} valid / {invalidImportedCount} skipped
-                          </span>
+                      {/* Enhanced Contact Table & Filter Controls */}
+                      <div className="space-y-2.5 pt-2 border-t border-emerald-500/15">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-[var(--text-primary)]">
+                              Contacts ({parsedContacts.length.toLocaleString()})
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {validImportedContacts.length.toLocaleString()} Valid Numbers
+                            </span>
+                            {invalidImportedCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                {invalidImportedCount} Skipped
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {/* Live Search Filter */}
+                            <div className="relative">
+                              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
+                              <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search by name, phone..."
+                                className="pl-8 pr-2.5 py-1 text-xs rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)] w-40"
+                              />
+                            </div>
+
+                            {/* View Limit Selector */}
+                            <div className="flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] shrink-0">
+                              <span>Show:</span>
+                              <select
+                                value={previewLimit}
+                                onChange={(e) =>
+                                  setPreviewLimit(e.target.value === "all" ? "all" : Number(e.target.value))
+                                }
+                                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded px-1.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
+                              >
+                                <option value={50}>50</option>
+                                <option value={100}>100 (Default)</option>
+                                <option value={250}>250</option>
+                                <option value={500}>500</option>
+                                <option value="all">All ({parsedContacts.length})</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div className="max-h-36 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+
+                        {/* Batch Target Selector */}
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-surface)]/80 border border-[var(--border-subtle)] text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Users className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-[var(--text-secondary)] font-medium text-[11px]">
+                              Recipients for this Campaign Blast:
+                            </span>
+                          </div>
+                          <div className="relative shrink-0">
+                            <select
+                              value={sendLimit}
+                              onChange={(e) =>
+                                setSendLimit(e.target.value === "all" ? "all" : Number(e.target.value))
+                              }
+                              className="appearance-none bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-md px-2.5 py-1 pr-7 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer"
+                            >
+                              <option value="all">
+                                Send to ALL ({validImportedContacts.length.toLocaleString()} Contacts)
+                              </option>
+                              <option value={100}>Send to First 100 Contacts</option>
+                              <option value={250}>Send to First 250 Contacts</option>
+                              <option value={500}>Send to First 500 Contacts</option>
+                              <option value={1000}>Send to First 1,000 Contacts</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* Scrollable Table showing up to 100+ contacts */}
+                        <div className="max-h-72 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xs">
                           <table className="w-full text-left text-xs">
-                            <thead className="bg-[var(--bg-subtle)] text-[10px] text-[var(--text-tertiary)] uppercase sticky top-0">
+                            <thead className="bg-[var(--bg-subtle)] text-[10px] text-[var(--text-tertiary)] uppercase sticky top-0 z-10 border-b border-[var(--border-subtle)]">
                               <tr>
-                                <th className="py-1.5 px-2.5">#</th>
-                                <th className="py-1.5 px-2.5">Customer Name</th>
-                                <th className="py-1.5 px-2.5">Phone Number</th>
-                                <th className="py-1.5 px-2.5 text-right">Status</th>
+                                <th className="py-2 px-3 w-10">#</th>
+                                <th className="py-2 px-3">Customer Name</th>
+                                <th className="py-2 px-3">WhatsApp Number</th>
+                                <th className="py-2 px-3 text-right">Status</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--border-subtle)] font-sans">
-                              {parsedContacts.slice(0, 5).map((contact, idx) => (
-                                <tr key={idx} className="hover:bg-[var(--bg-subtle)]/50">
-                                  <td className="py-1.5 px-2.5 text-[var(--text-tertiary)] tabular-nums">{idx + 1}</td>
-                                  <td className="py-1.5 px-2.5 font-medium text-[var(--text-primary)] truncate max-w-[120px]">
+                              {displayContacts.map((contact, idx) => (
+                                <tr key={idx} className="hover:bg-[var(--bg-subtle)]/60 transition-colors">
+                                  <td className="py-1.5 px-3 text-[var(--text-tertiary)] tabular-nums text-[11px]">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="py-1.5 px-3 font-medium text-[var(--text-primary)] truncate max-w-[160px]">
                                     {contact.name}
                                   </td>
-                                  <td className="py-1.5 px-2.5 font-mono text-[var(--text-secondary)] tabular-nums">
-                                    {contact.phone || "(empty)"}
+                                  <td className="py-1.5 px-3 font-mono text-[var(--text-secondary)] tabular-nums text-[11.5px]">
+                                    +{contact.phone || "(empty)"}
                                   </td>
-                                  <td className="py-1.5 px-2.5 text-right">
+                                  <td className="py-1.5 px-3 text-right">
                                     {contact.isValid ? (
-                                      <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 font-medium">
+                                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                                         <CheckCircle2 className="w-3 h-3" /> Valid
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-400 font-medium" title="Invalid phone length or missing digits">
+                                      <span
+                                        className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20"
+                                        title="Invalid phone length or missing digits"
+                                      >
                                         <AlertCircle className="w-3 h-3" /> Skipped
                                       </span>
                                     )}
@@ -719,6 +933,15 @@ export default function CampaignsPage() {
                               ))}
                             </tbody>
                           </table>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)] px-0.5">
+                          <span>
+                            Showing {displayContacts.length.toLocaleString()} of{" "}
+                            {filteredContacts.length.toLocaleString()} contacts
+                          </span>
+                          <span>
+                            Targeting {targetCount.toLocaleString()} recipient{targetCount !== 1 ? "s" : ""}
+                          </span>
                         </div>
                       </div>
                     </div>
