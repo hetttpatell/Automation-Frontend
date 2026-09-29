@@ -14,7 +14,10 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   Sparkles,
+  Check,
   CheckCheck,
+  Clock,
+  FileText,
   X,
   AlertCircle
 } from "lucide-react";
@@ -44,6 +47,9 @@ interface Message {
   message_text: string;
   tokens_consumed: number;
   created_at: string;
+  whatsapp_message_id?: string | null;
+  status?: "sending" | "sent" | "delivered" | "read" | "failed" | null;
+  error_message?: string | null;
 }
 
 // ─── Formatting Helpers ──────────────────────────────────────────
@@ -267,33 +273,45 @@ export default function InboxPage() {
       .channel(`realtime-messages-${conversationId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          if (newMessage.conversation_id === conversationId) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMessage.id)) return prev;
-              return [...prev, newMessage];
-            });
-          }
+        { event: "*", schema: "public", table: "messages" },
+        (payload: any) => {
+          if (payload.eventType === "INSERT") {
+            const newMessage = payload.new as Message;
+            if (newMessage.conversation_id === conversationId) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === newMessage.id)) return prev;
+                return [...prev, newMessage];
+              });
+            }
 
-          setConversations((prevConvos) => {
-            const updated = prevConvos.map((c) => {
-              if (c.id === newMessage.conversation_id) {
-                const currentMsgs = c.messages || [];
-                if (currentMsgs.some((m) => m.id === newMessage.id)) return c;
-                return {
-                  ...c,
-                  updated_at: newMessage.created_at,
-                  messages: [...currentMsgs, newMessage],
-                };
-              }
-              return c;
+            setConversations((prevConvos) => {
+              const updated = prevConvos.map((c) => {
+                if (c.id === newMessage.conversation_id) {
+                  const currentMsgs = c.messages || [];
+                  if (currentMsgs.some((m) => m.id === newMessage.id)) return c;
+                  return {
+                    ...c,
+                    updated_at: newMessage.created_at,
+                    messages: [...currentMsgs, newMessage],
+                  };
+                }
+                return c;
+              });
+              return [...updated].sort(
+                (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+              );
             });
-            return [...updated].sort(
-              (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-            );
-          });
+          } else if (payload.eventType === "UPDATE") {
+            const updatedMsg = payload.new as Message;
+            if (updatedMsg.conversation_id === conversationId) {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m))
+              );
+            }
+          } else if (payload.eventType === "DELETE") {
+            const deletedId = (payload.old as Message).id;
+            setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -302,6 +320,66 @@ export default function InboxPage() {
       supabase.removeChannel(channel);
     };
   }, [selectedConversation?.id]);
+
+  // ─── 24-Hour WhatsApp Service Window Tracking ───
+  const customerMessages = messages.filter((m) => m.sender === "customer");
+  const lastCustomerMessage = customerMessages[customerMessages.length - 1];
+
+  const [sessionWindow, setSessionWindow] = useState<{
+    isOpen: boolean;
+    hoursLeft: number;
+    minutesLeft: number;
+    lastTime: Date | null;
+  }>({ isOpen: false, hoursLeft: 0, minutesLeft: 0, lastTime: null });
+
+  useEffect(() => {
+    function computeSession() {
+      if (!lastCustomerMessage) {
+        setSessionWindow({ isOpen: false, hoursLeft: 0, minutesLeft: 0, lastTime: null });
+        return;
+      }
+      const lastTime = new Date(lastCustomerMessage.created_at);
+      const diffMs = Date.now() - lastTime.getTime();
+      const WINDOW_MS = 24 * 60 * 60 * 1000;
+      const isOpen = diffMs < WINDOW_MS;
+      const remainingMs = Math.max(0, WINDOW_MS - diffMs);
+      const hoursLeft = Math.floor(remainingMs / (1000 * 60 * 60));
+      const minutesLeft = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+      setSessionWindow({ isOpen, hoursLeft, minutesLeft, lastTime });
+    }
+
+    computeSession();
+    const interval = setInterval(computeSession, 30000);
+    return () => clearInterval(interval);
+  }, [lastCustomerMessage?.created_at, messages.length]);
+
+  // ─── Approved WhatsApp Templates for Re-engagement ───
+  const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+
+  useEffect(() => {
+    async function fetchTemplates() {
+      if (!selectedConversation?.tenant_id) return;
+      setIsLoadingTemplates(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const res = await fetch(`${apiUrl}/api/whatsapp/templates?tenantId=${selectedConversation.tenant_id}`);
+        const data = await res.json();
+        if (data.templates && Array.isArray(data.templates)) {
+          setAvailableTemplates(data.templates);
+        }
+      } catch (err) {
+        console.error("[Fetch Templates Error]:", err);
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    }
+
+    if (selectedConversation?.tenant_id) {
+      fetchTemplates();
+    }
+  }, [selectedConversation?.tenant_id]);
 
   // Fetch active CRM lead details
   useEffect(() => {
@@ -415,38 +493,59 @@ export default function InboxPage() {
   };
 
   // Send Message
-  const handleSendMessage = async (e?: React.SyntheticEvent) => {
+  const handleSendMessage = async (
+    e?: React.SyntheticEvent,
+    templateData?: { name: string; lang?: string; bodyText?: string }
+  ) => {
     if (e) e.preventDefault();
-    if (!selectedConversation || !inputMessage.trim() || isSending) return;
+    if (!selectedConversation || isSending) return;
+
+    if (!templateData && !inputMessage.trim()) return;
+
     setIsSending(true);
 
     const { id: conversationId, customer_phone: customerPhone, tenant_id: tenantId } = selectedConversation;
     const textToSend = inputMessage;
-    setInputMessage("");
+    if (!templateData) {
+      setInputMessage("");
+    }
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const payload: any = {
+        conversationId,
+        customerPhone,
+        messageText: templateData?.bodyText || textToSend,
+        tenantId,
+      };
+
+      if (templateData) {
+        payload.templateName = templateData.name;
+        payload.templateLang = templateData.lang || "en";
+      }
+
       const response = await fetch(`${apiUrl}/api/send-message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          conversationId,
-          customerPhone,
-          messageText: textToSend,
-          tenantId,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      const resJson = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error("Failed to post message");
+        throw new Error(resJson.error || "Failed to deliver message via WhatsApp");
       }
-      info("Message sent successfully");
+      
+      success(templateData ? `Template "${templateData.name}" dispatched successfully!` : "Message sent successfully");
+      setShowTemplateModal(false);
     } catch (err: any) {
       console.error("[Send Message Error]:", err.message);
-      toastError("Failed to deliver message");
-      setInputMessage(textToSend);
+      toastError(err.message || "Failed to deliver message");
+      if (!templateData) {
+        setInputMessage(textToSend);
+      }
     } finally {
       setIsSending(false);
       setTimeout(() => textInputRef.current?.focus(), 50);
@@ -777,9 +876,31 @@ export default function InboxPage() {
                     <h2 className="text-[15px] font-bold text-[var(--text-primary)] truncate font-display">
                       {selectedConversation.customer_name || "Customer"}
                     </h2>
-                    <p className="text-[12px] text-[var(--text-secondary)] font-mono flex items-center gap-1 mt-0.5 truncate">
-                      {selectedConversation.customer_phone}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[12px] text-[var(--text-secondary)] font-mono truncate">
+                        {selectedConversation.customer_phone}
+                      </p>
+                      {/* 24-Hour WhatsApp Session Window Badge */}
+                      {sessionWindow.isOpen ? (
+                        <span 
+                          className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium"
+                          title={`24-hour WhatsApp customer window is open. Free-form text allowed for another ${sessionWindow.hoursLeft}h ${sessionWindow.minutesLeft}m.`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>24h Window: {sessionWindow.hoursLeft}h {sessionWindow.minutesLeft}m</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowTemplateModal(true)}
+                          className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-medium hover:bg-amber-500/20 transition-colors cursor-pointer"
+                          title="24-hour customer window expired. Regular text cannot be delivered. Send a template message."
+                        >
+                          <AlertTriangle className="w-3 h-3 text-amber-500" />
+                          <span>Session Expired (Send Template)</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -885,13 +1006,32 @@ export default function InboxPage() {
                 ) : null}
               </header>
 
-              {/* Human Takeover Banner */}
+              {/* Human Takeover Banner & 24h WhatsApp Session Status */}
               {!selectedConversation.is_ai_active && (
-                <div className="bg-[var(--color-warning-bg)] border-b border-[var(--warning-border)] px-5 py-1.5 flex items-center gap-2 select-none shrink-0 z-10 animate-fade-in">
-                  <AlertTriangle className="w-[14px] h-[14px] text-[var(--warning-icon)] shrink-0" />
-                  <span className="text-[12.5px] font-semibold text-[var(--color-warning-text)]">
-                    Human Takeover Active — AI chatbot is currently paused on this thread
-                  </span>
+                <div className={`border-b px-5 py-2 flex flex-wrap items-center justify-between gap-2 select-none shrink-0 z-10 animate-fade-in ${
+                  sessionWindow.isOpen 
+                    ? "bg-[var(--color-warning-bg)] border-[var(--warning-border)] text-[var(--color-warning-text)]"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-[14px] h-[14px] text-amber-500 shrink-0" />
+                    <span className="text-[12px] sm:text-[12.5px] font-semibold">
+                      {sessionWindow.isOpen 
+                        ? `Human Takeover Active — AI chatbot paused (Session window: ${sessionWindow.hoursLeft}h ${sessionWindow.minutesLeft}m left)`
+                        : "Human Takeover Active — ⚠️ 24h WhatsApp Session Expired! WhatsApp blocks regular text messages. Send an approved template to re-engage."
+                      }
+                    </span>
+                  </div>
+                  {!sessionWindow.isOpen && (
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplateModal(true)}
+                      className="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Send Approved Template</span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -968,7 +1108,7 @@ export default function InboxPage() {
                                   <>
                                     <span className="text-[var(--text-tertiary)]/40 select-none">·</span>
                                     <span className="bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 border border-violet-100/60 dark:border-violet-900/20 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide font-sans">
-                                      gemini-2.5-flash
+                                      Nemotron 3 Ultra (free)
                                     </span>
                                     <span className="bg-slate-100/80 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 border border-slate-200/40 dark:border-zinc-700/40 px-2 py-0.5 rounded-full text-[9px] font-medium font-sans">
                                       {mockMs}ms
@@ -985,6 +1125,37 @@ export default function InboxPage() {
                                       Manual Reply
                                     </span>
                                   </>
+                                )}
+
+                                {/* WhatsApp Delivery Status Indicator */}
+                                {message.status === "sending" && (
+                                  <span className="inline-flex items-center text-[var(--text-tertiary)]" title="Sending...">
+                                    <Clock className="w-3 h-3 animate-spin" />
+                                  </span>
+                                )}
+                                {message.status === "sent" && (
+                                  <span className="inline-flex items-center text-[var(--text-tertiary)]" title="Sent to WhatsApp servers">
+                                    <Check className="w-3.5 h-3.5" />
+                                  </span>
+                                )}
+                                {message.status === "delivered" && (
+                                  <span className="inline-flex items-center text-[var(--text-tertiary)]" title="Delivered to customer WhatsApp">
+                                    <CheckCheck className="w-3.5 h-3.5" />
+                                  </span>
+                                )}
+                                {message.status === "read" && (
+                                  <span className="inline-flex items-center text-sky-400" title="Read by customer">
+                                    <CheckCheck className="w-3.5 h-3.5" />
+                                  </span>
+                                )}
+                                {message.status === "failed" && (
+                                  <span 
+                                    className="inline-flex items-center gap-1 text-rose-500 font-medium text-[9px] bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 cursor-help"
+                                    title={message.error_message || "Delivery failed by WhatsApp. Outside 24h window or unverified test number."}
+                                  >
+                                    <AlertCircle className="w-3 h-3 shrink-0" />
+                                    <span>Failed</span>
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -1033,40 +1204,70 @@ export default function InboxPage() {
                       transition={{ type: "spring", stiffness: 350, damping: 25 }}
                       className="p-3 w-full"
                     >
-                      <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-5xl mx-auto">
-                        <div className="flex-1 relative">
-                          <textarea
-                            ref={textInputRef}
-                            placeholder="Type a reply as agent..."
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            disabled={isSending}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                if (inputMessage.trim() && !isSending) {
-                                  handleSendMessage(e);
-                                }
+                      <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto space-y-2">
+                        {!sessionWindow.isOpen && (
+                          <div className="flex items-center justify-between px-1 text-[11.5px] text-amber-600 dark:text-amber-400 font-medium">
+                            <span className="flex items-center gap-1.5">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              Customer hasn't messaged in 24 hours. WhatsApp will block normal text.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowTemplateModal(true)}
+                              className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-300 cursor-pointer ml-2"
+                            >
+                              Choose Approved Template
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowTemplateModal(true)}
+                            title="Browse & Send Approved WhatsApp Templates"
+                            className="h-10 px-3 bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] border border-[var(--border-default)] hover:border-[var(--brand-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)] text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer transition-all shadow-2xs"
+                          >
+                            <FileText className="w-4 h-4 text-emerald-500" />
+                            <span className="hidden sm:inline">Templates</span>
+                          </button>
+                          <div className="flex-1 relative">
+                            <textarea
+                              ref={textInputRef}
+                              placeholder={
+                                sessionWindow.isOpen
+                                  ? "Type a reply as agent..."
+                                  : "Type custom text or select an approved template..."
                               }
-                            }}
-                            rows={1}
-                            className="w-full h-10 px-3.5 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[13.5px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] resize-none transition-all"
-                          />
+                              value={inputMessage}
+                              onChange={(e) => setInputMessage(e.target.value)}
+                              disabled={isSending}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (inputMessage.trim() && !isSending) {
+                                    handleSendMessage(e);
+                                  }
+                                }
+                              }}
+                              rows={1}
+                              className="w-full h-10 px-3.5 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] text-[13.5px] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] font-sans focus:outline-none focus:border-[var(--brand-primary)] focus:shadow-[var(--shadow-focus)] resize-none transition-all"
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={isSending || !inputMessage.trim()}
+                            className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-md)] text-[13.5px] font-sans font-semibold flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] outline-none shrink-0 transition-all"
+                          >
+                            {isSending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4" />
+                                <span>Send Reply</span>
+                              </>
+                            )}
+                          </button>
                         </div>
-                        <button
-                          type="submit"
-                          disabled={isSending || !inputMessage.trim()}
-                          className="h-10 px-4 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:bg-[var(--bg-muted)] text-white disabled:text-[var(--text-tertiary)] rounded-[var(--radius-md)] text-[13.5px] font-sans font-semibold flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] outline-none shrink-0 transition-all"
-                        >
-                          {isSending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>Send Overrides</span>
-                            </>
-                          )}
-                        </button>
                       </form>
                     </motion.div>
                   )}
@@ -1273,6 +1474,119 @@ export default function InboxPage() {
           </div>
         </aside>
       )}
+
+      {/* ─── Template Selector Modal ─── */}
+      <AnimatePresence>
+        {showTemplateModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-lg bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-fade-in"
+            >
+              {/* Modal Header */}
+              <div className="px-5 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-gradient-to-r from-[var(--bg-surface)] to-[var(--bg-subtle)]/50">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-500" />
+                    <span>Approved WhatsApp Templates</span>
+                  </h3>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    Pre-approved by Meta to start or re-open conversations outside the 24-hour window.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto space-y-3 flex-1">
+                {isLoadingTemplates ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center text-xs text-[var(--text-secondary)]">
+                    <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)] mb-2" />
+                    <span>Loading templates from Meta Graph API...</span>
+                  </div>
+                ) : availableTemplates.length === 0 ? (
+                  <div className="p-6 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-secondary)] space-y-2">
+                    <p className="font-semibold text-[var(--text-primary)]">No Approved Templates Detected</p>
+                    <p className="text-[11.5px] leading-relaxed max-w-sm mx-auto">
+                      Go to Meta Business Manager → WhatsApp Manager → Message Templates to create and approve templates for re-engaging customers.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        onClick={() =>
+                          handleSendMessage(undefined, {
+                            name: "hello_world",
+                            lang: "en_US",
+                            bodyText: inputMessage.trim() || undefined,
+                          })
+                        }
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-xs"
+                      >
+                        Try Default "hello_world" Template
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  availableTemplates.map((tmpl: any) => {
+                    const bodyComponent = tmpl.components?.find((c: any) => c.type === "BODY");
+                    const bodyText = bodyComponent?.text || "[Template Message]";
+
+                    return (
+                      <div
+                        key={tmpl.id || tmpl.name}
+                        className="p-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-canvas)] hover:border-[var(--brand-primary)] transition-all space-y-2.5 shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-[var(--text-primary)]">
+                              {tmpl.name}
+                            </span>
+                            <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              {tmpl.category || "APPROVED"}
+                            </span>
+                            <span className="text-[9px] text-[var(--text-tertiary)] font-mono">
+                              {tmpl.language}
+                            </span>
+                          </div>
+                          <button
+                            disabled={isSending}
+                            onClick={() =>
+                              handleSendMessage(undefined, {
+                                name: tmpl.name,
+                                lang: tmpl.language,
+                                bodyText: inputMessage.trim() || undefined,
+                              })
+                            }
+                            className="px-3.5 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 shadow-xs"
+                          >
+                            {isSending ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="w-3 h-3" />
+                                <span>Send</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-[12px] text-[var(--text-secondary)] bg-[var(--bg-surface)] p-3 rounded-lg border border-[var(--border-subtle)] whitespace-pre-wrap font-sans leading-relaxed">
+                          {bodyText}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
