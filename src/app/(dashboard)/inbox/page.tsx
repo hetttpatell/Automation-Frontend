@@ -19,7 +19,8 @@ import {
   Clock,
   FileText,
   X,
-  AlertCircle
+  AlertCircle,
+  Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -50,6 +51,9 @@ interface Message {
   whatsapp_message_id?: string | null;
   status?: "sending" | "sent" | "delivered" | "read" | "failed" | null;
   error_message?: string | null;
+  media_url?: string | null;
+  media_type?: string | null;
+  media_filename?: string | null;
 }
 
 // ─── Formatting Helpers ──────────────────────────────────────────
@@ -880,26 +884,6 @@ export default function InboxPage() {
                       <p className="text-[12px] text-[var(--text-secondary)] font-mono truncate">
                         {selectedConversation.customer_phone}
                       </p>
-                      {/* 24-Hour WhatsApp Session Window Badge */}
-                      {sessionWindow.isOpen ? (
-                        <span 
-                          className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium"
-                          title={`24-hour WhatsApp customer window is open. Free-form text allowed for another ${sessionWindow.hoursLeft}h ${sessionWindow.minutesLeft}m.`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>24h Window: {sessionWindow.hoursLeft}h {sessionWindow.minutesLeft}m</span>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setShowTemplateModal(true)}
-                          className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-medium hover:bg-amber-500/20 transition-colors cursor-pointer"
-                          title="24-hour customer window expired. Regular text cannot be delivered. Send a template message."
-                        >
-                          <AlertTriangle className="w-3 h-3 text-amber-500" />
-                          <span>Session Expired (Send Template)</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1006,34 +990,6 @@ export default function InboxPage() {
                 ) : null}
               </header>
 
-              {/* Human Takeover Banner & 24h WhatsApp Session Status */}
-              {!selectedConversation.is_ai_active && (
-                <div className={`border-b px-5 py-2 flex flex-wrap items-center justify-between gap-2 select-none shrink-0 z-10 animate-fade-in ${
-                  sessionWindow.isOpen 
-                    ? "bg-[var(--color-warning-bg)] border-[var(--warning-border)] text-[var(--color-warning-text)]"
-                    : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300"
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-[14px] h-[14px] text-amber-500 shrink-0" />
-                    <span className="text-[12px] sm:text-[12.5px] font-semibold">
-                      {sessionWindow.isOpen 
-                        ? `Human Takeover Active — AI chatbot paused (Session window: ${sessionWindow.hoursLeft}h ${sessionWindow.minutesLeft}m left)`
-                        : "Human Takeover Active — ⚠️ 24h WhatsApp Session Expired! WhatsApp blocks regular text messages. Send an approved template to re-engage."
-                      }
-                    </span>
-                  </div>
-                  {!sessionWindow.isOpen && (
-                    <button
-                      type="button"
-                      onClick={() => setShowTemplateModal(true)}
-                      className="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Send Approved Template</span>
-                    </button>
-                  )}
-                </div>
-              )}
 
               {/* Message Stream */}
               <div
@@ -1067,6 +1023,27 @@ export default function InboxPage() {
                               <div
                                 className="px-4 py-2.5 text-[13.5px] font-sans leading-[1.6] break-words bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[20px] rounded-tl-[4px] shadow-[var(--shadow-xs)]"
                               >
+                                {message.media_url && (
+                                  <a
+                                    href={message.media_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mb-2 p-2.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-muted)] border border-[var(--border-subtle)] flex items-center gap-2.5 transition-colors cursor-pointer group/doc no-underline text-inherit"
+                                  >
+                                    <div className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shrink-0 border border-red-500/20">
+                                      <FileText className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-semibold text-[var(--text-primary)] truncate group-hover/doc:text-[var(--brand-primary)]">
+                                        {message.media_filename || "Document.pdf"}
+                                      </p>
+                                      <p className="text-[10px] text-[var(--text-tertiary)]">
+                                        Click to view or download
+                                      </p>
+                                    </div>
+                                    <Download className="w-4 h-4 text-[var(--text-tertiary)] shrink-0 group-hover/doc:text-[var(--text-primary)]" />
+                                  </a>
+                                )}
                                 <p className="whitespace-pre-wrap select-text">
                                   {message.message_text}
                                 </p>
@@ -1095,6 +1072,27 @@ export default function InboxPage() {
                                     <User className="w-3.5 h-3.5 text-indigo-100/90" />
                                     <span>Agent Override</span>
                                   </div>
+                                )}
+                                {message.media_url && (
+                                  <a
+                                    href={message.media_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mb-2 p-2.5 rounded-xl bg-black/20 hover:bg-black/30 border border-white/15 flex items-center gap-2.5 text-white transition-colors cursor-pointer group/doc no-underline"
+                                  >
+                                    <div className="w-8 h-8 rounded-lg bg-red-500/80 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                      <FileText className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-semibold text-white truncate group-hover/doc:underline">
+                                        {message.media_filename || "Document.pdf"}
+                                      </p>
+                                      <p className="text-[10px] text-white/70">
+                                        Click to view or download
+                                      </p>
+                                    </div>
+                                    <Download className="w-4 h-4 text-white/80 shrink-0 group-hover/doc:text-white" />
+                                  </a>
                                 )}
                                 <p className="whitespace-pre-wrap select-text">
                                   {message.message_text}

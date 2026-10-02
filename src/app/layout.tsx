@@ -7,23 +7,29 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-inter",
 });
 
 const calistoga = Calistoga({
   weight: "400",
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-calistoga",
+  preload: false,
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-display",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-mono",
+  preload: false,
 });
 
 export const metadata: Metadata = {

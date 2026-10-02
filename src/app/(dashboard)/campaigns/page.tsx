@@ -26,6 +26,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Paperclip,
+  Pencil,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
@@ -46,6 +49,7 @@ type TargetStage = "lost" | "contacted";
 type AudienceSource = "crm" | "file";
 
 interface ParsedContact {
+  id: string;
   name: string;
   phone: string;
   isValid: boolean;
@@ -119,6 +123,26 @@ export default function CampaignsPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
+  // PDF Attachment state
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [pdfFileName, setPdfFileName] = useState<string>("");
+  const [pdfFileSize, setPdfFileSize] = useState<string>("");
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  // Contact Editing & Management State
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [editPhone, setEditPhone] = useState<string>("");
+  const [isAddingContact, setIsAddingContact] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+
+  // Approved WhatsApp Meta Templates
+  const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+
   // ─── Fetch user + leads ───────────────────────────────────────────
   useEffect(() => {
     async function init() {
@@ -137,6 +161,20 @@ export default function CampaignsPage() {
       if (dashboardTenant) {
         if (dashboardTenant.business_name) setBusinessName(dashboardTenant.business_name);
         if (dashboardTenant.subscription_tier) setSubscriptionTier(dashboardTenant.subscription_tier);
+
+        // Fetch pre-approved Meta templates for this tenant
+        if (dashboardTenant.id) {
+          setIsLoadingTemplates(true);
+          fetch(`${API_URL}/api/whatsapp/templates?tenantId=${dashboardTenant.id}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.templates && Array.isArray(data.templates)) {
+                setAvailableTemplates(data.templates);
+              }
+            })
+            .catch((err) => console.error("[Campaigns] Templates fetch error:", err))
+            .finally(() => setIsLoadingTemplates(false));
+        }
       }
 
       // Fetch leads
@@ -189,6 +227,7 @@ export default function CampaignsPage() {
   const isFormValid =
     customMessage.trim().length > 0 &&
     targetCount > 0 &&
+    !isUploadingPdf &&
     (sendMode === "text" || templateName.trim().length > 0);
 
   // ─── File Upload Handler ──────────────────────────────────────────
@@ -251,12 +290,13 @@ export default function CampaignsPage() {
         setNameColumn(detectedName);
         setPhoneColumn(detectedPhone);
 
-        const contacts: ParsedContact[] = json.map((row: any) => {
+        const contacts: ParsedContact[] = json.map((row: any, idx: number) => {
           const rawName = String(row[detectedName] || "").trim();
           const rawPhone = String(row[detectedPhone] || "").trim();
           const cleanPhone = sanitizePhoneForWhatsApp(rawPhone);
           const isValid = cleanPhone.length >= 7 && cleanPhone.length <= 16;
           return {
+            id: `c_pdf_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: rawName || "Valued Customer",
             phone: cleanPhone,
             isValid,
@@ -322,12 +362,13 @@ export default function CampaignsPage() {
       setPhoneColumn(detectedPhone);
 
       // Map contacts
-      const contacts: ParsedContact[] = json.map((row) => {
+      const contacts: ParsedContact[] = json.map((row, idx) => {
         const rawName = String(row[detectedName] || "").trim();
         const rawPhone = String(row[detectedPhone] || "").trim();
         const cleanPhone = sanitizePhoneForWhatsApp(rawPhone);
         const isValid = cleanPhone.length >= 7 && cleanPhone.length <= 16;
         return {
+          id: `c_sheet_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           name: rawName || "Valued Customer",
           phone: cleanPhone,
           isValid,
@@ -373,12 +414,13 @@ export default function CampaignsPage() {
     setPhoneColumn(newPhoneCol);
     if (!rawRows || rawRows.length === 0) return;
 
-    const contacts: ParsedContact[] = rawRows.map((row) => {
+    const contacts: ParsedContact[] = rawRows.map((row, idx) => {
       const rawName = String(row[newNameCol] || "").trim();
       const rawPhone = String(row[newPhoneCol] || "").trim();
       const cleanPhone = sanitizePhoneForWhatsApp(rawPhone);
       const isValid = cleanPhone.length >= 7 && cleanPhone.length <= 16;
       return {
+        id: `c_remap_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         name: rawName || "Valued Customer",
         phone: cleanPhone,
         isValid,
@@ -465,6 +507,172 @@ export default function CampaignsPage() {
     });
   };
 
+  // ─── Contact Editing & Management Handlers ───────────────────────
+  const startEditingContact = (contact: ParsedContact) => {
+    setEditingContactId(contact.id);
+    setEditName(contact.name);
+    setEditPhone(contact.phone);
+  };
+
+  const saveEditingContact = (contactId: string) => {
+    if (!editPhone.trim()) {
+      toastError("Phone number cannot be empty.");
+      return;
+    }
+
+    const cleanPhone = sanitizePhoneForWhatsApp(editPhone);
+    const isValid = cleanPhone.length >= 7 && cleanPhone.length <= 16;
+
+    setParsedContacts((prev) =>
+      prev.map((c) => {
+        if (c.id === contactId) {
+          return {
+            ...c,
+            name: editName.trim() || "Valued Customer",
+            phone: cleanPhone,
+            isValid,
+          };
+        }
+        return c;
+      })
+    );
+
+    setEditingContactId(null);
+    setEditName("");
+    setEditPhone("");
+
+    if (!isValid) {
+      warning("Contact updated, but phone number format seems invalid (must be 7–16 digits).");
+    } else {
+      success("Contact updated!");
+    }
+  };
+
+  const cancelEditingContact = () => {
+    setEditingContactId(null);
+    setEditName("");
+    setEditPhone("");
+  };
+
+  const deleteContact = (contactId: string) => {
+    setParsedContacts((prev) => prev.filter((c) => c.id !== contactId));
+    info("Contact removed from campaign list.");
+  };
+
+  const clearSkippedContacts = () => {
+    const skippedCount = parsedContacts.filter((c) => !c.isValid).length;
+    if (skippedCount === 0) return;
+    setParsedContacts((prev) => prev.filter((c) => c.isValid));
+    success(`Removed ${skippedCount} invalid contact${skippedCount > 1 ? "s" : ""} from list.`);
+  };
+
+  const handleSaveNewContact = () => {
+    if (!newPhone.trim()) {
+      toastError("Please enter a phone number.");
+      return;
+    }
+    const cleanPhone = sanitizePhoneForWhatsApp(newPhone);
+    const isValid = cleanPhone.length >= 7 && cleanPhone.length <= 16;
+    const newContact: ParsedContact = {
+      id: `c_manual_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: newName.trim() || "Valued Customer",
+      phone: cleanPhone,
+      isValid,
+      rawRow: { [nameColumn || "Name"]: newName, [phoneColumn || "Phone"]: cleanPhone },
+    };
+
+    setParsedContacts((prev) => [newContact, ...prev]);
+    setNewName("");
+    setNewPhone("");
+    setIsAddingContact(false);
+    success(`Added ${newContact.name} to campaign list!`);
+  };
+
+  // ─── PDF Attachment Handlers ─────────────────────────────────────
+  const handlePdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    if (selected.type !== "application/pdf" && !selected.name.toLowerCase().endsWith(".pdf")) {
+      toastError("Only PDF files are supported for document attachments.");
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+      return;
+    }
+
+    if (selected.size > 50 * 1024 * 1024) {
+      toastError("PDF exceeds the 50MB file size limit.");
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+      return;
+    }
+
+    setPdfFile(selected);
+    setPdfFileName(selected.name);
+    setPdfFileSize(
+      selected.size > 1024 * 1024
+        ? `${(selected.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(selected.size / 1024)} KB`
+    );
+    setIsUploadingPdf(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || "";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Content = (reader.result as string).split(",")[1];
+          const res = await fetch(`${API_URL}/api/campaigns/upload-pdf`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              base64: base64Content,
+              fileName: selected.name,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Failed to upload PDF");
+          }
+
+          setPdfUrl(data.url);
+          success(`PDF "${selected.name}" attached successfully!`);
+        } catch (err: any) {
+          console.error("PDF upload error:", err);
+          toastError(err.message || "Failed to upload PDF. Please try again.");
+          handleClearPdf();
+        } finally {
+          setIsUploadingPdf(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toastError("Failed to read PDF file.");
+        setIsUploadingPdf(false);
+        handleClearPdf();
+      };
+
+      reader.readAsDataURL(selected);
+    } catch (err: any) {
+      console.error("PDF preparation error:", err);
+      toastError("Failed to process PDF.");
+      setIsUploadingPdf(false);
+      handleClearPdf();
+    }
+  };
+
+  const handleClearPdf = () => {
+    setPdfFile(null);
+    setPdfUrl("");
+    setPdfFileName("");
+    setPdfFileSize("");
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+  };
+
   // ─── Launch blast ─────────────────────────────────────────────────
   const handleLaunchBlast = async () => {
     if (!user || !isFormValid) return;
@@ -486,6 +694,8 @@ export default function CampaignsPage() {
         target_stage: audienceSource === "file" ? "csv_import" : targetStage,
         template_name: sendMode === "template" ? templateName.trim() : "",
         template_lang: sendMode === "template" ? templateLang.trim() : "en",
+        pdf_url: pdfUrl || undefined,
+        pdf_filename: pdfFileName || undefined,
         recipients: audienceSource === "file"
           ? targetContacts.map((c) => ({
               customer_name: c.name,
@@ -514,6 +724,9 @@ export default function CampaignsPage() {
       const totalFailed = data.total_failed ?? 0;
 
       if (totalFailed > 0 && totalSent > 0) {
+        if (data.failed_details) {
+          console.warn("[Campaign Delivery Report] Failed contacts:", data.failed_details);
+        }
         warning(data.message || `⚠️ ${totalSent} sent, ${totalFailed} failed.`);
       } else {
         success(data.message || "🚀 Blast campaign successfully sent!");
@@ -522,9 +735,8 @@ export default function CampaignsPage() {
       if (totalSent > 0) {
         setCampaignName("");
         setCustomMessage("");
-        if (audienceSource === "file") {
-          handleClearFile();
-        }
+        handleClearPdf();
+        // File and contacts remain loaded so user can still view, edit, or blast another campaign
       }
     } catch (err: any) {
       console.error("[Campaign Send Error]:", err);
@@ -822,7 +1034,7 @@ export default function CampaignsPage() {
                               Contacts ({parsedContacts.length.toLocaleString()})
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              {validImportedContacts.length.toLocaleString()} Valid Numbers
+                              {validImportedContacts.length.toLocaleString()} Valid
                             </span>
                             {invalidImportedCount > 0 && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -831,7 +1043,7 @@ export default function CampaignsPage() {
                             )}
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                             {/* Live Search Filter */}
                             <div className="relative">
                               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
@@ -839,10 +1051,38 @@ export default function CampaignsPage() {
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search by name, phone..."
-                                className="pl-8 pr-2.5 py-1 text-xs rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)] w-40"
+                                placeholder="Search contacts..."
+                                className="pl-8 pr-2.5 py-1 text-xs rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-primary)] w-32 sm:w-40"
                               />
                             </div>
+
+                            {/* Add Contact Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddingContact(true);
+                                setNewName("");
+                                setNewPhone("");
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-[var(--brand-subtle)] text-[var(--brand-primary)] border border-[var(--brand-border)] hover:bg-[var(--brand-muted)] cursor-pointer transition-colors shrink-0"
+                              title="Add contact manually"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Contact</span>
+                            </button>
+
+                            {/* Clear Skipped Button */}
+                            {invalidImportedCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={clearSkippedContacts}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 cursor-pointer transition-colors shrink-0"
+                                title="Remove invalid / skipped contacts"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Clear Invalid ({invalidImportedCount})</span>
+                              </button>
+                            )}
 
                             {/* View Limit Selector */}
                             <div className="flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] shrink-0">
@@ -855,7 +1095,7 @@ export default function CampaignsPage() {
                                 className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded px-1.5 py-1 text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
                               >
                                 <option value={50}>50</option>
-                                <option value={100}>100 (Default)</option>
+                                <option value={100}>100</option>
                                 <option value={250}>250</option>
                                 <option value={500}>500</option>
                                 <option value="all">All ({parsedContacts.length})</option>
@@ -892,45 +1132,195 @@ export default function CampaignsPage() {
                           </div>
                         </div>
 
-                        {/* Scrollable Table showing up to 100+ contacts */}
-                        <div className="max-h-72 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xs">
+                        {/* Scrollable Editable Table */}
+                        <div className="max-h-80 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xs">
                           <table className="w-full text-left text-xs">
                             <thead className="bg-[var(--bg-subtle)] text-[10px] text-[var(--text-tertiary)] uppercase sticky top-0 z-10 border-b border-[var(--border-subtle)]">
                               <tr>
                                 <th className="py-2 px-3 w-10">#</th>
                                 <th className="py-2 px-3">Customer Name</th>
                                 <th className="py-2 px-3">WhatsApp Number</th>
-                                <th className="py-2 px-3 text-right">Status</th>
+                                <th className="py-2 px-3 text-center w-24">Status</th>
+                                <th className="py-2 px-3 text-right w-24">Actions</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--border-subtle)] font-sans">
-                              {displayContacts.map((contact, idx) => (
-                                <tr key={idx} className="hover:bg-[var(--bg-subtle)]/60 transition-colors">
-                                  <td className="py-1.5 px-3 text-[var(--text-tertiary)] tabular-nums text-[11px]">
-                                    {idx + 1}
+                              {/* Inline New Contact Row */}
+                              {isAddingContact && (
+                                <tr className="bg-[var(--brand-subtle)]/30 border-b-2 border-[var(--brand-primary)]">
+                                  <td className="py-2 px-3 text-[var(--brand-primary)] font-bold text-xs">
+                                    +
                                   </td>
-                                  <td className="py-1.5 px-3 font-medium text-[var(--text-primary)] truncate max-w-[160px]">
-                                    {contact.name}
+                                  <td className="py-1.5 px-3">
+                                    <input
+                                      type="text"
+                                      value={newName}
+                                      onChange={(e) => setNewName(e.target.value)}
+                                      placeholder="Customer Name..."
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSaveNewContact();
+                                        if (e.key === "Escape") setIsAddingContact(false);
+                                      }}
+                                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded px-2 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] shadow-xs"
+                                    />
                                   </td>
-                                  <td className="py-1.5 px-3 font-mono text-[var(--text-secondary)] tabular-nums text-[11.5px]">
-                                    +{contact.phone || "(empty)"}
+                                  <td className="py-1.5 px-3">
+                                    <input
+                                      type="text"
+                                      value={newPhone}
+                                      onChange={(e) => setNewPhone(e.target.value)}
+                                      placeholder="e.g. +91 98765 43210"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSaveNewContact();
+                                        if (e.key === "Escape") setIsAddingContact(false);
+                                      }}
+                                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded px-2 py-1 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] shadow-xs"
+                                    />
+                                  </td>
+                                  <td className="py-1.5 px-3 text-center">
+                                    <span className="text-[10px] text-[var(--brand-primary)] font-semibold">
+                                      New
+                                    </span>
                                   </td>
                                   <td className="py-1.5 px-3 text-right">
-                                    {contact.isValid ? (
-                                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                                        <CheckCircle2 className="w-3 h-3" /> Valid
-                                      </span>
-                                    ) : (
-                                      <span
-                                        className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20"
-                                        title="Invalid phone length or missing digits"
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={handleSaveNewContact}
+                                        className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition-colors cursor-pointer"
+                                        title="Save contact (Enter)"
                                       >
-                                        <AlertCircle className="w-3 h-3" /> Skipped
-                                      </span>
-                                    )}
+                                        <Check className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setIsAddingContact(false);
+                                          setNewName("");
+                                          setNewPhone("");
+                                        }}
+                                        className="p-1 rounded bg-[var(--bg-muted)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                        title="Cancel (Esc)"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
-                              ))}
+                              )}
+
+                              {displayContacts.map((contact, idx) => {
+                                const isEditing = editingContactId === contact.id;
+
+                                if (isEditing) {
+                                  return (
+                                    <tr key={contact.id || idx} className="bg-[var(--brand-subtle)]/40 border-b border-[var(--brand-border)]">
+                                      <td className="py-2 px-3 text-[var(--text-tertiary)] tabular-nums text-[11px]">
+                                        {idx + 1}
+                                      </td>
+                                      <td className="py-1.5 px-3">
+                                        <input
+                                          type="text"
+                                          value={editName}
+                                          onChange={(e) => setEditName(e.target.value)}
+                                          autoFocus
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") saveEditingContact(contact.id);
+                                            if (e.key === "Escape") cancelEditingContact();
+                                          }}
+                                          className="w-full bg-[var(--bg-surface)] border border-[var(--brand-primary)] rounded px-2 py-1 text-xs font-medium text-[var(--text-primary)] focus:outline-none shadow-xs"
+                                        />
+                                      </td>
+                                      <td className="py-1.5 px-3">
+                                        <input
+                                          type="text"
+                                          value={editPhone}
+                                          onChange={(e) => setEditPhone(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") saveEditingContact(contact.id);
+                                            if (e.key === "Escape") cancelEditingContact();
+                                          }}
+                                          className="w-full bg-[var(--bg-surface)] border border-[var(--brand-primary)] rounded px-2 py-1 text-xs font-mono text-[var(--text-primary)] focus:outline-none shadow-xs"
+                                        />
+                                      </td>
+                                      <td className="py-1.5 px-3 text-center">
+                                        <span className="text-[10px] text-amber-500 font-medium">
+                                          Editing…
+                                        </span>
+                                      </td>
+                                      <td className="py-1.5 px-3 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => saveEditingContact(contact.id)}
+                                            className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition-colors cursor-pointer"
+                                            title="Save changes (Enter)"
+                                          >
+                                            <Check className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={cancelEditingContact}
+                                            className="p-1 rounded bg-[var(--bg-muted)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                                            title="Cancel (Esc)"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+
+                                return (
+                                  <tr key={contact.id || idx} className="hover:bg-[var(--bg-subtle)]/60 transition-colors group">
+                                    <td className="py-1.5 px-3 text-[var(--text-tertiary)] tabular-nums text-[11px]">
+                                      {idx + 1}
+                                    </td>
+                                    <td className="py-1.5 px-3 font-medium text-[var(--text-primary)] truncate max-w-[160px]">
+                                      {contact.name}
+                                    </td>
+                                    <td className="py-1.5 px-3 font-mono text-[var(--text-secondary)] tabular-nums text-[11.5px]">
+                                      +{contact.phone || "(empty)"}
+                                    </td>
+                                    <td className="py-1.5 px-3 text-center">
+                                      {contact.isValid ? (
+                                        <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                          <CheckCircle2 className="w-3 h-3" /> Valid
+                                        </span>
+                                      ) : (
+                                        <span
+                                          className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20"
+                                          title="Invalid phone length or missing digits. Click edit to fix."
+                                        >
+                                          <AlertCircle className="w-3 h-3" /> Skipped
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-1.5 px-3 text-right">
+                                      <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditingContact(contact)}
+                                          className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-subtle)] cursor-pointer transition-colors"
+                                          title="Edit contact name or phone"
+                                        >
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => deleteContact(contact.id)}
+                                          className="p-1 rounded text-[var(--text-tertiary)] hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors"
+                                          title="Delete contact from list"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
@@ -1002,7 +1392,7 @@ export default function CampaignsPage() {
                       <span className="text-xs font-semibold">Standard Text</span>
                     </div>
                     <span className="text-[10px] text-[var(--text-tertiary)] leading-normal">
-                      Free session. Best if contacts interacted recently.
+                      Direct text &amp; PDF document messages.
                     </span>
                   </button>
 
@@ -1029,7 +1419,7 @@ export default function CampaignsPage() {
                       <span className="text-xs font-semibold">Meta Template</span>
                     </div>
                     <span className="text-[10px] text-[var(--text-tertiary)] leading-normal">
-                      Required for cold/CSV leads. Bypasses 24h limit.
+                      Pre-approved Meta templates.
                     </span>
                   </button>
                 </div>
@@ -1045,6 +1435,40 @@ export default function CampaignsPage() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden space-y-3 bg-[var(--bg-subtle)] p-4 rounded-[var(--radius-lg)] border border-[var(--border-default)]"
                   >
+                    {/* Pre-approved Template Dropdown if available */}
+                    {availableTemplates.length > 0 && (
+                      <div>
+                        <label
+                          htmlFor="template-select"
+                          className="block text-[10px] font-sans font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px] mb-1"
+                        >
+                          Select Pre-Approved Template ({availableTemplates.length} Available)
+                        </label>
+                        <select
+                          id="template-select"
+                          value={templateName}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const found = availableTemplates.find((t) => t.name === val);
+                            if (found) {
+                              setTemplateName(found.name);
+                              setTemplateLang(found.language || "en");
+                            } else {
+                              setTemplateName(val);
+                            }
+                          }}
+                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-2.5 py-1.5 text-xs font-sans text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer"
+                        >
+                          <option value="">-- Choose an approved Meta template --</option>
+                          {availableTemplates.map((t) => (
+                            <option key={t.id || t.name} value={t.name}>
+                              {t.name} ({t.category || "APPROVED"} • {t.language})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label
@@ -1082,7 +1506,7 @@ export default function CampaignsPage() {
                     <div className="text-[10px] text-[var(--text-tertiary)] leading-normal flex items-start gap-1 select-none">
                       <span>💡</span>
                       <span>
-                        Make sure this template is pre-approved in your Meta Business Suite before blasting cold contacts.
+                        Meta Templates bypass the 24-hour customer window and deliver reliably to cold leads and inactive contacts.
                       </span>
                     </div>
                   </motion.div>
@@ -1129,6 +1553,90 @@ export default function CampaignsPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+
+              {/* PDF Document Attachment Section */}
+              <div className="pt-3 border-t border-[var(--border-subtle)] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                    <span className="text-[11px] font-sans font-semibold text-[var(--text-secondary)] uppercase tracking-[0.5px]">
+                      Attach PDF Document (Optional)
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[var(--text-tertiary)] font-sans">
+                    Max 50 MB • Sent to all recipients
+                  </span>
+                </div>
+
+                <input
+                  ref={pdfInputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={handlePdfSelect}
+                  className="hidden"
+                  id="campaign-pdf-upload"
+                />
+
+                {!pdfFile ? (
+                  <label
+                    htmlFor="campaign-pdf-upload"
+                    className="group flex items-center justify-between p-3.5 rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-default)] hover:border-[var(--brand-primary)] bg-[var(--bg-subtle)]/50 hover:bg-[var(--bg-subtle)] cursor-pointer transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform border border-red-200/60 dark:border-red-900/40">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-sans font-medium text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors">
+                          Attach Brochure, Catalog, or Price List (PDF)
+                        </p>
+                        <p className="text-[10px] font-sans text-[var(--text-tertiary)]">
+                          Click to browse and upload your PDF file
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-[11px] font-sans font-semibold text-[var(--brand-primary)] px-2.5 py-1 rounded-md bg-[var(--brand-subtle)] border border-[var(--brand-border)] select-none">
+                      Choose PDF
+                    </div>
+                  </label>
+                ) : (
+                  <div className="flex items-center justify-between p-3 rounded-[var(--radius-lg)] bg-[var(--bg-surface)] border border-[var(--border-default)] shadow-[var(--shadow-xs)]">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-500 flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-sans font-semibold text-[var(--text-primary)] truncate max-w-[200px] sm:max-w-[280px]">
+                            {pdfFileName}
+                          </p>
+                          {isUploadingPdf ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-sans text-amber-500 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/30">
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" /> Uploading…
+                            </span>
+                          ) : pdfUrl ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-sans text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900/30 font-medium">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Ready
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-[10px] font-mono text-[var(--text-tertiary)] mt-0.5">
+                          {pdfFileSize} • PDF Document
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleClearPdf}
+                      className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                      title="Remove PDF"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1360,13 +1868,29 @@ export default function CampaignsPage() {
 
                   {/* Outbound Bubble */}
                   <motion.div
-                    key={previewContactIndex + customMessage}
+                    key={previewContactIndex + customMessage + (pdfFileName || "")}
                     initial={{ scale: 0.95, opacity: 0, y: 8 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="self-end max-w-[85%] bg-[#005C4B] text-[#E9EDEF] rounded-2xl rounded-tr-xs p-3 text-xs leading-relaxed shadow-md relative group font-sans break-words"
+                    className="self-end max-w-[85%] bg-[#005C4B] text-[#E9EDEF] rounded-2xl rounded-tr-xs p-2.5 text-xs leading-relaxed shadow-md relative group font-sans break-words"
                   >
-                    <p className="whitespace-pre-wrap">{getPreviewText(customMessage)}</p>
+                    {/* PDF Card Preview inside Outbound Bubble */}
+                    {pdfFileName && (
+                      <div className="mb-2 p-2 bg-[#025142] rounded-xl flex items-center gap-2.5 border border-white/10 select-none">
+                        <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <FileText className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-semibold text-white truncate">
+                            {pdfFileName}
+                          </p>
+                          <p className="text-[9px] text-[#A6B8BA] uppercase tracking-wide">
+                            {pdfFileSize || "PDF"} • Document
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <p className="whitespace-pre-wrap px-0.5">{getPreviewText(customMessage)}</p>
                     <div className="flex items-center justify-end gap-1 mt-1 select-none">
                       <span className="text-[9px] text-[#8696A0] tabular-nums font-mono">
                         {currentTime}
@@ -1467,6 +1991,18 @@ export default function CampaignsPage() {
                       </p>
                     </div>
                   </div>
+
+                  {pdfFileName && (
+                    <div className="pt-2 border-t border-[var(--border-subtle)] text-[11px] flex items-center justify-between">
+                      <span className="text-[var(--text-tertiary)] flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-red-500" />
+                        Attached Document:
+                      </span>
+                      <span className="font-semibold text-[var(--text-primary)] truncate max-w-[220px]">
+                        {pdfFileName} {pdfFileSize ? `(${pdfFileSize})` : ""}
+                      </span>
+                    </div>
+                  )}
 
                   {audienceSource === "file" && validImportedContacts.length > 0 && (
                     <div className="pt-2 border-t border-[var(--border-subtle)] text-[11px] text-[var(--text-secondary)]">
