@@ -13,7 +13,9 @@ import {
   Sun,
   Moon,
   ChevronsUpDown,
-  CreditCard
+  CreditCard,
+  Shield,
+  FileText
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
@@ -373,6 +375,26 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-[var(--border-subtle)] space-y-3 flex flex-col shrink-0">
 
+          {/* Legal Links */}
+          <div className={`flex ${isCollapsed ? 'flex-col items-center gap-1' : 'items-center gap-3 justify-center'} py-1`}>
+            <Link
+              href="/privacy"
+              className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors duration-200"
+              title="Privacy Policy"
+            >
+              <Shield className="w-3 h-3 shrink-0" />
+              {!isCollapsed && <span>Privacy</span>}
+            </Link>
+            <Link
+              href="/terms"
+              className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors duration-200"
+              title="Terms of Service"
+            >
+              <FileText className="w-3 h-3 shrink-0" />
+              {!isCollapsed && <span>Terms</span>}
+            </Link>
+          </div>
+
           {/* Pill Theme Toggle */}
           <div className="flex justify-center py-2 select-none">
             <button
@@ -565,6 +587,26 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                           }}
                         />
                       </button>
+                    </div>
+
+                    {/* Legal Links */}
+                    <div className="px-1 py-1 border-b border-[var(--border-subtle)] mb-1">
+                      <Link
+                        href="/privacy"
+                        onClick={() => setIsMobileDropdownOpen(false)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]/50 cursor-pointer"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Privacy Policy</span>
+                      </Link>
+                      <Link
+                        href="/terms"
+                        onClick={() => setIsMobileDropdownOpen(false)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]/50 cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Terms of Service</span>
+                      </Link>
                     </div>
 
                     {/* Logout Button */}

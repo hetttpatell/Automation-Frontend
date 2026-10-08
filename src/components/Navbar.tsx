@@ -31,6 +31,11 @@ export default function Navbar() {
     { name: "API", href: "/#developers", anchor: "developers" },
   ];
 
+  const legalLinks = [
+    { name: "Privacy", href: "/privacy" },
+    { name: "Terms", href: "/terms" },
+  ];
+
   const handleAnchorClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>, anchor: string) => {
       e.preventDefault();
@@ -107,6 +112,16 @@ export default function Navbar() {
                 {link.name}
               </a>
             ))}
+            <span className="w-px h-4 bg-slate-200" />
+            {legalLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="relative text-sm font-medium text-slate-400 hover:text-slate-700 transition-all duration-200 px-2.5 py-2 rounded-lg hover:bg-slate-500/5 cursor-pointer"
+              >
+                {link.name}
+              </Link>
+            ))}
           </nav>
 
           {/* Action Area - Desktop */}
@@ -158,7 +173,20 @@ export default function Navbar() {
                     {link.name}
                   </a>
                 ))}
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                <div className="pt-4 border-t border-slate-100 space-y-2">
+                  <div className="flex gap-4 pb-3">
+                    {legalLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}
@@ -174,6 +202,7 @@ export default function Navbar() {
                     <span>Get Started</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
+                  </div>
                 </div>
               </div>
             </motion.div>
